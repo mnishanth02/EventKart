@@ -3,10 +3,12 @@
 	"version": "1.0.0",
 	"description": "TypeScript-first Fastify API baseline for eventKart.",
 	"type": "module",
-	"main": "src/server.ts",
+	"main": "dist/server.js",
 	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
 		"dev": "tsx watch src/server.ts",
 		"start": "tsx src/server.ts",
+		"start:prod": "node dist/server.js",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"check": "biome check .",
