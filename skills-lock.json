@@ -1,15 +1,55 @@
 {
   "version": 1,
   "skills": {
+    "docker-compose-orchestration": {
+      "source": "manutej/luxor-claude-marketplace",
+      "sourceType": "github",
+      "computedHash": "01831d0723a2ac491e233bd9bfdffdac8c0ae5500f140a3ca0382ac5f4a26159"
+    },
+    "drizzle": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "5cfce7f940d8d52863a0206a0afe7c5b5f04d610c1eac2b01274938abbddcd23"
+    },
     "fastify-best-practices": {
       "source": "mcollina/skills",
       "sourceType": "github",
       "computedHash": "b3a771fa66bc5d8dac0af14e99e51fca2ff4a9add56f09d986778528bdf72c4c"
     },
+    "owasp-security": {
+      "source": "hoodini/ai-agents-skills",
+      "sourceType": "github",
+      "computedHash": "880d7aa73b001e7e28b9562639defeff11c073d958fe5a253eeea572539439a2"
+    },
+    "redis-development": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "computedHash": "993ad240385d830a9717796a4b76e835ed737bfc9d3e10a4528e00bacd58cbf8"
+    },
+    "tailwind-v4-shadcn": {
+      "source": "secondsky/claude-skills",
+      "sourceType": "github",
+      "computedHash": "40e8bf715ad567aaf6d9c6aceeafe77fa6e89209b4a59de1cb61cd211351c226"
+    },
+    "tanstack-form": {
+      "source": "tanstack-skills/tanstack-skills",
+      "sourceType": "github",
+      "computedHash": "6d00fa22960ef5c45d14906f8f05d91870de658effb8c76bacc69d60a1000098"
+    },
+    "tanstack-router-best-practices": {
+      "source": "deckardger/tanstack-agent-skills",
+      "sourceType": "github",
+      "computedHash": "090ae367732367c6a9a693dde029072e0eda8463e2a1047da76a4ec9b7d58b63"
+    },
     "tanstack-start-best-practices": {
       "source": "deckardger/tanstack-agent-skills",
       "sourceType": "github",
       "computedHash": "5f96b7af6d45343b5f272007ac16f149a319d3f203b6ed16bddc0f54f1257ac2"
+    },
+    "zod": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "3307ca1bef37ac4f32264c971c2b54ca3191f4f248a820b2c1255fc045ceb125"
     }
   }
 }
