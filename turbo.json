@@ -1,21 +1,43 @@
 {
-  "$schema": "https://turborepo.dev/schema.json",
-  "ui": "tui",
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
-    },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "check-types": {
-      "dependsOn": ["^check-types"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    }
-  }
+	"$schema": "https://turborepo.dev/schema.json",
+	"ui": "tui",
+	"tasks": {
+		"transit": {
+			"dependsOn": ["^transit"]
+		},
+		"build": {
+			"dependsOn": ["^build"]
+		},
+		"lint": {
+			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/biome.json"]
+		},
+		"check-types": {
+			"dependsOn": ["transit"]
+		},
+		"check": {
+			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/biome.json"]
+		},
+		"dev": {
+			"cache": false,
+			"persistent": true
+		},
+		"format": {
+			"cache": false
+		},
+		"test": {},
+		"//#lint:root": {
+			"inputs": ["package.json", "turbo.json", "biome.json"]
+		},
+		"//#format:root": {
+			"cache": false,
+			"inputs": ["package.json", "turbo.json", "biome.json"]
+		},
+		"//#check:root": {
+			"inputs": ["package.json", "turbo.json", "biome.json"]
+		},
+		"//#format:docs": {
+			"cache": false,
+			"inputs": ["**/*.md"]
+		}
+	}
 }

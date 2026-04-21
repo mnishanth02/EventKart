@@ -1,5 +1,5 @@
 ---
-title: Kiran V1 — Architecture & Tech Stack
+title: EventKart V1 — Architecture & Tech Stack
 version: 1.3
 date_created: 2026-04-19
 last_updated: 2026-04-20
@@ -7,9 +7,9 @@ derived_from: docs/requirements.md (v1.1), docs/product-plan.md (v2.1)
 owner: Engineering / Founding Team
 ---
 
-# Kiran V1 — Architecture & Tech Stack
+# EventKart V1 — Architecture & Tech Stack
 
-This document defines the system architecture, tech stack, and infrastructure decisions for Kiran V1. It is informed by the product plan and requirements document, and designed to support the stated scale target of **20,000 concurrent registrations per event**.
+This document defines the system architecture, tech stack, and infrastructure decisions for EventKart V1. It is informed by the product plan and requirements document, and designed to support the stated scale target of **20,000 concurrent registrations per event**.
 
 ---
 
@@ -17,14 +17,14 @@ This document defines the system architecture, tech stack, and infrastructure de
 
 ### Peak scenario: Popular event registration opens
 
-| Metric | Estimate | Constraint |
-|---|---|---|
-| Concurrent users on event page | ~20,000 | CDN/SSR handles read load |
-| Registration form submissions/sec | 500–1,000/sec | Backend burst capacity |
-| Payment initiations/sec | 200–500/sec | Razorpay Route rate limit (~500 TPS — **unverified; confirm with Razorpay enterprise team before launch**) |
-| OTP sends/sec | 200–500/sec | OTP provider rate limit |
-| QR check-ins (event day) | 5–10/sec per organizer | Not a scaling concern |
-| Browsing (non-peak) | 100–500 concurrent | Served mostly from cache/CDN |
+| Metric                            | Estimate               | Constraint                                                                                                 |
+| --------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Concurrent users on event page    | ~20,000                | CDN/SSR handles read load                                                                                  |
+| Registration form submissions/sec | 500–1,000/sec          | Backend burst capacity                                                                                     |
+| Payment initiations/sec           | 200–500/sec            | Razorpay Route rate limit (~500 TPS — **unverified; confirm with Razorpay enterprise team before launch**) |
+| OTP sends/sec                     | 200–500/sec            | OTP provider rate limit                                                                                    |
+| QR check-ins (event day)          | 5–10/sec per organizer | Not a scaling concern                                                                                      |
+| Browsing (non-peak)               | 100–500 concurrent     | Served mostly from cache/CDN                                                                               |
 
 ### Key insight
 
@@ -45,14 +45,14 @@ The real throughput bottleneck is external: payment gateway and OTP provider rat
 
 ### Why not microservices
 
-| Factor | Microservices | Modular Monolith |
-|---|---|---|
-| Team size (small founding team) | High overhead | Right-sized |
-| Speed to V1 | Slow (infra complexity) | Fast |
-| 20K concurrent | Achievable | Achievable with horizontal scaling |
-| Operational cost | High (orchestration, networking, observability per service) | Low |
-| Data consistency (payment + booking) | Distributed transactions | Single DB transaction |
-| Future extraction | N/A | Extract when a module needs independent scaling |
+| Factor                               | Microservices                                               | Modular Monolith                                |
+| ------------------------------------ | ----------------------------------------------------------- | ----------------------------------------------- |
+| Team size (small founding team)      | High overhead                                               | Right-sized                                     |
+| Speed to V1                          | Slow (infra complexity)                                     | Fast                                            |
+| 20K concurrent                       | Achievable                                                  | Achievable with horizontal scaling              |
+| Operational cost                     | High (orchestration, networking, observability per service) | Low                                             |
+| Data consistency (payment + booking) | Distributed transactions                                    | Single DB transaction                           |
+| Future extraction                    | N/A                                                         | Extract when a module needs independent scaling |
 
 ### Module boundaries
 
@@ -124,6 +124,7 @@ External Services:
 ### Module extraction criteria
 
 A module should be extracted into its own service only when:
+
 - It needs to scale independently (e.g., check-in service during event day)
 - It has a fundamentally different deployment cadence
 - A team is dedicated to it
@@ -134,28 +135,32 @@ For V1, extraction is not expected. The boundaries exist in code to make future 
 
 The frontend (TanStack Start) and backend (Fastify) are separate deployable services that use a **hybrid communication pattern**:
 
-| Route type | Examples | Rendering | API communication |
-|---|---|---|---|
-| Public SSR pages | `/`, `/events/:slug`, `/organizers/:slug` | Server-side rendered by TanStack Start | TanStack Start server functions call Fastify **server-to-server** over Railway's internal network (no public internet hop) |
-| Client-rendered app | `/book/*`, `/my/*`, `/org/*`, `/admin/*` | Client-side React | Browser calls Fastify API **directly** over public endpoint |
+| Route type          | Examples                                  | Rendering                              | API communication                                                                                                          |
+| ------------------- | ----------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Public SSR pages    | `/`, `/events/:slug`, `/organizers/:slug` | Server-side rendered by TanStack Start | TanStack Start server functions call Fastify **server-to-server** over Railway's internal network (no public internet hop) |
+| Client-rendered app | `/book/*`, `/my/*`, `/org/*`, `/admin/*`  | Client-side React                      | Browser calls Fastify API **directly** over public endpoint                                                                |
 
 **Why hybrid:**
+
 - SSR pages get server-to-server latency (~1–5ms internal) instead of public round-trip latency, which matters for SEO-critical pages
 - Client-rendered pages avoid an unnecessary proxy hop through the frontend server, reducing latency for interactive flows like registration and dashboards
 - Auth is handled consistently via a shared session cookie on the parent domain
 
 **Auth across services:**
-- Both services share a parent domain: `kiran.app` (frontend) and `api.kiran.app` (backend)
-- Fastify issues an `HttpOnly`, `Secure`, `SameSite=Lax` session cookie scoped to `.kiran.app`
+
+- Both services share a parent domain: `eventkart.app` (frontend) and `api.eventkart.app` (backend)
+- Fastify issues an `HttpOnly`, `Secure`, `SameSite=Lax` session cookie scoped to `.eventkart.app`
 - For SSR routes, TanStack Start reads the session cookie from the incoming request and forwards it in server-to-server calls to Fastify
-- For client-rendered routes, the browser sends the cookie directly to `api.kiran.app`
+- For client-rendered routes, the browser sends the cookie directly to `api.eventkart.app`
 - `SameSite=Lax` is used instead of `Strict` to allow the cookie to be sent on top-level navigations from external links (e.g., shared event page URLs)
 
 **CORS configuration:**
-- Fastify enables CORS for the frontend origin (`https://kiran.app`) with `credentials: true`
+
+- Fastify enables CORS for the frontend origin (`https://eventkart.app`) with `credentials: true`
 - Server-to-server calls from TanStack Start bypass CORS (internal network, not browser-initiated)
 
 **Rate limiting scope:**
+
 - Browser-direct calls to Fastify: standard per-IP rate limits apply
 - Server-to-server calls from TanStack Start: identified by internal network origin or a shared request-signing secret, allowed higher rate limits since they are already one-per-user-request
 
@@ -165,18 +170,18 @@ The frontend (TanStack Start) and backend (Fastify) are separate deployable serv
 
 ### 3.1 Frontend
 
-| Component | Choice | Rationale |
-|---|---|---|
-| **Framework** | TanStack Start (`@tanstack/react-start`) | SSR for SEO (event pages, OG tags), server functions, type-safe routing, deep TanStack ecosystem integration. **Note:** TanStack Start is currently RC (v1.154+, not GA). API is stable and production-ready; pin exact version and include upgrade validation in release checklists. |
-| **UI library** | React | Mature ecosystem, largest hiring pool in India |
-| **Routing** | TanStack Router | Type-safe, file-based routing built into TanStack Start |
-| **Server state** | TanStack Query | Caching, background refetching, optimistic updates |
-| **Styling** | Tailwind CSS v4 | Utility-first, mobile-first, fast iteration. CSS-first config (no `tailwind.config.js`). |
-| **Component library** | shadcn/ui (v4, requires Tailwind v4) | Accessible, copy-paste components, full code ownership |
-| **Form handling** | TanStack Form (v1) + Zod | Type-safe, headless, granular reactivity. v1 is now GA with first-class TypeScript inference. Validation shared with backend via Zod schemas. |
-| **Tables & datagrids** | TanStack Table (v8) | Headless, framework-agnostic table engine. Sorting, filtering, pagination, grouping, row selection, column resizing. 27K+ stars, 179K+ dependents. Used by shadcn/ui's DataTable. |
-| **Virtualization** | TanStack Virtual (v3) | Headless virtualization for large lists/grids. 60FPS performance for participant rosters (20K+ rows). Composes with TanStack Table for virtualized tables. |
-| **Build** | Vite (via `@tanstack/react-start` plugin) | Fast HMR, optimized builds. Vinxi was removed from TanStack Start in v1.121.0 (June 2025); Vite is now the sole build tool. Config via `vite.config.ts`. |
+| Component              | Choice                                    | Rationale                                                                                                                                                                                                                                                                             |
+| ---------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Framework**          | TanStack Start (`@tanstack/react-start`)  | SSR for SEO (event pages, OG tags), server functions, type-safe routing, deep TanStack ecosystem integration. **Note:** TanStack Start is currently RC (v1.154+, not GA). API is stable and production-ready; pin exact version and include upgrade validation in release checklists. |
+| **UI library**         | React                                     | Mature ecosystem, largest hiring pool in India                                                                                                                                                                                                                                        |
+| **Routing**            | TanStack Router                           | Type-safe, file-based routing built into TanStack Start                                                                                                                                                                                                                               |
+| **Server state**       | TanStack Query                            | Caching, background refetching, optimistic updates                                                                                                                                                                                                                                    |
+| **Styling**            | Tailwind CSS v4                           | Utility-first, mobile-first, fast iteration. CSS-first config (no `tailwind.config.js`).                                                                                                                                                                                              |
+| **Component library**  | shadcn/ui (v4, requires Tailwind v4)      | Accessible, copy-paste components, full code ownership                                                                                                                                                                                                                                |
+| **Form handling**      | TanStack Form (v1) + Zod                  | Type-safe, headless, granular reactivity. v1 is now GA with first-class TypeScript inference. Validation shared with backend via Zod schemas.                                                                                                                                         |
+| **Tables & datagrids** | TanStack Table (v8)                       | Headless, framework-agnostic table engine. Sorting, filtering, pagination, grouping, row selection, column resizing. 27K+ stars, 179K+ dependents. Used by shadcn/ui's DataTable.                                                                                                     |
+| **Virtualization**     | TanStack Virtual (v3)                     | Headless virtualization for large lists/grids. 60FPS performance for participant rosters (20K+ rows). Composes with TanStack Table for virtualized tables.                                                                                                                            |
+| **Build**              | Vite (via `@tanstack/react-start` plugin) | Fast HMR, optimized builds. Vinxi was removed from TanStack Start in v1.121.0 (June 2025); Vite is now the sole build tool. Config via `vite.config.ts`.                                                                                                                              |
 
 #### Frontend route structure
 
@@ -187,23 +192,23 @@ The frontend (TanStack Start) and backend (Fastify) are separate deployable serv
 /book/:eventId            → Registration + payment flow (CSR with `ssr: 'data-only'`, auth-gated at submit)
 /my/*                     → Participant profile, booking history (CSR, auth required)
 /org/*                    → Organizer dashboard (CSR, auth required)
-/admin/*                  → Kiran ops panel (CSR, auth required)
+/admin/*                  → EventKart ops panel (CSR, auth required)
 ```
 
-SSR pages (/, /events/*, /organizers/*) are the public-facing, SEO-critical surfaces. Dashboard and booking flows are client-rendered.
+SSR pages (/, /events/_, /organizers/_) are the public-facing, SEO-critical surfaces. Dashboard and booking flows are client-rendered.
 
 ### 3.2 Backend
 
-| Component | Choice | Rationale |
-|---|---|---|
-| **Runtime** | Node.js (v22 LTS+) | Same language as frontend, shared Zod schemas, smaller team surface. Note: Node.js v20 reached EOL April 2026. |
-| **Framework** | Fastify v5 | 2–3x faster than Express, built-in validation (Ajv), plugin system, TypeScript-first. Note: Fastify v4 reached EOL June 2025. |
-| **Language** | TypeScript | Type safety, shared types with frontend |
-| **ORM** | Drizzle ORM | Lightweight, SQL-like syntax, excellent TypeScript types, fast, minimal abstraction. **Note:** Pre-1.0 (v0.45.x); pin exact version. |
-| **Validation** | Zod v4 | Shared schemas between frontend and backend. v4 offers 6–14x performance gains over v3. Consider `zod-mini` for frontend bundle optimization. |
-| **Auth** | Custom (OTP + session) | Simple enough for custom implementation; no need for Auth0/Clerk overhead |
-| **Queue** | BullMQ (Redis-backed) | Job queue for payment processing, email sending, async tasks. Use **separate queues**: `payment-webhook`, `email`, `cleanup`, `exports`. Configure per-queue concurrency, rate limits, and retry budgets. BullMQ has no native DLQ — implement custom failed-jobs queue with alerting and replay tooling. Use `upsertJobScheduler` API for cron/repeatable jobs. Native OpenTelemetry support available (v5.71+). |
-| **Rate limiting** | @fastify/rate-limit + Redis | Per-route and per-event rate limiting |
+| Component         | Choice                      | Rationale                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ----------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Runtime**       | Node.js (v22 LTS+)          | Same language as frontend, shared Zod schemas, smaller team surface. Note: Node.js v20 reached EOL April 2026.                                                                                                                                                                                                                                                                                                    |
+| **Framework**     | Fastify v5                  | 2–3x faster than Express, built-in validation (Ajv), plugin system, TypeScript-first. Note: Fastify v4 reached EOL June 2025.                                                                                                                                                                                                                                                                                     |
+| **Language**      | TypeScript                  | Type safety, shared types with frontend                                                                                                                                                                                                                                                                                                                                                                           |
+| **ORM**           | Drizzle ORM                 | Lightweight, SQL-like syntax, excellent TypeScript types, fast, minimal abstraction. **Note:** Pre-1.0 (v0.45.x); pin exact version.                                                                                                                                                                                                                                                                              |
+| **Validation**    | Zod v4                      | Shared schemas between frontend and backend. v4 offers 6–14x performance gains over v3. Consider `zod-mini` for frontend bundle optimization.                                                                                                                                                                                                                                                                     |
+| **Auth**          | Custom (OTP + session)      | Simple enough for custom implementation; no need for Auth0/Clerk overhead                                                                                                                                                                                                                                                                                                                                         |
+| **Queue**         | BullMQ (Redis-backed)       | Job queue for payment processing, email sending, async tasks. Use **separate queues**: `payment-webhook`, `email`, `cleanup`, `exports`. Configure per-queue concurrency, rate limits, and retry budgets. BullMQ has no native DLQ — implement custom failed-jobs queue with alerting and replay tooling. Use `upsertJobScheduler` API for cron/repeatable jobs. Native OpenTelemetry support available (v5.71+). |
+| **Rate limiting** | @fastify/rate-limit + Redis | Per-route and per-event rate limiting                                                                                                                                                                                                                                                                                                                                                                             |
 
 #### API structure
 
@@ -235,10 +240,10 @@ GET  /api/v1/admin/event-reviews   → Events pending review
 
 ### 3.3 Database
 
-| Component | Choice | Rationale |
-|---|---|---|
-| **Database** | PostgreSQL 17 | ACID transactions, JSONB for flexible form fields, mature, battle-tested. v17 adds JSON_TABLE and improved vacuum performance. |
-| **Migrations** | Drizzle Kit | Integrated with Drizzle ORM, generates SQL migrations. Use **expand/contract migration strategy**: backward-compatible schema changes first, deploy app code second, cleanup migrations later. Every migration must include rollback SQL and lock-risk assessment. |
+| Component              | Choice                               | Rationale                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Database**           | PostgreSQL 17                        | ACID transactions, JSONB for flexible form fields, mature, battle-tested. v17 adds JSON_TABLE and improved vacuum performance.                                                                                                                                                                                                                                                                                                                |
+| **Migrations**         | Drizzle Kit                          | Integrated with Drizzle ORM, generates SQL migrations. Use **expand/contract migration strategy**: backward-compatible schema changes first, deploy app code second, cleanup migrations later. Every migration must include rollback SQL and lock-risk assessment.                                                                                                                                                                            |
 | **Connection pooling** | PgBouncer (transaction pooling mode) | Handles connection burst from scaled backend instances. **Critical:** When using Drizzle ORM through PgBouncer, set `prepare: false` in the PostgreSQL driver options to avoid prepared-statement failures. Use a separate direct connection for migrations. Define pool budgets: max app instances × per-instance connections must stay below PgBouncer and Postgres limits, with reserved headroom for workers, admin jobs, and migrations. |
 
 #### Key schema design decisions
@@ -253,28 +258,28 @@ GET  /api/v1/admin/event-reviews   → Events pending review
 
 ### 3.4 Cache, Queue & Session
 
-| Component | Choice | Rationale |
-|---|---|---|
+| Component | Choice                  | Rationale                                                                                                                                                                                                                                                  |
+| --------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Redis** | Redis (Railway managed) | Session store, BullMQ job queue, rate limiting, caching. **Configuration:** Use `volatile-lru` eviction policy. Isolate namespaces with key prefixes: `sess:`, `bull:`, `rl:`, `cache:`, `otp:` — ensures cache eviction never touches sessions or queues. |
 
 #### Redis usage breakdown
 
-| Use case | Pattern |
-|---|---|
-| Sessions | Key-value with TTL |
-| Registration queue | BullMQ queue — smooths payment burst |
-| Rate limiting | Sliding window counters per event + per IP |
-| Event page cache | Key-value with short TTL (60s) for listing queries |
-| OTP storage | Key-value with 5-min TTL |
+| Use case           | Pattern                                            |
+| ------------------ | -------------------------------------------------- |
+| Sessions           | Key-value with TTL                                 |
+| Registration queue | BullMQ queue — smooths payment burst               |
+| Rate limiting      | Sliding window counters per event + per IP         |
+| Event page cache   | Key-value with short TTL (60s) for listing queries |
+| OTP storage        | Key-value with 5-min TTL                           |
 
 ### 3.5 External Services
 
-| Service | Provider | Why |
-|---|---|---|
-| **Payments** | Razorpay Route | Locked in product plan. Best India UPI + card support. Split payout built-in. **⚠️ RBI PA-PG Compliance:** The 2025 Master Direction requires Payment Aggregator authorization. Kiran's marketplace split-payout model must be validated against these regulations before launch — this is a legal prerequisite. Confirm actual TPS limits with Razorpay enterprise team. |
-| **OTP** | MSG91 | India-first, reliable, good pricing, DLT-compliant. **Fallback:** Enable WhatsApp OTP delivery as fallback for SMS delivery failures. |
-| **Email** | Resend (burst: SES fallback) | Modern API, great DX, React Email for templates. **⚠️ Rate limit:** Resend default is only 2 req/s — use batch API (up to 100 emails/request) for burst booking confirmations, or add Amazon SES as high-throughput fallback. **Deployment prerequisite:** Configure SPF, DKIM, and DMARC records for sending domain before launch. |
-| **Object storage** | Cloudflare R2 or AWS S3 | KYC documents, event images (hero, route map), roster PDFs. R2 has no egress fees. **KYC documents must use server-side encryption at rest.** Access logging enabled for audit compliance. |
+| Service            | Provider                     | Why                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Payments**       | Razorpay Route               | Locked in product plan. Best India UPI + card support. Split payout built-in. **⚠️ RBI PA-PG Compliance:** The 2025 Master Direction requires Payment Aggregator authorization. EventKart's marketplace split-payout model must be validated against these regulations before launch — this is a legal prerequisite. Confirm actual TPS limits with Razorpay enterprise team. |
+| **OTP**            | MSG91                        | India-first, reliable, good pricing, DLT-compliant. **Fallback:** Enable WhatsApp OTP delivery as fallback for SMS delivery failures.                                                                                                                                                                                                                                         |
+| **Email**          | Resend (burst: SES fallback) | Modern API, great DX, React Email for templates. **⚠️ Rate limit:** Resend default is only 2 req/s — use batch API (up to 100 emails/request) for burst booking confirmations, or add Amazon SES as high-throughput fallback. **Deployment prerequisite:** Configure SPF, DKIM, and DMARC records for sending domain before launch.                                           |
+| **Object storage** | Cloudflare R2 or AWS S3      | KYC documents, event images (hero, route map), roster PDFs. R2 has no egress fees. **KYC documents must use server-side encryption at rest.** Access logging enabled for audit compliance.                                                                                                                                                                                    |
 
 ---
 
@@ -282,20 +287,20 @@ GET  /api/v1/admin/event-reviews   → Events pending review
 
 ### 4.1 Hosting: Railway
 
-| Component | Railway Service | Notes |
-|---|---|---|
-| **Frontend (TanStack Start)** | Web service | SSR server, auto-scaled |
-| **Backend (Fastify)** | Web service | API server, auto-scaled |
-| **PostgreSQL** | Railway PostgreSQL | Managed, automated backups, connection pooler included |
-| **Redis** | Railway Redis | Managed |
-| **Worker (BullMQ)** | Worker service | Processes async jobs (emails, payment callbacks) |
+| Component                     | Railway Service    | Notes                                                  |
+| ----------------------------- | ------------------ | ------------------------------------------------------ |
+| **Frontend (TanStack Start)** | Web service        | SSR server, auto-scaled                                |
+| **Backend (Fastify)**         | Web service        | API server, auto-scaled                                |
+| **PostgreSQL**                | Railway PostgreSQL | Managed, automated backups, connection pooler included |
+| **Redis**                     | Railway Redis      | Managed                                                |
+| **Worker (BullMQ)**           | Worker service     | Processes async jobs (emails, payment callbacks)       |
 
 #### Why Railway over AWS for V1
 
-| Factor | Railway | AWS |
-|---|---|---|
-| Deployment speed | `git push` → deployed | ECS task definitions, ALB config, IAM roles |
-| Ops burden | Near-zero | Significant (even with Fargate) |
+| Factor           | Railway                         | AWS                                                     |
+| ---------------- | ------------------------------- | ------------------------------------------------------- |
+| Deployment speed | `git push` → deployed           | ECS task definitions, ALB config, IAM roles             |
+| Ops burden       | Near-zero                       | Significant (even with Fargate)                         |
 | Cost at V1 scale | ~$50–150/month (pilot baseline) | ~$200–500/month (comparable compute + managed services) |
 
 **Cost note:** `$50–150/month` is plausible for a low-traffic pilot only, **not for validated 20K-concurrent burst readiness**. Production-like load testing requires multiple web/API instances, dedicated worker(s), managed Postgres with sufficient CPU/IOPS, Redis with headroom, CDN, Sentry, SMS, and email costs. Maintain two cost models: "pilot baseline" and "peak-event ready" with explicit assumptions.
@@ -308,19 +313,19 @@ GET  /api/v1/admin/event-reviews   → Events pending review
 
 ### 4.2 CDN & Edge
 
-| Component | Choice | Notes |
-|---|---|---|
-| **CDN** | Cloudflare (free tier) | Cache SSR event pages at edge, static assets, DDoS protection |
-| **Domain** | Cloudflare DNS | Fast propagation, free SSL |
+| Component  | Choice                 | Notes                                                         |
+| ---------- | ---------------------- | ------------------------------------------------------------- |
+| **CDN**    | Cloudflare (free tier) | Cache SSR event pages at edge, static assets, DDoS protection |
+| **Domain** | Cloudflare DNS         | Fast propagation, free SSL                                    |
 
 ### 4.3 Monitoring & Observability
 
-| Component | Choice | Notes |
-|---|---|---|
-| **Error tracking** | Sentry | Frontend + backend error tracking, source maps. **Setup:** Separate Sentry projects (or separate init files) for client-side, SSR server, and API server. |
-| **Logging** | Pino (Fastify default) + Railway log drain | Structured JSON logs with request correlation IDs. Consider Pino + OpenTelemetry bridge for log↔trace correlation. |
-| **Uptime** | Better Uptime or Railway built-in | Alerts on downtime |
-| **APM** | Minimum V1 metrics (see below) | BullMQ v5.71+ provides native OpenTelemetry; wire it up for near-free distributed tracing. |
+| Component          | Choice                                     | Notes                                                                                                                                                     |
+| ------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Error tracking** | Sentry                                     | Frontend + backend error tracking, source maps. **Setup:** Separate Sentry projects (or separate init files) for client-side, SSR server, and API server. |
+| **Logging**        | Pino (Fastify default) + Railway log drain | Structured JSON logs with request correlation IDs. Consider Pino + OpenTelemetry bridge for log↔trace correlation.                                        |
+| **Uptime**         | Better Uptime or Railway built-in          | Alerts on downtime                                                                                                                                        |
+| **APM**            | Minimum V1 metrics (see below)             | BullMQ v5.71+ provides native OpenTelemetry; wire it up for near-free distributed tracing.                                                                |
 
 #### Minimum production metrics for V1
 
@@ -340,9 +345,9 @@ Track these from day one — not deferred to post-V1:
 
 ### 4.4 Health checks
 
-| Service | Endpoint | Checks |
-|---|---|---|
-| **Fastify API** | `GET /health` | PostgreSQL connection + Redis ping |
+| Service            | Endpoint      | Checks                                   |
+| ------------------ | ------------- | ---------------------------------------- |
+| **Fastify API**    | `GET /health` | PostgreSQL connection + Redis ping       |
 | **TanStack Start** | `GET /health` | SSR rendering + Fastify API reachability |
 
 Railway uses these endpoints for auto-scaling decisions and automatic restarts on failure.
@@ -370,6 +375,7 @@ GitHub Push → GitHub Actions → Build & Test → Migrate DB → Deploy to Rai
 ```
 
 **Database migration step:**
+
 - Runs after build and test, before the app service restarts
 - Command: `pnpm --filter @eventkart/db drizzle-kit migrate`
 - **Strategy:** Adopt **expand/contract migration pattern** — backward-compatible schema changes first, deploy app code second, cleanup migrations later. Every migration must include: compatibility notes, rollback SQL, data backfill plan, lock-risk assessment, and execution-time estimate.
@@ -379,11 +385,11 @@ GitHub Push → GitHub Actions → Build & Test → Migrate DB → Deploy to Rai
 
 ### Environments
 
-| Environment | Purpose | Deployment |
-|---|---|---|
-| **Local** | Development | Docker Compose (Postgres + Redis + app) |
-| **Staging** | QA, organizer demos | Auto-deploy from `main` branch |
-| **Production** | Live pilot | Manual promote from staging or deploy from `release/*` tags |
+| Environment    | Purpose             | Deployment                                                  |
+| -------------- | ------------------- | ----------------------------------------------------------- |
+| **Local**      | Development         | Docker Compose (Postgres + Redis + app)                     |
+| **Staging**    | QA, organizer demos | Auto-deploy from `main` branch                              |
+| **Production** | Live pilot          | Manual promote from staging or deploy from `release/*` tags |
 
 ### Repository structure: Monorepo
 
@@ -425,10 +431,10 @@ eventkart/
 
 ### Authentication
 
-- **Participant:** Phone OTP → session cookie (HttpOnly, Secure, SameSite=Lax, Domain=.kiran.app). Session stored in Redis with 30-day TTL.
+- **Participant:** Phone OTP → session cookie (HttpOnly, Secure, SameSite=Lax, Domain=.eventkart.app). Session stored in Redis with 30-day TTL.
 - **Organizer:** Phone OTP + email verification → session cookie. Elevated role assigned after admin verification.
 - **Admin:** Phone OTP + IP allowlist during pilot.
-- **Cookie domain:** Scoped to `.kiran.app` so the session cookie is shared between the frontend (`kiran.app`) and backend (`api.kiran.app`). `SameSite=Lax` allows the cookie to be sent on top-level navigations from external links.
+- **Cookie domain:** Scoped to `.eventkart.app` so the session cookie is shared between the frontend (`eventkart.app`) and backend (`api.eventkart.app`). `SameSite=Lax` allows the cookie to be sent on top-level navigations from external links.
 
 ### Data protection
 
@@ -475,16 +481,17 @@ Driven by requirements F-7.3.4 and §4.2.
 
 Driven by requirements §4.3 and product plan §13.
 
-| Data class | Retention rule | Mechanism |
-|---|---|---|
-| Participant profile | Until deletion request or 3 years of inactivity | Soft delete via `deleted_at` column; deletion API marks profile and triggers anonymization of linked bookings |
-| Booking & payment records | 5 years (financial/audit) | Anonymization replaces participant PII while preserving financial records |
-| Sensitive participant fields (blood group, medical, emergency contact) | 30 days post-event | BullMQ repeatable cron job scans and deletes sensitive fields on bookings for completed events |
-| Organizer verification docs | 1 year after account closure | BullMQ repeatable cron job removes S3/R2 objects and DB metadata |
-| Audit logs | 3 years minimum | No automated deletion; manual review before purge |
-| Consent records | Retained as long as any related data exists | Never deleted before the data they authorize |
+| Data class                                                             | Retention rule                                  | Mechanism                                                                                                     |
+| ---------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Participant profile                                                    | Until deletion request or 3 years of inactivity | Soft delete via `deleted_at` column; deletion API marks profile and triggers anonymization of linked bookings |
+| Booking & payment records                                              | 5 years (financial/audit)                       | Anonymization replaces participant PII while preserving financial records                                     |
+| Sensitive participant fields (blood group, medical, emergency contact) | 30 days post-event                              | BullMQ repeatable cron job scans and deletes sensitive fields on bookings for completed events                |
+| Organizer verification docs                                            | 1 year after account closure                    | BullMQ repeatable cron job removes S3/R2 objects and DB metadata                                              |
+| Audit logs                                                             | 3 years minimum                                 | No automated deletion; manual review before purge                                                             |
+| Consent records                                                        | Retained as long as any related data exists     | Never deleted before the data they authorize                                                                  |
 
 **Implementation:**
+
 - Soft-delete pattern: `deleted_at` timestamp column on participant profiles. Queries exclude soft-deleted records by default.
 - Anonymization: Replaces PII fields (`name`, `email`, `phone`) with deterministic hashes or placeholder values. Booking financial data (amount, transaction ID, split details) is preserved.
 - Scheduled jobs: BullMQ repeatable jobs running on the worker service handle sensitive field cleanup (daily) and KYC doc cleanup (weekly).
@@ -574,34 +581,34 @@ The backend never needs to process 20K simultaneous transactions. The natural st
 
 ## 8. Decision Log
 
-| # | Decision | Chosen | Alternatives Considered | Rationale |
-|---|---|---|---|---|
-| D-1 | Architecture pattern | Modular monolith | Microservices, hybrid | Team size, speed to V1, data consistency |
-| D-2 | Frontend framework | TanStack Start (`@tanstack/react-start`) | Next.js, React + Vite SPA | SSR for SEO, type-safe routing, avoids Vercel lock-in. **Status:** RC (v1.154+, not GA). Maturity risk accepted — pin exact version, validate on upgrade. Vinxi removed June 2025; Vite is sole build tool. |
-| D-3 | Backend framework | Fastify v5 (Node.js v22 LTS+) | Spring Boot, FastAPI | Same language as frontend, fast, TypeScript-first. Fastify v4 EOL June 2025, Node.js v20 EOL April 2026. |
-| D-4 | ORM | Drizzle ORM (v0.45.x) | Prisma, raw SQL | Lightweight, SQL-like, great TS types. Pre-1.0; pin exact version. **Requires `prepare: false` with PgBouncer.** |
-| D-5 | Database | PostgreSQL 17 | MySQL, MongoDB | ACID, JSONB, JSON_TABLE, improved vacuum, industry standard |
-| D-6 | Hosting | Railway | AWS, GCP, Render, Fly.io | Minimal ops, fast deploys, right cost for V1. Latency accepted for dev — evaluate alternatives before production. |
-| D-7 | CDN | Cloudflare | CloudFront, Fastly | Free tier, global edge, DDoS protection |
-| D-8 | Payment gateway | Razorpay Route | Cashfree Split | Locked in product plan, best India support |
-| D-9 | OTP provider | MSG91 | Twilio, Gupshup | India-first, DLT-compliant, good pricing |
-| D-10 | Email | Resend | SES, SendGrid | Modern DX, React Email templates |
-| D-11 | Monorepo tool | Turborepo v2 + pnpm | Nx, npm/yarn workspaces | Fast, `tasks` config, build caching, remote caching, strict dependency resolution. Use pnpm `catalog:` for centralized versions. |
-| D-12 | Routing pattern | Hybrid (SSR server-to-server + browser-direct) | Full BFF proxy, browser-direct only | Best performance for SSR pages, simpler than full BFF, consistent auth via shared cookie domain |
-| D-13 | QR code generation | On-the-fly HMAC-signed token | Store QR images in S3/R2 | Eliminates storage overhead, QR is deterministic and small, HMAC verification is faster. Token includes `booking_id`, `event_id`, `ticket_version`, `exp`, `kid`, `jti`. Server-side status check enforced at scan time. |
-| D-14 | API versioning | URL prefix `/api/v1/` | Header-based, no versioning | Simple, future-proof, easy to route |
-| D-15 | Redis SPOF | Accepted for V1 dev | Redis Sentinel, fallback to DB sessions | Revisit before production. For dev/pilot, single Redis instance is sufficient. |
-| D-16 | Package manager | pnpm | npm, yarn | Fast installs, strict dependency resolution, excellent monorepo support |
-| D-17 | Offline check-in | Downloadable roster (PDF/CSV) only | PWA with offline QR scanning | V1 simplicity. PWA deferred to post-V1 if needed. |
-| D-18 | Razorpay split config | Deferred | Implement upfront | Integrate Razorpay first. Split payout configuration details addressed during Phase 3 implementation. |
-| D-19 | Validation library | Zod v4 | Zod v3, ArkType, Valibot | 6–14x performance gains over v3. Shared frontend/backend schemas. `zod-mini` for frontend bundle optimization. |
-| D-20 | Styling framework | Tailwind CSS v4 | Tailwind v3, CSS Modules | CSS-first config, no `tailwind.config.js`. Required by shadcn/ui v4. |
-| D-21 | Capacity management | Atomic DB reservation + 15-min expiry | Optimistic booking, Redis-based counters | Prevents overselling with single DB transaction. Simpler than distributed counters. |
-| D-22 | Email burst strategy | Resend (low-vol) + SES fallback (burst) | Resend only, SES only | Resend's 2 req/s default too low for burst. SES handles high-throughput. Resend for DX in templates. |
-| D-23 | Payment reconciliation | Periodic Razorpay API poll | Webhook-only | Safety net for lost webhooks during outages. Essential for financial consistency. |
-| D-24 | Form library | TanStack Form (v1) | React Hook Form, Formik | v1 GA with first-class TypeScript inference, granular reactive updates, headless, Zod integration. Superior DX for type-safe forms. |
-| D-25 | Table/datagrid | TanStack Table (v8) | AG Grid (free), MUI DataGrid | Headless, 27K+ stars, 179K+ dependents. Full control over markup. Composes with TanStack Virtual for 20K+ row participant rosters. |
-| D-26 | Virtualization | TanStack Virtual (v3) | react-window, react-virtualized | Tiny API (single hook), 60FPS, vertical/horizontal/grid support. Essential for organizer dashboards with large participant lists. |
+| #    | Decision               | Chosen                                         | Alternatives Considered                  | Rationale                                                                                                                                                                                                                |
+| ---- | ---------------------- | ---------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D-1  | Architecture pattern   | Modular monolith                               | Microservices, hybrid                    | Team size, speed to V1, data consistency                                                                                                                                                                                 |
+| D-2  | Frontend framework     | TanStack Start (`@tanstack/react-start`)       | Next.js, React + Vite SPA                | SSR for SEO, type-safe routing, avoids Vercel lock-in. **Status:** RC (v1.154+, not GA). Maturity risk accepted — pin exact version, validate on upgrade. Vinxi removed June 2025; Vite is sole build tool.              |
+| D-3  | Backend framework      | Fastify v5 (Node.js v22 LTS+)                  | Spring Boot, FastAPI                     | Same language as frontend, fast, TypeScript-first. Fastify v4 EOL June 2025, Node.js v20 EOL April 2026.                                                                                                                 |
+| D-4  | ORM                    | Drizzle ORM (v0.45.x)                          | Prisma, raw SQL                          | Lightweight, SQL-like, great TS types. Pre-1.0; pin exact version. **Requires `prepare: false` with PgBouncer.**                                                                                                         |
+| D-5  | Database               | PostgreSQL 17                                  | MySQL, MongoDB                           | ACID, JSONB, JSON_TABLE, improved vacuum, industry standard                                                                                                                                                              |
+| D-6  | Hosting                | Railway                                        | AWS, GCP, Render, Fly.io                 | Minimal ops, fast deploys, right cost for V1. Latency accepted for dev — evaluate alternatives before production.                                                                                                        |
+| D-7  | CDN                    | Cloudflare                                     | CloudFront, Fastly                       | Free tier, global edge, DDoS protection                                                                                                                                                                                  |
+| D-8  | Payment gateway        | Razorpay Route                                 | Cashfree Split                           | Locked in product plan, best India support                                                                                                                                                                               |
+| D-9  | OTP provider           | MSG91                                          | Twilio, Gupshup                          | India-first, DLT-compliant, good pricing                                                                                                                                                                                 |
+| D-10 | Email                  | Resend                                         | SES, SendGrid                            | Modern DX, React Email templates                                                                                                                                                                                         |
+| D-11 | Monorepo tool          | Turborepo v2 + pnpm                            | Nx, npm/yarn workspaces                  | Fast, `tasks` config, build caching, remote caching, strict dependency resolution. Use pnpm `catalog:` for centralized versions.                                                                                         |
+| D-12 | Routing pattern        | Hybrid (SSR server-to-server + browser-direct) | Full BFF proxy, browser-direct only      | Best performance for SSR pages, simpler than full BFF, consistent auth via shared cookie domain                                                                                                                          |
+| D-13 | QR code generation     | On-the-fly HMAC-signed token                   | Store QR images in S3/R2                 | Eliminates storage overhead, QR is deterministic and small, HMAC verification is faster. Token includes `booking_id`, `event_id`, `ticket_version`, `exp`, `kid`, `jti`. Server-side status check enforced at scan time. |
+| D-14 | API versioning         | URL prefix `/api/v1/`                          | Header-based, no versioning              | Simple, future-proof, easy to route                                                                                                                                                                                      |
+| D-15 | Redis SPOF             | Accepted for V1 dev                            | Redis Sentinel, fallback to DB sessions  | Revisit before production. For dev/pilot, single Redis instance is sufficient.                                                                                                                                           |
+| D-16 | Package manager        | pnpm                                           | npm, yarn                                | Fast installs, strict dependency resolution, excellent monorepo support                                                                                                                                                  |
+| D-17 | Offline check-in       | Downloadable roster (PDF/CSV) only             | PWA with offline QR scanning             | V1 simplicity. PWA deferred to post-V1 if needed.                                                                                                                                                                        |
+| D-18 | Razorpay split config  | Deferred                                       | Implement upfront                        | Integrate Razorpay first. Split payout configuration details addressed during Phase 3 implementation.                                                                                                                    |
+| D-19 | Validation library     | Zod v4                                         | Zod v3, ArkType, Valibot                 | 6–14x performance gains over v3. Shared frontend/backend schemas. `zod-mini` for frontend bundle optimization.                                                                                                           |
+| D-20 | Styling framework      | Tailwind CSS v4                                | Tailwind v3, CSS Modules                 | CSS-first config, no `tailwind.config.js`. Required by shadcn/ui v4.                                                                                                                                                     |
+| D-21 | Capacity management    | Atomic DB reservation + 15-min expiry          | Optimistic booking, Redis-based counters | Prevents overselling with single DB transaction. Simpler than distributed counters.                                                                                                                                      |
+| D-22 | Email burst strategy   | Resend (low-vol) + SES fallback (burst)        | Resend only, SES only                    | Resend's 2 req/s default too low for burst. SES handles high-throughput. Resend for DX in templates.                                                                                                                     |
+| D-23 | Payment reconciliation | Periodic Razorpay API poll                     | Webhook-only                             | Safety net for lost webhooks during outages. Essential for financial consistency.                                                                                                                                        |
+| D-24 | Form library           | TanStack Form (v1)                             | React Hook Form, Formik                  | v1 GA with first-class TypeScript inference, granular reactive updates, headless, Zod integration. Superior DX for type-safe forms.                                                                                      |
+| D-25 | Table/datagrid         | TanStack Table (v8)                            | AG Grid (free), MUI DataGrid             | Headless, 27K+ stars, 179K+ dependents. Full control over markup. Composes with TanStack Virtual for 20K+ row participant rosters.                                                                                       |
+| D-26 | Virtualization         | TanStack Virtual (v3)                          | react-window, react-virtualized          | Tiny API (single hook), 60FPS, vertical/horizontal/grid support. Essential for organizer dashboards with large participant lists.                                                                                        |
 
 ---
 

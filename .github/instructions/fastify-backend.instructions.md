@@ -2,22 +2,22 @@
 applyTo: "**/apps/api/**/*.{ts,tsx}"
 ---
 
-# Kiran Backend — Project-Specific Patterns
+# EventKart Backend — Project-Specific Patterns
 
 > For generic Fastify patterns (plugins, schemas, hooks, testing, deployment), see the installed skill: `.agents/skills/fastify-best-practices/`
-> This file contains ONLY Kiran-specific decisions, module structure, and domain patterns.
+> This file contains ONLY EventKart-specific decisions, module structure, and domain patterns.
 
 ---
 
-## Project Structure (Kiran-Specific)
+## Project Structure (EventKart-Specific)
 
 ```
 apps/api/src/
-├── server.ts               # Production entry point (listen on 0.0.0.0:3000)
+├── server.ts               # Production entry point (listen on 0.0.0.0:3001 by default)
 ├── app.ts                  # Application factory (testable, no listen)
 ├── plugins/                # Infrastructure (use fastify-plugin to share globally)
 │   ├── auth.ts             # Session from Redis, decorates request.session
-│   ├── cors.ts             # Origin: https://kiran.app, credentials: true
+│   ├── cors.ts             # Origin: WEB_ORIGIN, credentials: true
 │   ├── rate-limit.ts       # Redis-backed, per-route overrides
 │   ├── error-handler.ts    # AppError → structured JSON
 │   ├── request-id.ts       # X-Request-ID (forward from TanStack Start or generate)
@@ -49,9 +49,10 @@ apps/api/src/
 
 ---
 
-## Kiran Module Convention
+## EventKart Module Convention
 
 Each module follows this structure:
+
 ```
 modules/<domain>/
 ├── routes.ts       # Route definitions with schemas + preHandlers
@@ -62,30 +63,31 @@ modules/<domain>/
 
 ---
 
-## Authentication — Kiran Session Model
+## Authentication — EventKart Session Model
 
-- Cookie: `kiran_session`, `HttpOnly`, `Secure`, `SameSite=Lax`, `Domain=.kiran.app`, 30-day TTL
+- Cookie: `kiran_session`, `HttpOnly`, `Secure`, `SameSite=Lax`, `Domain=.eventkart.app`, 30-day TTL
 - Session stored in Redis under `sess:<sessionId>`
 - Roles: `participant`, `organizer`, `admin`
 - Server-to-server calls from TanStack Start identified by `X-Internal-Key` header → higher rate limits
 
 ---
 
-## Rate Limiting — Kiran-Specific Rules
+## Rate Limiting — EventKart-Specific Rules
 
-| Endpoint | Limit | Key |
-|----------|-------|-----|
-| `POST /auth/otp/send` | 1/phone/60s | `req.body.phone` |
-| `POST /bookings` | 5/user/minute | `session.userId` |
-| Payment webhook | No limit | Signature-verified |
-| Internal (from TanStack Start) | 1000/min | `X-Internal-Key` |
-| Default API | 100/min | IP |
+| Endpoint                       | Limit         | Key                |
+| ------------------------------ | ------------- | ------------------ |
+| `POST /auth/otp/send`          | 1/phone/60s   | `req.body.phone`   |
+| `POST /bookings`               | 5/user/minute | `session.userId`   |
+| Payment webhook                | No limit      | Signature-verified |
+| Internal (from TanStack Start) | 1000/min      | `X-Internal-Key`   |
+| Default API                    | 100/min       | IP                 |
 
 ---
 
-## Payment — Razorpay Patterns (Kiran-Specific)
+## Payment — Razorpay Patterns (EventKart-Specific)
 
 ### Webhook Flow (CRITICAL PATH)
+
 1. Verify `X-Razorpay-Signature` (HMAC SHA256) — reject if invalid
 2. Record in `webhook_events` table (idempotency key: provider event ID)
 3. Enqueue to `payment-webhook` queue (jobId = event_id for dedup)
@@ -93,28 +95,31 @@ modules/<domain>/
 5. Worker processes: row-lock booking → state machine transition → downstream jobs
 
 ### Capacity Reservation
+
 ```sql
 UPDATE events SET spots_remaining = spots_remaining - 1
 WHERE id = :eventId AND spots_remaining > 0
 RETURNING spots_remaining
 ```
+
 - 15-minute reservation expiry via BullMQ repeatable job
 - Prevents overselling during burst registration
 
 ### Reconciliation
+
 - BullMQ repeatable job every 5 minutes polls Razorpay for payments stuck as "pending"
 - Catches webhooks lost during Railway outages
 
 ---
 
-## BullMQ — Kiran Queue Configuration
+## BullMQ — EventKart Queue Configuration
 
-| Queue | Concurrency | Retry | Use Case |
-|-------|-------------|-------|----------|
-| `payment-webhook` | 10 | 3× exponential | Payment state transitions |
-| `email` | 5 | 2× exponential | Booking confirmations, reminders |
-| `cleanup` | 2 | 1× | Sensitive data expiry (30d post-event) |
-| `exports` | 1 | 2× | Roster PDF/CSV generation |
+| Queue             | Concurrency | Retry          | Use Case                               |
+| ----------------- | ----------- | -------------- | -------------------------------------- |
+| `payment-webhook` | 10          | 3× exponential | Payment state transitions              |
+| `email`           | 5           | 2× exponential | Booking confirmations, reminders       |
+| `cleanup`         | 2           | 1×             | Sensitive data expiry (30d post-event) |
+| `exports`         | 1           | 2×             | Roster PDF/CSV generation              |
 
 Workers run as a **separate Railway service** — never in the API process.
 
@@ -122,7 +127,7 @@ Custom DLQ: BullMQ has no native DLQ — implement via `failed` event handler wi
 
 ---
 
-## Database — Kiran-Specific Drizzle Rules
+## Database — EventKart-Specific Drizzle Rules
 
 - `prepare: false` — MANDATORY (PgBouncer transaction mode)
 - Separate direct connection for migrations (bypasses PgBouncer)
@@ -132,7 +137,7 @@ Custom DLQ: BullMQ has no native DLQ — implement via `failed` event handler wi
 
 ---
 
-## Validation — Kiran Convention
+## Validation — EventKart Convention
 
 - Use `@fastify/type-provider-zod` for schema integration
 - Import shared schemas from `@eventkart/shared/schemas`
@@ -145,18 +150,23 @@ Custom DLQ: BullMQ has no native DLQ — implement via `failed` event handler wi
 
 ```
 GET /health  → { status: 'ok' }           # Liveness (always passes if process is up)
-GET /ready   → DB ping + Redis ping        # Readiness (Railway uses for scaling/restart)
+GET /ready   → { status: 'ok', uptime }   # Current foundation baseline
 ```
 
 ---
 
-## CORS — Kiran Configuration
+## CORS — EventKart Configuration
 
 ```typescript
-origin: ['https://kiran.app']
-credentials: true
-methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
-allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Internal-Key']
+origin: process.env.WEB_ORIGIN; // local default: http://localhost:3000
+credentials: true;
+methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"];
+allowedHeaders: [
+  "Content-Type",
+  "Authorization",
+  "X-Request-ID",
+  "X-Internal-Key",
+];
 ```
 
 ---
@@ -169,7 +179,7 @@ allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Internal-Ke
 
 ---
 
-## Testing — Kiran Conventions
+## Testing — EventKart Conventions
 
 - Use Vitest (not `node:test`) — consistent with frontend
 - Always use `app.inject()` — no port binding needed

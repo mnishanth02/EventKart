@@ -2,14 +2,14 @@
 applyTo: "**/apps/web/**/*.{ts,tsx}"
 ---
 
-# Kiran Frontend — Project-Specific Patterns
+# EventKart Frontend — Project-Specific Patterns
 
 > For generic TanStack Start patterns (server functions, middleware, SSR, prerendering), see the installed skill: `.agents/skills/tanstack-start-best-practices/`
-> This file contains ONLY Kiran-specific decisions, module structure, and domain patterns.
+> This file contains ONLY EventKart-specific decisions, module structure, and domain patterns.
 
 ---
 
-## Project Structure (Kiran-Specific)
+## Project Structure (EventKart-Specific)
 
 ```
 apps/web/src/
@@ -32,6 +32,7 @@ apps/web/src/
 ```
 
 ### Feature Module Convention
+
 ```
 features/<domain>/
 ├── api.ts              # createServerFn wrappers (safe to import anywhere)
@@ -44,63 +45,67 @@ features/<domain>/
 
 ---
 
-## SSR Decisions (Kiran Routes)
+## SSR Decisions (EventKart Routes)
 
-| Route | SSR Mode | Reason |
-|-------|----------|--------|
-| `/` (discovery) | `ssr: true` | SEO, CDN-cacheable |
-| `/events/:slug` | `ssr: true` | SEO, OG tags, CDN `s-maxage` + `stale-while-revalidate` |
-| `/organizers/:slug` | `ssr: true` | SEO |
-| `/book/:eventId` | `ssr: 'data-only'` | Server data needed, Razorpay SDK renders client-side |
-| `/my/*` | `ssr: 'data-only'` | Auth data from server, CSR dashboard |
-| `/org/*` | `ssr: 'data-only'` | Auth data from server, CSR dashboard |
-| `/admin/*` | `ssr: 'data-only'` | Auth data from server, CSR admin |
-| `/org/check-in` | `ssr: false` | Uses camera/QR browser APIs |
+| Route               | SSR Mode           | Reason                                                  |
+| ------------------- | ------------------ | ------------------------------------------------------- |
+| `/` (discovery)     | `ssr: true`        | SEO, CDN-cacheable                                      |
+| `/events/:slug`     | `ssr: true`        | SEO, OG tags, CDN `s-maxage` + `stale-while-revalidate` |
+| `/organizers/:slug` | `ssr: true`        | SEO                                                     |
+| `/book/:eventId`    | `ssr: 'data-only'` | Server data needed, Razorpay SDK renders client-side    |
+| `/my/*`             | `ssr: 'data-only'` | Auth data from server, CSR dashboard                    |
+| `/org/*`            | `ssr: 'data-only'` | Auth data from server, CSR dashboard                    |
+| `/admin/*`          | `ssr: 'data-only'` | Auth data from server, CSR admin                        |
+| `/org/check-in`     | `ssr: false`       | Uses camera/QR browser APIs                             |
 
 ---
 
-## Authorization — Kiran Roles
+## Authorization — EventKart Roles
 
 ```typescript
 // lib/auth/middleware.ts
-export function requireRole(role: 'organizer' | 'admin') {
-  return createMiddleware({ type: 'function' })
+export function requireRole(role: "organizer" | "admin") {
+  return createMiddleware({ type: "function" })
     .middleware([authMiddleware])
     .server(async ({ next, context }) => {
-      if (context.session.role !== role) throw new Error('Forbidden')
-      return next()
-    })
+      if (context.session.role !== role) throw new Error("Forbidden");
+      return next();
+    });
 }
 
-const organizerOnly = requireRole('organizer')
-const adminOnly = requireRole('admin')
+const organizerOnly = requireRole("organizer");
+const adminOnly = requireRole("admin");
 ```
 
 ---
 
-## Hybrid API Communication (Kiran Architecture)
+## Hybrid API Communication (EventKart Architecture)
 
-The frontend communicates with Fastify (`api.kiran.app`) using two paths:
+The frontend communicates with Fastify (`api.eventkart.app`) using two paths:
 
-| Context | Target | Auth |
-|---------|--------|------|
-| SSR server functions | `INTERNAL_API_URL` (Railway internal network, ~1–5ms) | Forward incoming cookie |
-| Browser (CSR pages) | `https://api.kiran.app` (public) | Cookie sent automatically |
+| Context              | Target                                                | Auth                      |
+| -------------------- | ----------------------------------------------------- | ------------------------- |
+| SSR server functions | `INTERNAL_API_URL` (Railway internal network, ~1–5ms) | Forward incoming cookie   |
+| Browser (CSR pages)  | `https://api.eventkart.app` (public)                  | Cookie sent automatically |
 
 ```typescript
 // lib/api-client.ts
-const API_BASE = typeof window === 'undefined'
-  ? process.env.INTERNAL_API_URL   // http://api.railway.internal:3000
-  : 'https://api.kiran.app'
+const API_BASE =
+  typeof window === "undefined"
+    ? process.env.INTERNAL_API_URL // http://api.railway.internal:3000
+    : "https://api.eventkart.app";
 
 export async function apiClient(path: string, options?: RequestInit) {
-  return fetch(`${API_BASE}/api/v1${path}`, { ...options, credentials: 'include' })
+  return fetch(`${API_BASE}/api/v1${path}`, {
+    ...options,
+    credentials: "include",
+  });
 }
 ```
 
 ---
 
-## Data Fetching — Kiran Conventions
+## Data Fetching — EventKart Conventions
 
 - `queryOptions()` factories in `features/<domain>/queries.ts`
 - Route loaders use `ensureQueryData` (fetches if stale) — NOT `fetchQuery`
@@ -111,10 +116,10 @@ export async function apiClient(path: string, options?: RequestInit) {
 // features/events/queries.ts
 export const eventQueryOptions = (slug: string) =>
   queryOptions({
-    queryKey: ['events', slug],
+    queryKey: ["events", slug],
     queryFn: () => getEvent({ data: { slug } }),
     staleTime: 30_000,
-  })
+  });
 ```
 
 ---
@@ -122,28 +127,33 @@ export const eventQueryOptions = (slug: string) =>
 ## Domain-Specific Patterns
 
 ### Registration Form (TanStack Form + Zod from shared)
+
 - Schemas from `@eventkart/shared/schemas` — same schema validates on frontend and Fastify
 - Use `zodValidator()` adapter with `@tanstack/react-form`
 - Async validation for phone uniqueness (debounced)
 
 ### Participant Tables (Table + Virtual)
+
 - Organizer roster: server-side pagination for >100 rows
 - Use TanStack Virtual when rendering 20K+ participant rows
 - Use shadcn/ui DataTable wrapper
 
 ### Event Search/Filters (URL State)
+
 - Pagination, category, sort stored in search params (shareable, bookmarkable)
 - Validate with Zod schema in `validateSearch`
 
 ---
 
-## Caching — Kiran CDN Strategy
+## Caching — EventKart CDN Strategy
 
 ```typescript
 // Public event pages — cached at Cloudflare edge
-setResponseHeaders(new Headers({
-  'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-}))
+setResponseHeaders(
+  new Headers({
+    "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+  }),
+);
 ```
 
 Cache invalidation triggers: event publish/unpublish, pricing changes, seat-count changes, admin moderation.

@@ -27,6 +27,13 @@ out/
 build
 dist
 
+# TanStack Start / Nitro / Vinxi generated and build outputs
+.output/
+.tanstack/
+.nitro/
+.vinxi/
+.wrangler/
+
 
 # Debug
 npm-debug.log*

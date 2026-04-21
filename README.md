@@ -1,159 +1,159 @@
-# Turborepo starter
+# EventKart workspace
 
-This Turborepo starter is maintained by the Turborepo core team.
+EventKart is a pnpm + Turborepo monorepo with a TanStack Start frontend, a Fastify API, shared UI primitives, and shared TypeScript presets. The workspace foundation is now aligned to the actual stack instead of the original Turborepo starter defaults.
 
-## Using this example
+## Workspace layout
 
-Run the following command:
+| Path                         | Responsibility                                                                                        |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `apps/web`                   | TanStack Start frontend on Vite for public discovery, booking, dashboards, and SSR/CSR route handling |
+| `apps/api`                   | TypeScript-first Fastify API baseline with typed runtime config and inject-based tests                |
+| `packages/ui`                | Shared React UI primitives                                                                            |
+| `packages/typescript-config` | Shared TypeScript presets for the web app, Fastify API, and React libraries                           |
+| `docs`                       | Product, requirements, architecture, and implementation guidance                                      |
 
-```sh
-npx create-turbo@latest
-```
+## Local requirements
 
-## What's inside?
+- Node.js `>=22.12.0`
+- pnpm `9`
 
-This Turborepo includes the following packages/apps:
+## Getting started
 
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+1. Install dependencies:
 
 ```sh
-cd my-turborepo
-turbo build
+pnpm install
 ```
 
-Without global `turbo`, use your package manager:
+2. Copy the package-local env examples:
 
 ```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
+Copy-Item apps\web\.env.example apps\web\.env.local
+Copy-Item apps\api\.env.example apps\api\.env
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+3. Start the API and frontend:
 
 ```sh
-turbo build --filter=docs
+pnpm --filter api dev
+pnpm --filter web dev
 ```
 
-Without global `turbo`:
+The default local setup uses `http://localhost:3000` for the web app and `http://localhost:3001` for the API.
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+You can also run `pnpm dev` from the repo root to let Turbo orchestrate persistent dev tasks.
 
-### Develop
+## Workspace commands
 
-To develop all apps and packages, run the following command:
+| Command            | What it covers                                                                |
+| ------------------ | ----------------------------------------------------------------------------- |
+| `pnpm format`      | Package formatting plus root-owned files and Markdown docs                    |
+| `pnpm lint`        | Biome lint across workspace packages plus root-owned files                    |
+| `pnpm check`       | Biome full checks across workspace packages plus root-owned files             |
+| `pnpm check-types` | `tsc --noEmit` across the packages that own TypeScript compilation boundaries |
+| `pnpm test`        | Vitest package test suites                                                    |
+| `pnpm build`       | Production builds for deployable packages                                     |
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Toolchain conventions
 
-```sh
-cd my-turborepo
-turbo dev
-```
+### Biome is the workspace standard
 
-Without global `turbo`, use your package manager:
+Biome is the default formatter and linter for the TypeScript workspace:
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
+- package scripts use `biome lint .`, `biome format --write .`, and `biome check .`
+- the root `biome.json` is the single shared config
+- the old `packages/eslint-config` starter package has been removed
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Why `tsc --noEmit` stays separate
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+Biome covers formatting, import organization, and lint rules. It does **not** replace TypeScript's project-wide type analysis, so `check-types` remains a dedicated `tsc --noEmit` task for the web app, API, and shared packages.
 
-```sh
-turbo dev --filter=web
-```
+### Why Prettier is still present
 
-Without global `turbo`:
+Prettier remains at the root for `format:docs` only. Code formatting is handled by Biome, but Markdown formatting stays on Prettier until Biome's Markdown support is mature enough for the repo's docs workflow.
 
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+### Turbo task conventions
 
-### Remote Caching
+Workspace packages expose a consistent task surface:
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+- `lint`
+- `format`
+- `check`
+- `check-types`
+- `test`
+- `build` where applicable
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+Root-only files are handled through Turbo root tasks in `turbo.json`, so `package.json`, `turbo.json`, `biome.json`, and Markdown docs are still part of the normal workspace pipeline.
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+## Environment ownership
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+Environment files are package-local. Do not centralize env files at the repo root.
 
-```sh
-cd my-turborepo
-turbo login
-```
+| Package    | Local example                                   | Ownership model                                                 |
+| ---------- | ----------------------------------------------- | --------------------------------------------------------------- |
+| `apps/web` | `apps/web/.env.example` → `apps/web/.env.local` | Public `VITE_*` values plus server-only frontend runtime values |
+| `apps/api` | `apps/api/.env.example` → `apps/api/.env`       | Fastify runtime config owned by the API service                 |
 
-Without global `turbo`, use your package manager:
+### `apps/web` env split
 
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
+The frontend uses two explicit env layers:
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+- `apps/web/src/lib/env/public.ts` for client-safe `VITE_*` variables
+- `apps/web/src/lib/env/server.ts` for server-only values such as `INTERNAL_API_URL` and `SERVER_URL`
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+Do not read `import.meta.env` directly outside the env layer. Import `publicEnv` or `serverEnv` instead so the SSR/client boundary stays explicit.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### `apps/api` runtime config
 
-```sh
-turbo link
-```
+The API validates runtime config in `apps/api/src/lib/config.ts` and exposes it through the Fastify config plugin.
 
-Without global `turbo`:
+Current baseline variables:
 
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
+- `HOST`
+- `PORT`
+- `LOG_LEVEL`
+- `WEB_ORIGIN`
+- `INTERNAL_API_KEY` (optional)
 
-## Useful Links
+Blank optional values are normalized away, and `WEB_ORIGIN` must be an absolute origin without a path, query, or hash.
+The local defaults keep the frontend on port `3000` and the API on port `3001`.
 
-Learn more about the power of Turborepo:
+## Frontend baseline
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+`apps/web` is a TanStack Start app running on Vite, not Next.js.
+
+- Public discovery surfaces are SSR-first
+- Authenticated dashboard flows use the route model defined in the workspace plan
+- env access is centralized through the dedicated env modules
+- package validation is `biome` + `tsc --noEmit` + `vitest`
+
+See `apps/web/README.md` for web-specific conventions.
+
+## API baseline
+
+`apps/api` is a TypeScript-first Fastify v5 app.
+
+- `src/app.ts` owns the app factory
+- `src/server.ts` is the runtime entrypoint
+- `src/plugins/config.ts` decorates typed config onto the Fastify instance
+- tests use Vitest with `app.inject()` via `apps/api/test/helpers/build-app.ts`
+
+This keeps runtime boot, configuration, and tests aligned with Fastify's testable app-factory pattern.
+
+## Starter tooling removed
+
+The workspace no longer uses:
+
+- the original Turborepo starter README assumptions
+- the `packages/eslint-config` workspace package
+- repo-wide ESLint config as part of the active toolchain
+
+The remaining starter-plan references in `docs/impl-plan/workspace-foundation-implementation-plan.md` are historical planning context only.
+
+## Additional docs
+
+- `docs/architecture.md`
+- `docs/requirements.md`
+- `docs/product-plan.md`
+- `docs/implementation-plan.md`
+- `docs/impl-plan/workspace-foundation-implementation-plan.md`

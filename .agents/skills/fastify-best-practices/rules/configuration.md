@@ -12,23 +12,26 @@ metadata:
 **Always use `env-schema` for configuration validation.** It provides JSON Schema validation for environment variables with sensible defaults.
 
 ```typescript
-import Fastify from 'fastify';
-import envSchema from 'env-schema';
-import { Type, type Static } from '@sinclair/typebox';
+import Fastify from "fastify";
+import envSchema from "env-schema";
+import { Type, type Static } from "@sinclair/typebox";
 
 const schema = Type.Object({
   PORT: Type.Number({ default: 3000 }),
-  HOST: Type.String({ default: '0.0.0.0' }),
+  HOST: Type.String({ default: "0.0.0.0" }),
   DATABASE_URL: Type.String(),
   JWT_SECRET: Type.String({ minLength: 32 }),
-  LOG_LEVEL: Type.Union([
-    Type.Literal('trace'),
-    Type.Literal('debug'),
-    Type.Literal('info'),
-    Type.Literal('warn'),
-    Type.Literal('error'),
-    Type.Literal('fatal'),
-  ], { default: 'info' }),
+  LOG_LEVEL: Type.Union(
+    [
+      Type.Literal("trace"),
+      Type.Literal("debug"),
+      Type.Literal("info"),
+      Type.Literal("warn"),
+      Type.Literal("error"),
+      Type.Literal("fatal"),
+    ],
+    { default: "info" },
+  ),
 });
 
 type Config = Static<typeof schema>;
@@ -42,9 +45,9 @@ const app = Fastify({
   logger: { level: config.LOG_LEVEL },
 });
 
-app.decorate('config', config);
+app.decorate("config", config);
 
-declare module 'fastify' {
+declare module "fastify" {
   interface FastifyInstance {
     config: Config;
   }
@@ -58,36 +61,39 @@ await app.listen({ port: config.PORT, host: config.HOST });
 Encapsulate configuration in a plugin for reuse:
 
 ```typescript
-import fp from 'fastify-plugin';
-import envSchema from 'env-schema';
-import { Type, type Static } from '@sinclair/typebox';
+import fp from "fastify-plugin";
+import envSchema from "env-schema";
+import { Type, type Static } from "@sinclair/typebox";
 
 const schema = Type.Object({
   PORT: Type.Number({ default: 3000 }),
-  HOST: Type.String({ default: '0.0.0.0' }),
+  HOST: Type.String({ default: "0.0.0.0" }),
   DATABASE_URL: Type.String(),
   JWT_SECRET: Type.String({ minLength: 32 }),
-  LOG_LEVEL: Type.String({ default: 'info' }),
+  LOG_LEVEL: Type.String({ default: "info" }),
 });
 
 type Config = Static<typeof schema>;
 
-declare module 'fastify' {
+declare module "fastify" {
   interface FastifyInstance {
     config: Config;
   }
 }
 
-export default fp(async function configPlugin(fastify) {
-  const config = envSchema<Config>({
-    schema,
-    dotenv: true,
-  });
+export default fp(
+  async function configPlugin(fastify) {
+    const config = envSchema<Config>({
+      schema,
+      dotenv: true,
+    });
 
-  fastify.decorate('config', config);
-}, {
-  name: 'config',
-});
+    fastify.decorate("config", config);
+  },
+  {
+    name: "config",
+  },
+);
 ```
 
 ## Secrets Management
@@ -99,7 +105,7 @@ Handle secrets securely:
 const app = Fastify({
   logger: {
     level: config.LOG_LEVEL,
-    redact: ['req.headers.authorization', '*.password', '*.secret', '*.apiKey'],
+    redact: ["req.headers.authorization", "*.password", "*.secret", "*.apiKey"],
   },
 });
 
@@ -112,7 +118,7 @@ const app = Fastify({
 Implement feature flags via environment variables:
 
 ```typescript
-import { Type, type Static } from '@sinclair/typebox';
+import { Type, type Static } from "@sinclair/typebox";
 
 const schema = Type.Object({
   // ... other config
@@ -125,11 +131,11 @@ type Config = Static<typeof schema>;
 const config = envSchema<Config>({ schema, dotenv: true });
 
 // Use in routes
-app.get('/dashboard', async (request) => {
+app.get("/dashboard", async (request) => {
   if (app.config.FEATURE_NEW_DASHBOARD) {
-    return { version: 'v2', data: await getNewDashboardData() };
+    return { version: "v2", data: await getNewDashboardData() };
   }
-  return { version: 'v1', data: await getOldDashboardData() };
+  return { version: "v1", data: await getOldDashboardData() };
 });
 ```
 
@@ -139,14 +145,15 @@ app.get('/dashboard', async (request) => {
 
 ```typescript
 // ❌ NEVER DO THIS - configuration files are an antipattern
-import config from './config/production.json';
+import config from "./config/production.json";
 
 // ❌ NEVER DO THIS - per-environment config files
-const env = process.env.NODE_ENV || 'development';
+const env = process.env.NODE_ENV || "development";
 const config = await import(`./config/${env}.js`);
 ```
 
 Configuration files lead to:
+
 - Security risks (secrets in files)
 - Deployment complexity
 - Environment drift
@@ -157,9 +164,9 @@ Configuration files lead to:
 ```typescript
 // ❌ NEVER DO THIS
 const configs = {
-  development: { logLevel: 'debug' },
-  production: { logLevel: 'info' },
-  test: { logLevel: 'silent' },
+  development: { logLevel: "debug" },
+  production: { logLevel: "info" },
+  test: { logLevel: "silent" },
 };
 const config = configs[process.env.NODE_ENV];
 ```
@@ -170,7 +177,7 @@ Instead, use a single configuration source (environment variables) with sensible
 
 ```typescript
 // ❌ AVOID checking NODE_ENV
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   // do something
 }
 
@@ -199,9 +206,9 @@ async function refreshConfig() {
   try {
     const newConfig = await fetchConfigFromService();
     dynamicConfig = newConfig;
-    app.log.info('Configuration refreshed');
+    app.log.info("Configuration refreshed");
   } catch (error) {
-    app.log.error({ err: error }, 'Failed to refresh configuration');
+    app.log.error({ err: error }, "Failed to refresh configuration");
   }
 }
 
@@ -209,9 +216,9 @@ async function refreshConfig() {
 setInterval(refreshConfig, 60000);
 
 // Use in hooks
-app.addHook('onRequest', async (request, reply) => {
-  if (dynamicConfig.maintenanceMode && !request.url.startsWith('/health')) {
-    reply.code(503).send({ error: 'Service under maintenance' });
+app.addHook("onRequest", async (request, reply) => {
+  if (dynamicConfig.maintenanceMode && !request.url.startsWith("/health")) {
+    reply.code(503).send({ error: "Service under maintenance" });
   }
 });
 ```

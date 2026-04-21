@@ -1,5 +1,5 @@
 ---
-goal: Kiran V1 — complete product plan (vision + execution)
+goal: EventKart V1 — complete product plan (vision + execution)
 version: 2.1
 date_created: 2026-04-19
 last_updated: 2026-04-19
@@ -7,9 +7,9 @@ owner: Product / Founding Team
 tags: [product, strategy, v1]
 ---
 
-# Kiran V1 Product Plan
+# EventKart V1 Product Plan
 
-The canonical source of truth for Kiran V1. This document combines product strategy, launch scope, commercial posture, trust posture, and execution sequence.
+The canonical source of truth for EventKart V1. This document combines product strategy, launch scope, commercial posture, trust posture, and execution sequence.
 
 ---
 
@@ -17,7 +17,7 @@ The canonical source of truth for Kiran V1. This document combines product strat
 
 ### One-line vision
 
-Kiran is the organizer operating system for fitness events in India — starting with unified registration, payments, and event-day operations, with public discovery and participant identity compounding over time.
+EventKart is the organizer operating system for fitness events in India — starting with unified registration, payments, and event-day operations, with public discovery and participant identity compounding over time.
 
 ### Mission
 
@@ -31,9 +31,9 @@ Vertical SaaS for fitness event organizers, with public event-discovery surfaces
 
 ### Positioning statement
 
-For Indian fitness event organizers still running on Google Forms, payment links, WhatsApp, and spreadsheets, Kiran is the organizer system of record for paid fitness events. Unlike generic ticketing tools or broad event portals, Kiran unifies registration, payment, participant management, and event-day check-in in one India-first workflow, while using public event pages to support discovery and distribution.
+For Indian fitness event organizers still running on Google Forms, payment links, WhatsApp, and spreadsheets, EventKart is the organizer system of record for paid fitness events. Unlike generic ticketing tools or broad event portals, EventKart unifies registration, payment, participant management, and event-day check-in in one India-first workflow, while using public event pages to support discovery and distribution.
 
-### What Kiran is not
+### What EventKart is not
 
 - A wedding, concert, or entertainment ticketing platform
 - A generic all-events marketplace
@@ -44,7 +44,7 @@ For Indian fitness event organizers still running on Google Forms, payment links
 
 ---
 
-## 2. Who Kiran Serves
+## 2. Who EventKart Serves
 
 ### Primary customer: Organizers
 
@@ -103,7 +103,7 @@ V1 is an organizer-tool-first product for single-day paid running events in Coim
 - Booking confirmation and reminder emails
 - QR-based check-in with manual search fallback
 - Exportable roster for offline fallback
-- Basic refund/dispute workflow with Kiran ops support
+- Basic refund/dispute workflow with EventKart ops support
 - Organizer profile with verification status and event history
 
 ### In-scope participant capabilities
@@ -160,12 +160,12 @@ The core V1 promise is not just “save admin time.” It is: **help organizers 
 
 This means V1 must improve the metrics that organizers actually care about:
 
-| Metric | What moves it | V1 feature |
-| --- | --- | --- |
-| **Registration completion rate** | Fewer steps from event page to paid booking | Unified registration + payment flow |
-| **Fill rate** | More credible event pages and lower abandonment | Professional event pages with policy clarity and share optimization |
-| **Repeat participant rate** | Less friction for returning participants | Saved profiles and fast repeat booking |
-| **Revenue per event** | Better pricing clarity and urgency where relevant | Structured pricing display and early-bird support |
+| Metric                           | What moves it                                     | V1 feature                                                          |
+| -------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------- |
+| **Registration completion rate** | Fewer steps from event page to paid booking       | Unified registration + payment flow                                 |
+| **Fill rate**                    | More credible event pages and lower abandonment   | Professional event pages with policy clarity and share optimization |
+| **Repeat participant rate**      | Less friction for returning participants          | Saved profiles and fast repeat booking                              |
+| **Revenue per event**            | Better pricing clarity and urgency where relevant | Structured pricing display and early-bird support                   |
 
 ### Implications for V1 prioritization
 
@@ -179,7 +179,7 @@ This means V1 must improve the metrics that organizers actually care about:
 
 ### Tier 1 — Must ship
 
-These are the features that make an organizer say, “Kiran helped this event convert and run better.”
+These are the features that make an organizer say, “EventKart helped this event convert and run better.”
 
 1. **Unified registration + payment page**
    - Single mobile-first flow: event details → registration form → payment → instant confirmation
@@ -230,8 +230,8 @@ These are the features that make an organizer say, “Kiran helped this event co
    - Email as the default transactional channel in V1
 
 4. **Basic refund/dispute tooling**
-    - Organizer refund policy captured and displayed
-    - Kiran ops workflow for exception handling and participant support
+   - Organizer refund policy captured and displayed
+   - EventKart ops workflow for exception handling and participant support
 
 ### Tier 3 — Defer
 
@@ -255,19 +255,19 @@ V1 uses **payment-time split with organizer-linked settlement** as the commercia
 
 ### Why split payout is the right V1 model
 
-| Criteria | Split payout | Post-invoice | Merchant of record |
-| --- | --- | --- | --- |
-| Fee enforcement | Automatic on every transaction | Weak | Strong |
-| Organizer trust | High — money settles to organizer-linked account | Medium | Lower |
-| Refund control | Moderate to strong | Weak | Strong |
-| Compliance burden | Moderate | Low | High |
-| Adoption friction | Low | Low | High |
-| Fit for V1 | Best balance | Weak monetization control | Too heavy |
+| Criteria          | Split payout                                     | Post-invoice              | Merchant of record |
+| ----------------- | ------------------------------------------------ | ------------------------- | ------------------ |
+| Fee enforcement   | Automatic on every transaction                   | Weak                      | Strong             |
+| Organizer trust   | High — money settles to organizer-linked account | Medium                    | Lower              |
+| Refund control    | Moderate to strong                               | Weak                      | Strong             |
+| Compliance burden | Moderate                                         | Low                       | High               |
+| Adoption friction | Low                                              | Low                       | High               |
+| Fit for V1        | Best balance                                     | Weak monetization control | Too heavy          |
 
 ### Pilot commercial posture
 
 - First 3 events are free for organizer onboarding
-- After the free period, Kiran captures its fee at payment time via split payout
+- After the free period, EventKart captures its fee at payment time via split payout
 - Target pilot fee band: **3-5%** on paid registrations
 - Final public pricing can be published in a separate commercial memo before broad rollout
 - Post-event invoicing is not the primary V1 model
@@ -275,19 +275,19 @@ V1 uses **payment-time split with organizer-linked settlement** as the commercia
 ### Refund posture
 
 - The organizer owns the published refund policy for each event
-- If the organizer cancels and refundable funds are still under platform or provider control, Kiran initiates the refund workflow
-- If funds have already settled, the organizer remains economically responsible and Kiran mediates support and enforcement
+- If the organizer cancels and refundable funds are still under platform or provider control, EventKart initiates the refund workflow
+- If funds have already settled, the organizer remains economically responsible and EventKart mediates support and enforcement
 - Target dispute first-response SLA: **2 business days** during the pilot
 
 ---
 
 ## 8. Compounding Value and Switching Costs
 
-Kiran becomes harder to replace when it compounds organizer value over time, not when it merely saves admin hours.
+EventKart becomes harder to replace when it compounds organizer value over time, not when it merely saves admin hours.
 
-### Layer 1 — Participant history inside Kiran
+### Layer 1 — Participant history inside EventKart
 
-- Every registration builds the organizer's participant database inside Kiran
+- Every registration builds the organizer's participant database inside EventKart
 - Returning participants can be recognized across the organizer's past events
 - Switching away means losing structured repeat-participant visibility
 
@@ -311,7 +311,7 @@ Kiran becomes harder to replace when it compounds organizer value over time, not
 - As local supply grows, participants begin browsing across organizers
 - Cross-organizer discovery becomes more valuable only after density exists
 
-In practical terms, an organizer who has run multiple events on Kiran has more than a booking tool: they have participant history, public credibility, reusable event pages, and a repeat-booking funnel.
+In practical terms, an organizer who has run multiple events on EventKart has more than a booking tool: they have participant history, public credibility, reusable event pages, and a repeat-booking funnel.
 
 ---
 
@@ -327,20 +327,20 @@ In practical terms, an organizer who has run multiple events on Kiran has more t
 ### Transparency
 
 - Event pages clearly state who is organizing the event
-- Verification is explained as a Kiran onboarding and policy check, not a blanket quality guarantee
+- Verification is explained as a EventKart onboarding and policy check, not a blanket quality guarantee
 - Participants see refund and cancellation terms before payment
 
 ### Response
 
-- Participants can report issues through Kiran support, not only through the organizer
-- Kiran mediates refund and dispute workflows during the pilot
+- Participants can report issues through EventKart support, not only through the organizer
+- EventKart mediates refund and dispute workflows during the pilot
 - Repeated organizer complaints or policy violations can trigger suspension
 
-### Boundaries of Kiran's promise
+### Boundaries of EventKart's promise
 
-- Kiran is not a guarantor of event safety or event quality
-- Kiran does not provide blanket marketplace-style protection for every event outcome
-- Kiran does provide stronger trust signals, policy transparency, booking-state reliability, and dispute escalation than a typical Google Form flow
+- EventKart is not a guarantor of event safety or event quality
+- EventKart does not provide blanket marketplace-style protection for every event outcome
+- EventKart does provide stronger trust signals, policy transparency, booking-state reliability, and dispute escalation than a typical Google Form flow
 
 ---
 
@@ -348,7 +348,7 @@ In practical terms, an organizer who has run multiple events on Kiran has more t
 
 ### Core pitch
 
-Kiran helps organizers get more paid registrations with professional event pages, instant payment confirmation, and lower repeat-booking friction.
+EventKart helps organizers get more paid registrations with professional event pages, instant payment confirmation, and lower repeat-booking friction.
 
 ### Organizer acquisition motion
 
@@ -356,7 +356,7 @@ Kiran helps organizers get more paid registrations with professional event pages
    - Prioritize organizers who have lost conversions, dealt with payment mismatches, or look unprofessional with current tools
 
 2. **Run side-by-side proof where needed**
-   - Compare Kiran conversion against the organizer's Google Form + payment-link flow on a comparable event
+   - Compare EventKart conversion against the organizer's Google Form + payment-link flow on a comparable event
 
 3. **Reduce adoption friction early**
    - First 3 events free
@@ -373,22 +373,22 @@ Kiran helps organizers get more paid registrations with professional event pages
 Expand beyond Coimbatore only after:
 
 - 15+ active organizers in Coimbatore
-- At least 3 organizers have run 3+ events on Kiran
-- Kiran has proven conversion improvement versus the old flow
+- At least 3 organizers have run 3+ events on EventKart
+- EventKart has proven conversion improvement versus the old flow
 - Split payout operations are stable in production
 
 ---
 
 ## 11. Success Criteria and Metric Definitions
 
-| Metric | Definition | V1 target |
-| --- | --- | --- |
-| **Conversion proof** | At least 3 organizers show higher registration completion rate on Kiran than on their previous comparable Google Form + payment-link flow, or in an agreed side-by-side test | Achieve by pilot close |
-| **Registration completion rate** | Paid bookings ÷ started registrations on Kiran | Improve versus organizer baseline |
-| **Repeat organizer usage** | Organizers who publish 3+ events on Kiran within 6 months | At least 5 organizers |
-| **Repeat participant rate** | Participants who complete a second paid booking on Kiran within 6 months of their first paid booking | At least 20% |
-| **Revenue capture reliability** | Successful paid registrations where Kiran fee is captured automatically without manual invoicing | At least 95% |
-| **Trust baseline** | Organizer-initiated cancellation cases that receive refund or documented policy-based resolution within the stated support SLA | Zero unresolved cases at pilot close |
+| Metric                           | Definition                                                                                                                                                                       | V1 target                            |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Conversion proof**             | At least 3 organizers show higher registration completion rate on EventKart than on their previous comparable Google Form + payment-link flow, or in an agreed side-by-side test | Achieve by pilot close               |
+| **Registration completion rate** | Paid bookings ÷ started registrations on EventKart                                                                                                                               | Improve versus organizer baseline    |
+| **Repeat organizer usage**       | Organizers who publish 3+ events on EventKart within 6 months                                                                                                                    | At least 5 organizers                |
+| **Repeat participant rate**      | Participants who complete a second paid booking on EventKart within 6 months of their first paid booking                                                                         | At least 20%                         |
+| **Revenue capture reliability**  | Successful paid registrations where EventKart fee is captured automatically without manual invoicing                                                                             | At least 95%                         |
+| **Trust baseline**               | Organizer-initiated cancellation cases that receive refund or documented policy-based resolution within the stated support SLA                                                   | Zero unresolved cases at pilot close |
 
 ---
 
@@ -435,13 +435,13 @@ This section defines the target V1 posture. Legal and policy review should valid
 
 ### Data classes
 
-| Data class | Examples | Access | Target retention |
-| --- | --- | --- | --- |
-| **Participant profile** | Name, phone, email, age, gender, city | Participant + booked organizers | Until account deletion or 3 years of inactivity |
-| **Booking data** | Event, category, payment status, QR ticket | Participant + organizer + Kiran ops | 5 years for financial and audit needs |
+| Data class                       | Examples                                           | Access                                              | Target retention                                                        |
+| -------------------------------- | -------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Participant profile**          | Name, phone, email, age, gender, city              | Participant + booked organizers                     | Until account deletion or 3 years of inactivity                         |
+| **Booking data**                 | Event, category, payment status, QR ticket         | Participant + organizer + EventKart ops             | 5 years for financial and audit needs                                   |
 | **Sensitive participant fields** | Emergency contact, blood group, medical conditions | Participant + organizer on event-day workflows only | Delete 30 days after event completion unless legally required otherwise |
-| **Payment data** | Transaction ID, amount, split details | Kiran ops + payment gateway | 5 years for financial and audit needs |
-| **Organizer verification docs** | Aadhaar, PAN, GST certificate, bank proof | Kiran ops only | Until 1 year after organizer account closure |
+| **Payment data**                 | Transaction ID, amount, split details              | EventKart ops + payment gateway                     | 5 years for financial and audit needs                                   |
+| **Organizer verification docs**  | Aadhaar, PAN, GST certificate, bank proof          | EventKart ops only                                  | Until 1 year after organizer account closure                            |
 
 ### Core rules
 
@@ -463,7 +463,7 @@ This section defines the target V1 posture. Legal and policy review should valid
 ### Incident posture
 
 - V1 prioritizes prevention through access control and data minimization
-- If an incident occurs, Kiran follows applicable notification requirements, including regulator or CERT-In reporting where required
+- If an incident occurs, EventKart follows applicable notification requirements, including regulator or CERT-In reporting where required
 - Access to organizer verification documents and sensitive participant data should be logged
 
 ---

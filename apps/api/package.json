@@ -1,24 +1,33 @@
 {
-  "name": "api",
-  "version": "1.0.0",
-  "description": "This project was bootstrapped with Fastify-CLI.",
-  "main": "app.js",
-  "directories": {
-    "test": "test"
-  },
-  "scripts": {
-    "test": "node --test test/**/*.test.js",
-    "start": "fastify start -l info app.js",
-    "dev": "fastify start -w -l info -P app.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@fastify/autoload": "^6.3.1",
-    "@fastify/sensible": "^6.0.4",
-    "fastify": "^5.8.5",
-    "fastify-cli": "^8.0.0",
-    "fastify-plugin": "^5.1.0"
-  }
+	"name": "api",
+	"version": "1.0.0",
+	"description": "TypeScript-first Fastify API baseline for eventKart.",
+	"type": "module",
+	"main": "src/server.ts",
+	"scripts": {
+		"dev": "tsx watch src/server.ts",
+		"start": "tsx src/server.ts",
+		"lint": "biome lint .",
+		"format": "biome format --write .",
+		"check": "biome check .",
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@fastify/cors": "^11.2.0",
+		"@fastify/type-provider-zod": "^1.0.0",
+		"@sinclair/typebox": "^0.34.41",
+		"env-schema": "^7.0.0",
+		"fastify": "^5.8.5",
+		"fastify-plugin": "^5.1.0",
+		"tsx": "^4.20.6",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.12",
+		"@types/node": "^25.6.0",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.4"
+	}
 }
