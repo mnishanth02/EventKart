@@ -15,8 +15,8 @@ importers:
         specifier: ^2.9.6
         version: 2.9.6
       typescript:
-        specifier: 5.9.2
-        version: 5.9.2
+        specifier: ^6.0.3
+        version: 6.0.3
 
   apps/api:
     dependencies:
@@ -229,8 +229,8 @@ importers:
         specifier: ^9.39.1
         version: 9.39.1(jiti@2.6.1)
       typescript:
-        specifier: 5.9.2
-        version: 5.9.2
+        specifier: ^6.0.3
+        version: 6.0.3
 
 packages:
 
