@@ -71,7 +71,7 @@ This plan covers **Phase 0.1 — Monorepo & Tooling Setup** from the high-level 
 
 ### Guidelines
 
-- **GUD-001**: Use `@event-kart/*` namespace for all internal packages (not default `@repo/*`)
+- **GUD-001**: Use `@eventkart/*` namespace for all internal packages (not default `@repo/*`)
 - **GUD-002**: Install dependencies where they're used — few deps in root, most in individual packages
 - **GUD-003**: One "purpose" per package — `shared` (schemas/types), `db` (Drizzle), `ui` (components)
 - **GUD-004**: Use Node.js `imports` (subpath imports) for path aliases instead of TypeScript `compilerOptions.paths`
@@ -86,10 +86,10 @@ This plan covers **Phase 0.1 — Monorepo & Tooling Setup** from the high-level 
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-001 | Rename `@repo/eslint-config` → `@event-kart/eslint-config` in `packages/eslint-config/package.json` `name` field | | |
-| TASK-002 | Rename `@repo/typescript-config` → `@event-kart/typescript-config` in `packages/typescript-config/package.json` `name` field | | |
-| TASK-003 | Rename `@repo/ui` → `@event-kart/ui` in `packages/ui/package.json` `name` field. Update `devDependencies` references: `@repo/eslint-config` → `@event-kart/eslint-config`, `@repo/typescript-config` → `@event-kart/typescript-config` | | |
-| TASK-004 | Update `packages/ui/tsconfig.json` — verify `extends` resolves to `@event-kart/typescript-config/react-library.json` | | |
+| TASK-001 | Rename `@repo/eslint-config` → `@eventkart/eslint-config` in `packages/eslint-config/package.json` `name` field | | |
+| TASK-002 | Rename `@repo/typescript-config` → `@eventkart/typescript-config` in `packages/typescript-config/package.json` `name` field | | |
+| TASK-003 | Rename `@repo/ui` → `@eventkart/ui` in `packages/ui/package.json` `name` field. Update `devDependencies` references: `@repo/eslint-config` → `@eventkart/eslint-config`, `@repo/typescript-config` → `@eventkart/typescript-config` | | |
+| TASK-004 | Update `packages/ui/tsconfig.json` — verify `extends` resolves to `@eventkart/typescript-config/react-library.json` | | |
 | TASK-005 | Add `catalog:` block to `pnpm-workspace.yaml` with all shared dependency versions (see catalog spec below). Add `catalogMode: strict` to settings. | | |
 | TASK-006 | Update root `package.json`: set `"packageManager": "pnpm@10.12.1"`, set `"engines": { "node": ">=24" }`, remove `prettier` from `devDependencies`, add `"@biomejs/biome": "^1.9.0"` to `devDependencies`, update scripts: `"lint": "biome check ."`, `"format": "biome format . --write"`, remove `"format": "prettier ..."` | | |
 | TASK-007 | Create `biome.json` at repo root with Kiran-specific configuration (see spec below) | | |
@@ -286,7 +286,7 @@ settings:
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-014 | Create `apps/api/package.json` (see spec below) | | |
-| TASK-015 | Create `apps/api/tsconfig.json` extending `@event-kart/typescript-config/fastify.json` with `include: ["src"]`, `exclude: ["node_modules", "dist"]` | | |
+| TASK-015 | Create `apps/api/tsconfig.json` extending `@eventkart/typescript-config/fastify.json` with `include: ["src"]`, `exclude: ["node_modules", "dist"]` | | |
 | TASK-016 | Create `apps/api/src/app.ts` — Fastify app factory with Pino logger, `trustProxy: true`, Zod type provider, plugin registration order (see spec below) | | |
 | TASK-017 | Create `apps/api/src/server.ts` — Production entry point: import `buildApp()`, listen on `0.0.0.0:3000`, graceful shutdown on SIGTERM/SIGINT (see spec below) | | |
 | TASK-018 | Create `apps/api/src/plugins/cors.ts` — CORS plugin using `@fastify/cors`, origin `['https://kiran.app']`, credentials true, wrapped with `fastify-plugin` | | |
@@ -296,13 +296,13 @@ settings:
 | TASK-022 | Create `apps/api/src/lib/logger.ts` — Pino logger configuration with JSON output, redaction of sensitive fields | | |
 | TASK-023 | Create skeleton module directories with placeholder `routes.ts`, `service.ts`, `schemas.ts`, `types.ts` for: `modules/auth/`, `modules/events/`, `modules/bookings/`, `modules/organizer/`, `modules/check-in/`, `modules/communications/`, `modules/admin/` | | |
 | TASK-024 | Create skeleton directories (empty with `.gitkeep`): `src/workers/`, `src/middleware/`, `src/plugins/auth.ts` (placeholder), `src/plugins/rate-limit.ts` (placeholder), `src/plugins/db.ts` (placeholder), `src/lib/redis.ts` (placeholder), `src/lib/queue.ts` (placeholder) | | |
-| TASK-025 | Run `pnpm install` from repo root, verify `turbo run check-types --filter=@event-kart/api` passes | | |
+| TASK-025 | Run `pnpm install` from repo root, verify `turbo run check-types --filter=@eventkart/api` passes | | |
 
 **`apps/api/package.json`:**
 
 ```json
 {
-  "name": "@event-kart/api",
+  "name": "@eventkart/api",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -315,8 +315,8 @@ settings:
     "test": "vitest"
   },
   "dependencies": {
-    "@event-kart/db": "workspace:*",
-    "@event-kart/shared": "workspace:*",
+    "@eventkart/db": "workspace:*",
+    "@eventkart/shared": "workspace:*",
     "fastify": "catalog:",
     "fastify-plugin": "catalog:",
     "@fastify/cors": "catalog:",
@@ -330,7 +330,7 @@ settings:
     "postgres": "catalog:"
   },
   "devDependencies": {
-    "@event-kart/typescript-config": "workspace:*",
+    "@eventkart/typescript-config": "workspace:*",
     "typescript": "catalog:",
     "@types/node": "catalog:",
     "vitest": "catalog:"
@@ -429,7 +429,7 @@ process.on('SIGINT', shutdown)
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-026 | Create `apps/web/package.json` (see spec below) | | |
-| TASK-027 | Create `apps/web/tsconfig.json` extending `@event-kart/typescript-config/start.json` with `include: ["src"]` | | |
+| TASK-027 | Create `apps/web/tsconfig.json` extending `@eventkart/typescript-config/start.json` with `include: ["src"]` | | |
 | TASK-028 | Create `apps/web/vite.config.ts` — `tanstackStart()` plugin BEFORE `viteReact()`, port 3001, `tsconfigPaths: true` (see spec below) | | |
 | TASK-029 | Create `apps/web/src/router.tsx` — `createRouter({ routeTree, scrollRestoration: true })` with TanStack Query default `staleTime: 30_000` | | |
 | TASK-030 | Create `apps/web/src/routes/__root.tsx` — HTML shell with `<HeadContent />`, `<Scripts />`, charset/viewport meta tags, Kiran title (see spec below) | | |
@@ -440,13 +440,13 @@ process.on('SIGINT', shutdown)
 | TASK-035 | Create feature module directories with placeholder files (`api.ts`, `queries.ts`, `types.ts`, `components/.gitkeep`, `hooks.ts`) for: `features/events/`, `features/registration/`, `features/payments/`, `features/check-in/`, `features/organizer/`, `features/admin/` | | |
 | TASK-036 | Create empty directories: `src/components/.gitkeep`, `src/lib/auth/.gitkeep`, `src/lib/utils/.gitkeep`, `src/styles/app.css` (with `@import "tailwindcss"` placeholder comment) | | |
 | TASK-037 | Create `apps/web/public/.gitkeep` | | |
-| TASK-038 | Run `pnpm install` from repo root, verify `turbo run check-types --filter=@event-kart/web` passes | | |
+| TASK-038 | Run `pnpm install` from repo root, verify `turbo run check-types --filter=@eventkart/web` passes | | |
 
 **`apps/web/package.json`:**
 
 ```json
 {
-  "name": "@event-kart/web",
+  "name": "@eventkart/web",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -458,8 +458,8 @@ process.on('SIGINT', shutdown)
     "lint": "biome check ."
   },
   "dependencies": {
-    "@event-kart/shared": "workspace:*",
-    "@event-kart/ui": "workspace:*",
+    "@eventkart/shared": "workspace:*",
+    "@eventkart/ui": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "@tanstack/react-start": "catalog:",
@@ -471,7 +471,7 @@ process.on('SIGINT', shutdown)
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@event-kart/typescript-config": "workspace:*",
+    "@eventkart/typescript-config": "workspace:*",
     "typescript": "catalog:",
     "vite": "catalog:",
     "@vitejs/plugin-react": "catalog:",
@@ -591,25 +591,25 @@ export async function apiClient<T>(
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-039 | Create `packages/shared/package.json` with Just-in-Time Package exports (see spec below) | | |
-| TASK-040 | Create `packages/shared/tsconfig.json` extending `@event-kart/typescript-config/base.json` with `include: ["src"]`, `noEmit: true` | | |
+| TASK-040 | Create `packages/shared/tsconfig.json` extending `@eventkart/typescript-config/base.json` with `include: ["src"]`, `noEmit: true` | | |
 | TASK-041 | Create `packages/shared/src/schemas/index.ts` — export placeholder Zod schema and `UserRole` const enum | | |
 | TASK-042 | Create `packages/shared/src/types/index.ts` — export placeholder `ApiResponse<T>` type, `UserRole` type | | |
 | TASK-043 | Create `packages/shared/src/constants/index.ts` — export `USER_ROLES`, `BOOKING_STATUSES`, `EVENT_STATUSES` as `as const` objects | | |
 | TASK-044 | Create `packages/shared/src/utils/index.ts` — export `formatINR()` (Indian rupee formatting), `generateSlug()` placeholder | | |
 | TASK-045 | Create `packages/db/package.json` with Just-in-Time Package exports (see spec below) | | |
-| TASK-046 | Create `packages/db/tsconfig.json` extending `@event-kart/typescript-config/base.json` with `include: ["src"]`, `noEmit: true` | | |
+| TASK-046 | Create `packages/db/tsconfig.json` extending `@eventkart/typescript-config/base.json` with `include: ["src"]`, `noEmit: true` | | |
 | TASK-047 | Create `packages/db/src/index.ts` — Drizzle client factory with `prepare: false` for PgBouncer, separate `DATABASE_DIRECT_URL` for migrations | | |
 | TASK-048 | Create `packages/db/src/schema/index.ts` — placeholder empty schema barrel export | | |
 | TASK-049 | Create `packages/db/src/migrations/.gitkeep` — empty migrations directory | | |
 | TASK-050 | Create `packages/db/drizzle.config.ts` — Drizzle Kit config using `DATABASE_DIRECT_URL` for migrations | | |
-| TASK-051 | Update `packages/ui/package.json` — convert version ranges to `catalog:` for `react`, `react-dom`, `typescript`, `@types/node`, `@types/react`, `@types/react-dom`. Remove `@event-kart/eslint-config` from devDependencies. Remove `eslint` from devDependencies. Update `scripts.lint` to `biome check .` | | |
+| TASK-051 | Update `packages/ui/package.json` — convert version ranges to `catalog:` for `react`, `react-dom`, `typescript`, `@types/node`, `@types/react`, `@types/react-dom`. Remove `@eventkart/eslint-config` from devDependencies. Remove `eslint` from devDependencies. Update `scripts.lint` to `biome check .` | | |
 | TASK-052 | Run `pnpm install`, verify `turbo run check-types` passes for all packages | | |
 
 **`packages/shared/package.json`:**
 
 ```json
 {
-  "name": "@event-kart/shared",
+  "name": "@eventkart/shared",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -627,7 +627,7 @@ export async function apiClient<T>(
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@event-kart/typescript-config": "workspace:*",
+    "@eventkart/typescript-config": "workspace:*",
     "typescript": "catalog:"
   }
 }
@@ -637,7 +637,7 @@ export async function apiClient<T>(
 
 ```json
 {
-  "name": "@event-kart/db",
+  "name": "@eventkart/db",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -657,7 +657,7 @@ export async function apiClient<T>(
     "postgres": "catalog:"
   },
   "devDependencies": {
-    "@event-kart/typescript-config": "workspace:*",
+    "@eventkart/typescript-config": "workspace:*",
     "drizzle-kit": "catalog:",
     "typescript": "catalog:",
     "@types/node": "catalog:"
@@ -735,7 +735,7 @@ export const BOOKING_STATUSES = {
 export type BookingStatus = (typeof BOOKING_STATUSES)[keyof typeof BOOKING_STATUSES]
 ```
 
-**Completion criteria:** `turbo run check-types` passes for `@event-kart/shared`, `@event-kart/db`, and `@event-kart/ui`. Import `@event-kart/shared/constants` resolves correctly from `apps/api` and `apps/web`.
+**Completion criteria:** `turbo run check-types` passes for `@eventkart/shared`, `@eventkart/db`, and `@eventkart/ui`. Import `@eventkart/shared/constants` resolves correctly from `apps/api` and `apps/web`.
 
 ---
 
@@ -748,7 +748,7 @@ export type BookingStatus = (typeof BOOKING_STATUSES)[keyof typeof BOOKING_STATU
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-053 | Update `turbo.json` — replace existing config with Kiran-specific tasks (see spec below) | | |
-| TASK-054 | Update root `package.json` scripts — add `"test": "turbo run test"`, `"db:migrate": "turbo run db:migrate --filter=@event-kart/db"`, `"db:generate": "turbo run db:generate --filter=@event-kart/db"` | | |
+| TASK-054 | Update root `package.json` scripts — add `"test": "turbo run test"`, `"db:migrate": "turbo run db:migrate --filter=@eventkart/db"`, `"db:generate": "turbo run db:generate --filter=@eventkart/db"` | | |
 | TASK-055 | Create `docker-compose.yml` at repo root (see spec below) | | |
 | TASK-056 | Create `.env.example` at repo root with all documented env vars (see spec below) | | |
 | TASK-057 | Create `apps/api/.env.example` with API-specific env vars | | |
@@ -928,7 +928,7 @@ trim_trailing_whitespace = false
 ## 3. Alternatives
 
 - **ALT-001**: Keep ESLint + Prettier instead of Biome — rejected because implementation plan explicitly calls for Biome as single tool; ESLint config has Next.js deps we won't use; Biome is faster and reduces config surface.
-- **ALT-002**: Use `@repo/*` namespace — rejected because implementation plan and all architecture docs reference `@event-kart/shared`. Renaming early avoids churn later.
+- **ALT-002**: Use `@repo/*` namespace — rejected because implementation plan and all architecture docs reference `@eventkart/shared`. Renaming early avoids churn later.
 - **ALT-003**: Use `tsx` for Fastify dev mode — rejected in favor of Node.js native type stripping (stable since Node 23.6+, current LTS v24.15). Zero extra dependencies, native `--watch` support. Production still compiles with `tsc`.
 - **ALT-004**: Use `tsc --watch + nodemon` for Fastify dev — rejected; more complex, slower feedback loop vs native `node --watch`.
 - **ALT-005**: Use pnpm 9.5+ (minimal upgrade) — rejected in favor of pnpm 10.x for `catalogMode: strict` enforcement and latest features.
@@ -966,10 +966,10 @@ trim_trailing_whitespace = false
 
 ### Internal Package Dependencies
 
-- **DEP-018**: `@event-kart/shared` — consumed by `apps/api`, `apps/web`
-- **DEP-019**: `@event-kart/db` — consumed by `apps/api`
-- **DEP-020**: `@event-kart/ui` — consumed by `apps/web`
-- **DEP-021**: `@event-kart/typescript-config` — consumed by all packages
+- **DEP-018**: `@eventkart/shared` — consumed by `apps/api`, `apps/web`
+- **DEP-019**: `@eventkart/db` — consumed by `apps/api`
+- **DEP-020**: `@eventkart/ui` — consumed by `apps/web`
+- **DEP-021**: `@eventkart/typescript-config` — consumed by all packages
 
 ---
 

@@ -122,7 +122,7 @@ export const eventQueryOptions = (slug: string) =>
 ## Domain-Specific Patterns
 
 ### Registration Form (TanStack Form + Zod from shared)
-- Schemas from `@event-kart/shared/schemas` — same schema validates on frontend and Fastify
+- Schemas from `@eventkart/shared/schemas` — same schema validates on frontend and Fastify
 - Use `zodValidator()` adapter with `@tanstack/react-form`
 - Async validation for phone uniqueness (debounced)
 

@@ -56,7 +56,7 @@ Each module follows this structure:
 modules/<domain>/
 ├── routes.ts       # Route definitions with schemas + preHandlers
 ├── service.ts      # Business logic (testable without HTTP)
-├── schemas.ts      # Zod request/response schemas (import shared from @event-kart/shared)
+├── schemas.ts      # Zod request/response schemas (import shared from @eventkart/shared)
 └── types.ts        # Module-specific types
 ```
 
@@ -135,7 +135,7 @@ Custom DLQ: BullMQ has no native DLQ — implement via `failed` event handler wi
 ## Validation — Kiran Convention
 
 - Use `@fastify/type-provider-zod` for schema integration
-- Import shared schemas from `@event-kart/shared/schemas`
+- Import shared schemas from `@eventkart/shared/schemas`
 - Response schemas on ALL routes (security + 2–3x serialization boost)
 - Internal fields (`razorpayAccountId`, `internalNotes`) NEVER in response schemas
 

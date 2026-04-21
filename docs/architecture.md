@@ -371,7 +371,7 @@ GitHub Push → GitHub Actions → Build & Test → Migrate DB → Deploy to Rai
 
 **Database migration step:**
 - Runs after build and test, before the app service restarts
-- Command: `pnpm --filter @event-kart/db drizzle-kit migrate`
+- Command: `pnpm --filter @eventkart/db drizzle-kit migrate`
 - **Strategy:** Adopt **expand/contract migration pattern** — backward-compatible schema changes first, deploy app code second, cleanup migrations later. Every migration must include: compatibility notes, rollback SQL, data backfill plan, lock-risk assessment, and execution-time estimate.
 - **Staging:** Auto-migration on deploy from `main`
 - **Production:** Migration runs as a separate Railway job before the app service restarts. Failed migrations block deployment. Production deploys must support rolling or blue/green release with health-checked promotion.
@@ -388,7 +388,7 @@ GitHub Push → GitHub Actions → Build & Test → Migrate DB → Deploy to Rai
 ### Repository structure: Monorepo
 
 ```
-event-kart/
+eventkart/
 ├── apps/
 │   ├── web/                  # TanStack Start frontend
 │   │   └── src/
