@@ -1,0 +1,49 @@
+# EventKart — Local Development Services
+# Start: pnpm docker:up | Stop: pnpm docker:down | Reset: pnpm docker:reset
+
+services:
+  # ── PostgreSQL 17 ───────────────────────────────────────────────────
+  # Primary data store for events, users, tickets, orders.
+  postgres:
+    image: postgres:17-alpine
+    container_name: eventkart-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: eventkart
+      POSTGRES_PASSWORD: eventkart_dev
+      POSTGRES_DB: eventkart_dev
+    volumes:
+      - eventkart-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventkart -d eventkart_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis 7 ─────────────────────────────────────────────────────────
+  # Sessions (sess:), job queues (bull:), rate limiting (rl:),
+  # caching (cache:), and OTP codes (otp:).
+  redis:
+    image: redis:7-alpine
+    container_name: eventkart-redis
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy volatile-lru
+      --appendonly yes
+    volumes:
+      - eventkart-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  eventkart-pgdata:
+  eventkart-redisdata:

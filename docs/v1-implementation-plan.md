@@ -42,6 +42,7 @@ The following foundation work is already complete or in progress:
 | Env handling (web + api) | ✅ Complete | Split public/server env, validated config plugin |
 | Deployment topology | 🔄 In progress | Separate web/api deployment plan exists |
 | I-0.1.1: `packages/shared` | ✅ Complete | Zod v4 schemas, types, constants, phone E.164 normalization. 58 tests passing. |
+| I-0.1.4: Docker Compose | ✅ Complete | PostgreSQL 17 + Redis 7 local dev infrastructure. `docker-compose.yml` at repo root. |
 
 **What remains:** All product feature development (Phases 0–7 from requirements doc).
 
