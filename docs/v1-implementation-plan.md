@@ -101,7 +101,7 @@ These are non-coding prerequisites that must be satisfied before production laun
 | 5 ✅ | I-0.1.5 | Redis client setup — namespaced connections (sess:, bull:, rl:, cache:, otp:) | ✦ | — | — | I-0.1.4 | `apps/api/src/lib/redis.ts`, `volatile-lru` eviction policy. Needs running Redis from Docker Compose. |
 | 6 ✅ | I-0.1.6 | BullMQ queue infrastructure — queue definitions, worker service skeleton, DLQ pattern | ✦ | — | — | I-0.1.5 | Queues: payment-webhook, email, cleanup, exports. Custom failed-jobs queue with alerting via `failed` event handler. Replay tooling for DLQ items. |
 | 7 | I-0.1.8 | Object storage client — S3/R2 presigned URL helper, server-side encryption, access logging | ✦ | — | — | I-0.1.3 | Used by KYC upload (Phase 1), event images (Phase 1), roster PDFs (Phase 5). Access log entries written to audit_log table. |
-| 8 | I-0.1.7 | Database migration CI pipeline | ✦ | — | — | I-0.1.2, I-0.1.3 | Expand/contract pattern, rollback SQL, lock-risk assessment. CI validates what's already working locally. |
+| 8 ✅ | I-0.1.7 | Database migration CI pipeline | ✦ | — | — | I-0.1.2, I-0.1.3 | Expand/contract pattern, rollback SQL, lock-risk assessment. CI validates what's already working locally. |
 | 9 | I-0.1.9 | CI/CD deployment pipeline — GitHub Actions for build, test, migrate, deploy | ✦ | ✦ | — | All above | Staging auto-deploy from `main`, production manual promote. Rolling/blue-green with health-checked promotion. |
 
 **Deliverables:**
