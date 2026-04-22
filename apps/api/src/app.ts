@@ -16,6 +16,7 @@ import securityHeadersPlugin from "./plugins/security-headers.js";
 import queuePlugin from "./plugins/queue.js";
 import redisPlugin from "./plugins/redis.js";
 import storagePlugin from "./plugins/storage.js";
+import internalKeyPlugin from "./plugins/internal-key.js";
 import authPlugin from "./plugins/auth.js";
 import csrfPlugin from "./plugins/csrf.js";
 import authRoutes from "./modules/auth/routes.js";
@@ -53,6 +54,7 @@ export function buildApp(options: BuildAppOptions = {}) {
 	app.register(corsPlugin);
 	app.register(cookie);
 	app.register(storagePlugin);
+	app.register(internalKeyPlugin);
 	app.register(authPlugin);
 	app.register(csrfPlugin);
 	app.register(errorHandlerPlugin);

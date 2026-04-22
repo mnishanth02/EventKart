@@ -1,14 +1,19 @@
 import rateLimit from "@fastify/rate-limit";
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
 
 const rateLimitPlugin: FastifyPluginAsync = async (fastify) => {
 	await fastify.register(rateLimit, {
 		global: true,
-		max: 100,
+		max: (request: FastifyRequest, _key: string) => {
+			return request.isInternalRequest ? 1000 : 100;
+		},
 		timeWindow: "1 minute",
 		redis: fastify.redis.rateLimit,
-		keyGenerator: (request) => {
+		keyGenerator: (request: FastifyRequest) => {
+			if (request.isInternalRequest) {
+				return `internal:${request.ip}`;
+			}
 			return request.ip;
 		},
 		errorResponseBuilder: (_request, context) => ({
@@ -27,5 +32,5 @@ const rateLimitPlugin: FastifyPluginAsync = async (fastify) => {
 export default fp(rateLimitPlugin, {
 	name: "rate-limit",
 	fastify: "5.x",
-	dependencies: ["redis"],
+	dependencies: ["redis", "internal-key"],
 });

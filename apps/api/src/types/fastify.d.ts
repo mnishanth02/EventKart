@@ -22,5 +22,6 @@ declare module "fastify" {
 
 	interface FastifyRequest {
 		session: SessionInfo | null;
+		isInternalRequest: boolean;
 	}
 }

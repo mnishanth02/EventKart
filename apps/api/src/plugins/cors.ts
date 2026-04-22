@@ -11,7 +11,6 @@ const corsPlugin: FastifyPluginAsync = async (fastify) => {
 			"Content-Type",
 			"Authorization",
 			"X-Request-ID",
-			"X-Internal-Key",
 			"X-CSRF-Token",
 		],
 	});

@@ -74,6 +74,10 @@ const csrfPlugin: FastifyPluginAsync = async (fastify) => {
 			return;
 		}
 
+		if (request.isInternalRequest) {
+			return;
+		}
+
 		if (request.session === null) {
 			return;
 		}
@@ -122,6 +126,6 @@ const csrfPlugin: FastifyPluginAsync = async (fastify) => {
 
 export default fp(csrfPlugin, {
 	name: "csrf",
-	dependencies: ["config", "auth"],
+	dependencies: ["config", "auth", "internal-key"],
 	fastify: "5.x",
 });
