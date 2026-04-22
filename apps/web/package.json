@@ -16,6 +16,7 @@
 		"test": "vitest run --passWithNoTests"
 	},
 	"dependencies": {
+		"@repo/shared": "workspace:*",
 		"@repo/ui": "workspace:*",
 		"@faker-js/faker": "^10.4.0",
 		"@posthog/react": "^1.9.0",
