@@ -40,13 +40,15 @@ The following foundation work is already complete or in progress:
 | Package script normalization | ✅ Complete | Consistent dev/build/lint/test/check-types |
 | Turbo task wiring | ✅ Complete | Correct outputs, env, caching |
 | Env handling (web + api) | ✅ Complete | Split public/server env, validated config plugin |
-| Deployment topology | 🔄 In progress | Separate web/api deployment plan exists |
+| Deployment topology | ✅ Complete | CI/CD pipeline with staging auto-deploy and production manual promote via Railway |
 | I-0.1.1: `packages/shared` | ✅ Complete | Zod v4 schemas, types, constants, phone E.164 normalization. 58 tests passing. |
 | I-0.1.4: Docker Compose | ✅ Complete | PostgreSQL 17 + Redis 7 local dev infrastructure. `docker-compose.yml` at repo root. |
 | I-0.1.2: `packages/db` | ✅ Complete | Drizzle ORM client with `prepare: false`, postgres.js driver, Drizzle Kit migrations, seed skeleton. 1 test passing. |
 | I-0.1.5: Redis client setup | ✅ Complete | ioredis namespaced connections (sess:, bull:, rl:, cache:, otp:), Fastify plugin, BullMQ connection factory. 35 API tests passing. |
 | I-0.1.6: BullMQ queue infrastructure | ✅ Complete | Queue definitions (payment-webhook, email, cleanup, exports, failed-jobs DLQ), worker service skeleton, Fastify plugin. 59 API tests passing. |
 | I-0.1.7: Database migration CI pipeline | ✅ Complete | GitHub Actions workflow, lock-risk SQL linter (7 rules), schema drift checker, rollback validator, programmatic migration runner. 22 DB tests passing. |
+| I-0.1.8: Object storage client | ✅ Complete | S3/R2 presigned URL helper, server-side encryption, Fastify plugin. 92 API tests passing. |
+| I-0.1.9: CI/CD deployment pipeline | ✅ Complete | GitHub Actions CI (lint, types, test, build), staging auto-deploy, production manual promote via Railway. |
 
 **What remains:** All product feature development (Phases 0–7 from requirements doc).
 
@@ -103,7 +105,7 @@ These are non-coding prerequisites that must be satisfied before production laun
 | 6 ✅ | I-0.1.6 | BullMQ queue infrastructure — queue definitions, worker service skeleton, DLQ pattern | ✦ | — | — | I-0.1.5 | Queues: payment-webhook, email, cleanup, exports. Custom failed-jobs queue with alerting via `failed` event handler. Replay tooling for DLQ items. |
 | 7 ✅ | I-0.1.8 | Object storage client — S3/R2 presigned URL helper, server-side encryption, access logging | ✦ | — | — | I-0.1.3 | Used by KYC upload (Phase 1), event images (Phase 1), roster PDFs (Phase 5). Access log entries written to audit_log table. |
 | 8 ✅ | I-0.1.7 | Database migration CI pipeline | ✦ | — | — | I-0.1.2, I-0.1.3 | Expand/contract pattern, rollback SQL, lock-risk assessment. CI validates what's already working locally. |
-| 9 | I-0.1.9 | CI/CD deployment pipeline — GitHub Actions for build, test, migrate, deploy | ✦ | ✦ | — | All above | Staging auto-deploy from `main`, production manual promote. Rolling/blue-green with health-checked promotion. |
+| 9 ✅ | I-0.1.9 | CI/CD deployment pipeline — GitHub Actions for build, test, migrate, deploy | ✦ | ✦ | — | All above | Staging auto-deploy from `main`, production manual promote. Rolling/blue-green with health-checked promotion. |
 
 **Deliverables:**
 - `packages/shared` with base Zod schemas, types, phone normalization (E.164)
