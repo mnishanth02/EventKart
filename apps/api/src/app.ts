@@ -8,6 +8,7 @@ import Fastify, { type FastifyServerOptions } from "fastify";
 import { type AppConfig, loadConfig } from "./lib/config.js";
 import configPlugin from "./plugins/config.js";
 import corsPlugin from "./plugins/cors.js";
+import queuePlugin from "./plugins/queue.js";
 import redisPlugin from "./plugins/redis.js";
 import healthRoutes from "./routes/health.js";
 
@@ -37,6 +38,7 @@ export function buildApp(options: BuildAppOptions = {}) {
 
 	app.register(configPlugin, { config });
 	app.register(redisPlugin);
+	app.register(queuePlugin);
 	app.register(corsPlugin);
 	app.register(healthRoutes);
 

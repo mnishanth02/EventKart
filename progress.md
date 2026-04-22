@@ -13,6 +13,8 @@
 | 2 | I-0.1.4 — Docker Compose (PostgreSQL + Redis) | [impl-plan](docs/impl-plan/feature-0.1-I-0.1.4.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
 | 3 | I-0.1.2 — `packages/db` (Drizzle ORM) | [impl-plan](docs/impl-plan/feature-0.1-I-0.1.2.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
 | 4 | I-0.1.5 — Redis client setup (namespaced connections) | [impl-plan](docs/impl-plan/feature-0.1-I-0.1.5.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
+| 5 | I-0.1.6 — BullMQ queue infrastructure | [impl-plan](docs/impl-plan/feature-0.1-I-0.1.6.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
+| 6 | I-0.1.3 — Core database tables | [impl-plan](docs/impl-plan/feature-0.1-I-0.1.3.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
 
 ## Completed Implementation Plans
 
@@ -26,7 +28,7 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 
 | Phase | Module | Status | Notes |
 |-------|--------|--------|-------|
-| Phase 0 | 0.1 — Shared Packages & Database Foundation | 🔄 Partial | I-0.1.1 (shared), I-0.1.4 (Docker), I-0.1.2 (db), I-0.1.5 (Redis) complete. I-0.1.3, I-0.1.6–I-0.1.9 remaining. |
+| Phase 0 | 0.1 — Shared Packages & Database Foundation | 🔄 Partial | I-0.1.1 (shared), I-0.1.4 (Docker), I-0.1.2 (db), I-0.1.3 (core tables), I-0.1.5 (Redis), I-0.1.6 (BullMQ) complete. I-0.1.7–I-0.1.9 remaining. |
 | Phase 0 | 0.2 — Authentication & Identity | ⬜ Not Started | — |
 | Phase 0 | 0.3 — Design System & App Shell | 🔄 Partial | App shell, shadcn/ui, Tailwind v4 configured |
 | Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | ⬜ Not Started | — |

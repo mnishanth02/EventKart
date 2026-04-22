@@ -68,6 +68,7 @@ describe("Redis Plugin", () => {
 		mockQuit.mockClear();
 		await localApp.close();
 
-		expect(mockQuit).toHaveBeenCalledTimes(5);
+		// 5 Redis namespace clients + 1 BullMQ connection = 6
+		expect(mockQuit).toHaveBeenCalledTimes(6);
 	});
 });
