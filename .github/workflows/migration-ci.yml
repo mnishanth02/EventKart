@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "packages/db/**"
+      - "packages/shared/src/constants/**"
   workflow_dispatch:
 
 concurrency:

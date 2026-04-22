@@ -23,13 +23,19 @@ export const users = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 	},
 	(table) => [
 		uniqueIndex("users_phone_unique")
 			.on(table.phone)
 			.where(sql`deleted_at IS NULL AND phone IS NOT NULL`),
-		index("users_email_idx").on(table.email),
+		uniqueIndex("users_email_unique")
+			.on(table.email)
+			.where(sql`deleted_at IS NULL AND email IS NOT NULL`),
 		index("users_role_idx").on(table.role),
 	],
 );

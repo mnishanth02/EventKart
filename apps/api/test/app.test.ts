@@ -37,6 +37,8 @@ describe("buildApp", () => {
 				PORT: "3000",
 				LOG_LEVEL: "info",
 				WEB_ORIGIN: "https://eventkart.app/api",
+				DATABASE_URL:
+					"postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev",
 			}),
 		).toThrow(
 			"Invalid configuration: WEB_ORIGIN must be an absolute origin without a path, query, or hash.",
@@ -49,6 +51,8 @@ describe("buildApp", () => {
 			PORT: "3000",
 			LOG_LEVEL: "info",
 			WEB_ORIGIN: "https://eventkart.app",
+			DATABASE_URL:
+				"postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev",
 			INTERNAL_API_KEY: "",
 		});
 
@@ -61,6 +65,8 @@ describe("buildApp", () => {
 			PORT: "3000",
 			LOG_LEVEL: "info",
 			WEB_ORIGIN: "https://eventkart.app:443",
+			DATABASE_URL:
+				"postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev",
 		});
 
 		expect(config.WEB_ORIGIN).toBe("https://eventkart.app");

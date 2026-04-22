@@ -11,6 +11,8 @@ export async function buildTestApp(): Promise<FastifyInstance> {
 			LOG_LEVEL: "info",
 			WEB_ORIGIN: "http://localhost:3000",
 			INTERNAL_API_KEY: "test-internal-key",
+			DATABASE_URL:
+				"postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev",
 			REDIS_URL: "redis://localhost:6379",
 		},
 	});

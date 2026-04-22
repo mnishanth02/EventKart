@@ -2,7 +2,7 @@ import { Redis } from "ioredis";
 
 export const REDIS_NAMESPACES = {
 	session: "sess:",
-	bull: "bull:",
+	bull: "bull:", // BullMQ uses "bull" prefix internally; this documents the effective namespace
 	rateLimit: "rl:",
 	cache: "cache:",
 	otp: "otp:",

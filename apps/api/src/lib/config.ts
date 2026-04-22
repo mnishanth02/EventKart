@@ -28,6 +28,10 @@ function ensureEnvLoaded() {
 function normalizeConfigData(data: Record<string, unknown>) {
 	const normalizedData = { ...data };
 
+	if (normalizedData.DATABASE_URL === "") {
+		delete normalizedData.DATABASE_URL;
+	}
+
 	if (normalizedData.INTERNAL_API_KEY === "") {
 		delete normalizedData.INTERNAL_API_KEY;
 	}
@@ -86,6 +90,7 @@ export const appConfigSchema = Type.Object({
 		{ default: "info" },
 	),
 	WEB_ORIGIN: Type.String({ default: "http://localhost:3000" }),
+	DATABASE_URL: Type.String({ minLength: 1 }),
 	REDIS_URL: Type.String({ default: "redis://localhost:6379" }),
 	INTERNAL_API_KEY: Type.Optional(Type.String({ minLength: 1 })),
 	S3_ENDPOINT: Type.Optional(Type.String({ minLength: 1 })),

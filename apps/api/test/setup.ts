@@ -15,6 +15,14 @@ vi.mock("ioredis", () => {
 	return { Redis: MockRedis, default: MockRedis };
 });
 
+// Global mock for @repo/db — prevents real PostgreSQL connections in all tests.
+vi.mock("@repo/db", () => {
+	return {
+		createDatabase: vi.fn().mockReturnValue({}),
+		createMigrationClient: vi.fn().mockReturnValue({}),
+	};
+});
+
 // Global mock for bullmq — prevents real queue connections in all tests.
 vi.mock("bullmq", () => {
 	class MockQueue {

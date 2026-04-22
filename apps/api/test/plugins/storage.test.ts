@@ -51,6 +51,8 @@ describe("Storage Plugin", () => {
 					PORT: 3001,
 					LOG_LEVEL: "info",
 					WEB_ORIGIN: "http://localhost:3000",
+					DATABASE_URL:
+						"postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev",
 					REDIS_URL: "redis://localhost:6379",
 				},
 			});
@@ -89,6 +91,8 @@ describe("Storage Plugin", () => {
 					PORT: 3001,
 					LOG_LEVEL: "info",
 					WEB_ORIGIN: "http://localhost:3000",
+					DATABASE_URL:
+						"postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev",
 					REDIS_URL: "redis://localhost:6379",
 					S3_ENDPOINT: "https://test.r2.cloudflarestorage.com",
 					S3_REGION: "auto",

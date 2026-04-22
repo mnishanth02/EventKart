@@ -7,12 +7,22 @@ import { createCleanupWorker } from "./cleanup.js";
 import { createExportsWorker } from "./exports.js";
 
 // Worker service entry point — runs as a separate Railway service.
-// Usage: tsx apps/api/src/workers/index.ts
+// Usage: pnpm --filter api start:worker
 
-const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
+function getRequiredEnv(name: string): string {
+	const value = process.env[name];
+	if (!value) {
+		throw new Error(
+			`Required environment variable ${name} is not set. Workers cannot start without it.`,
+		);
+	}
+	return value;
+}
 
-export async function startWorkers(redisUrl: string = REDIS_URL) {
-	const connection = new Redis(redisUrl, {
+export async function startWorkers(redisUrl?: string) {
+	const url = redisUrl ?? getRequiredEnv("REDIS_URL");
+
+	const connection = new Redis(url, {
 		maxRetriesPerRequest: null,
 		enableOfflineQueue: true,
 	});
@@ -42,4 +52,16 @@ export async function startWorkers(redisUrl: string = REDIS_URL) {
 
 	console.log(`Workers started: ${workers.map((w) => w.name).join(", ")}`);
 	return { workers, connection, failedJobsQueue };
+}
+
+// Auto-start when run directly as entrypoint
+const isDirectRun =
+	import.meta.url === `file://${process.argv[1]}` ||
+	process.argv[1]?.endsWith("workers/index.ts");
+
+if (isDirectRun) {
+	startWorkers().catch((error) => {
+		console.error("Failed to start workers:", error);
+		process.exit(1);
+	});
 }

@@ -43,6 +43,8 @@ function buildPluginTestApp(): ReturnType<typeof buildApp> {
 			PORT: 3001,
 			LOG_LEVEL: "info",
 			WEB_ORIGIN: "http://localhost:3000",
+			DATABASE_URL:
+				"postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev",
 			REDIS_URL: "redis://localhost:6379",
 		},
 	});

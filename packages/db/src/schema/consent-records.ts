@@ -8,7 +8,6 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import { users } from "./users.js";
 
 export const consentTypeEnum = pgEnum("consent_type", [
 	"booking_terms",
@@ -16,14 +15,13 @@ export const consentTypeEnum = pgEnum("consent_type", [
 	"marketing",
 ]);
 
-/** DPDPA-compliant consent tracking — records retained even after user deletion */
+/** DPDPA-compliant consent tracking — records retained even after user deletion.
+ *  No FK on participant_id (mirrors audit_log pattern — consent logs outlive users). */
 export const consentRecords = pgTable(
 	"consent_records",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
-		participantId: uuid("participant_id")
-			.notNull()
-			.references(() => users.id),
+		participantId: uuid("participant_id").notNull(),
 		consentType: consentTypeEnum("consent_type").notNull(),
 		consentVersion: varchar("consent_version", { length: 50 }).notNull(),
 		acceptedAt: timestamp("accepted_at", { withTimezone: true })
