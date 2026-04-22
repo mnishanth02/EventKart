@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { phoneSchema } from "@repo/shared/schemas";
+import { emailSchema, phoneSchema } from "@repo/shared/schemas";
 
 export const otpSendBodySchema = z.object({
 	phone: phoneSchema,
@@ -47,6 +47,36 @@ export const logoutErrorResponseSchema = z.object({
 	success: z.literal(false),
 	error: z.object({
 		code: z.string(),
+		message: z.string(),
+	}),
+});
+
+// ── Email verification schemas ──────────────────────────────────
+
+export const emailVerificationSendBodySchema = z.object({
+	email: emailSchema,
+});
+
+export const emailVerificationSendResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.object({
+		message: z.string(),
+		expiresInSeconds: z.number().int().positive(),
+	}),
+});
+
+export const emailVerificationVerifyBodySchema = z.object({
+	token: z
+		.string()
+		.length(64)
+		.regex(/^[a-f0-9]{64}$/, "Invalid token format"),
+});
+
+export const emailVerificationVerifyResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.object({
+		role: z.string(),
+		email: z.string(),
 		message: z.string(),
 	}),
 });

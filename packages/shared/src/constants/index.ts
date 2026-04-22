@@ -11,3 +11,8 @@ export {
 export type { OtpDeliveryMode } from "./otp.js";
 export { SESSION_TTL_SECONDS, SESSION_COOKIE_NAME } from "./session.js";
 export { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "./csrf.js";
+export {
+	EMAIL_VERIFICATION_TOKEN_TTL_SECONDS,
+	EMAIL_VERIFICATION_RATE_LIMIT_SECONDS,
+	EMAIL_VERIFICATION_TOKEN_BYTES,
+} from "./email-verification.js";

@@ -6,6 +6,10 @@ import {
 	logoutSession,
 } from "./service.js";
 import {
+	sendVerificationEmail,
+	verifyEmailToken,
+} from "./email-verification-service.js";
+import {
 	otpSendBodySchema,
 	otpSendResponseSchema,
 	otpVerifyBodySchema,
@@ -13,6 +17,10 @@ import {
 	otpErrorResponseSchema,
 	logoutResponseSchema,
 	logoutErrorResponseSchema,
+	emailVerificationSendBodySchema,
+	emailVerificationSendResponseSchema,
+	emailVerificationVerifyBodySchema,
+	emailVerificationVerifyResponseSchema,
 } from "./schemas.js";
 import {
 	SESSION_COOKIE_NAME,
@@ -25,6 +33,7 @@ import {
 	buildCsrfClearOptions,
 } from "../../plugins/csrf.js";
 import { UnauthorizedError, ForbiddenError } from "../../lib/errors.js";
+import { requireAuth } from "../../middleware/require-auth.js";
 
 /**
  * Validate Origin header against WEB_ORIGIN for login-CSRF protection.
@@ -199,6 +208,91 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				success: true as const,
 				data: {
 					message: "Logged out successfully",
+				},
+			});
+		},
+	);
+
+	// ── Email verification routes ───────────────────────────────
+
+	app.post(
+		"/email/send-verification",
+		{
+			schema: {
+				body: emailVerificationSendBodySchema,
+				response: {
+					200: emailVerificationSendResponseSchema,
+					400: otpErrorResponseSchema,
+					401: logoutErrorResponseSchema,
+					429: otpErrorResponseSchema,
+				},
+			},
+			onRequest: [requireAuth],
+		},
+		async (request, reply) => {
+			if (!request.session) {
+				throw new UnauthorizedError();
+			}
+
+			const { email } = request.body;
+
+			const result = await sendVerificationEmail(
+				{
+					db: fastify.db,
+					redis: fastify.redis.cache,
+					emailQueue: fastify.queues.email,
+					config: fastify.config,
+					log: request.log,
+				},
+				request.session.userId,
+				email,
+			);
+
+			return reply.code(200).send({
+				success: true as const,
+				data: result,
+			});
+		},
+	);
+
+	app.post(
+		"/email/verify",
+		{
+			schema: {
+				body: emailVerificationVerifyBodySchema,
+				response: {
+					200: emailVerificationVerifyResponseSchema,
+					400: otpErrorResponseSchema,
+					401: logoutErrorResponseSchema,
+				},
+			},
+			onRequest: [requireAuth],
+		},
+		async (request, reply) => {
+			if (!request.session) {
+				throw new UnauthorizedError();
+			}
+
+			const { token } = request.body;
+
+			const result = await verifyEmailToken(
+				{
+					db: fastify.db,
+					sessionRedis: fastify.redis.session,
+					log: request.log,
+				},
+				token,
+				{
+					userId: request.session.userId,
+					sessionId: request.session.sessionId,
+				},
+			);
+
+			return reply.code(200).send({
+				success: true as const,
+				data: {
+					...result,
+					message: "Email verified successfully",
 				},
 			});
 		},

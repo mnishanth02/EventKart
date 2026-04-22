@@ -64,6 +64,14 @@ function normalizeConfigData(data: Record<string, unknown>) {
 		delete normalizedData.COOKIE_DOMAIN;
 	}
 
+	if (normalizedData.ADMIN_IP_ALLOWLIST === "") {
+		delete normalizedData.ADMIN_IP_ALLOWLIST;
+	}
+
+	if (normalizedData.RESEND_API_KEY === "") {
+		delete normalizedData.RESEND_API_KEY;
+	}
+
 	return normalizedData;
 }
 
@@ -120,6 +128,9 @@ export const appConfigSchema = Type.Object({
 	COOKIE_DOMAIN: Type.Optional(Type.String({ minLength: 1 })),
 	OTP_HMAC_SECRET: Type.String({ default: "eventkart-otp-hash-v1" }),
 	CSRF_SECRET: Type.String({ default: "eventkart-csrf-secret-v1" }),
+	ADMIN_IP_ALLOWLIST: Type.Optional(Type.String({ minLength: 1 })),
+	RESEND_API_KEY: Type.Optional(Type.String({ minLength: 1 })),
+	EMAIL_FROM: Type.String({ default: "EventKart <noreply@eventkart.app>" }),
 });
 
 export type AppConfig = Static<typeof appConfigSchema>;
