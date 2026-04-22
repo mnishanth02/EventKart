@@ -10,11 +10,59 @@ import {
 	EMAIL_VERIFICATION_TOKEN_BYTES,
 	EMAIL_VERIFICATION_TOKEN_TTL_SECONDS,
 } from "@repo/shared/constants";
-import { RateLimitError, ValidationError } from "../../lib/errors.js";
+import {
+	ConflictError,
+	RateLimitError,
+	ValidationError,
+} from "../../lib/errors.js";
 
 function hashToken(token: string): string {
 	return createHash("sha256").update(token).digest("hex");
 }
+
+/** Check if a PostgreSQL error is a unique constraint violation. */
+function isUniqueViolation(
+	error: unknown,
+	constraintName?: string,
+): boolean {
+	if (
+		typeof error !== "object" ||
+		error === null ||
+		!("code" in error)
+	) {
+		return false;
+	}
+	const pgError = error as { code: string; constraint_name?: string };
+	if (pgError.code !== "23505") return false;
+	if (constraintName && pgError.constraint_name !== constraintName) {
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Lua script for atomic Redis session role refresh.
+ * Only updates if the key still exists (prevents session resurrection).
+ *
+ * KEYS[1] = sessionId
+ * ARGV[1] = new role value
+ *
+ * Returns 1 if updated, 0 if key doesn't exist.
+ */
+const REFRESH_SESSION_ROLE_LUA = `
+local raw = redis.call('GET', KEYS[1])
+if not raw then
+  return 0
+end
+local data = cjson.decode(raw)
+data.role = ARGV[1]
+local ttl = redis.call('TTL', KEYS[1])
+if ttl > 0 then
+  redis.call('SET', KEYS[1], cjson.encode(data), 'EX', ttl)
+  return 1
+end
+return 0
+`;
 
 export interface SendVerificationDeps {
 	db: Database;
@@ -45,33 +93,34 @@ export async function sendVerificationEmail(
 		);
 	}
 
-	// 2. Invalidate any previous pending tokens for this user
-	await deps.db
-		.update(emailVerifications)
-		.set({ verifiedAt: sql`now()` })
-		.where(
-			and(
-				eq(emailVerifications.userId, userId),
-				isNull(emailVerifications.verifiedAt),
-			),
-		);
-
-	// 3. Generate token
+	// 2. Invalidate old pending tokens + insert new token in one transaction
 	const rawToken = randomBytes(EMAIL_VERIFICATION_TOKEN_BYTES).toString("hex");
 	const tokenHash = hashToken(rawToken);
-
-	// 4. Store in DB
 	const expiresAt = new Date(
 		Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_SECONDS * 1000,
 	);
-	await deps.db.insert(emailVerifications).values({
-		userId,
-		email,
-		tokenHash,
-		expiresAt,
+
+	await deps.db.transaction(async (tx) => {
+		// Delete old pending tokens (they were never verified — no audit value)
+		await tx
+			.delete(emailVerifications)
+			.where(
+				and(
+					eq(emailVerifications.userId, userId),
+					isNull(emailVerifications.verifiedAt),
+				),
+			);
+
+		// Insert new token
+		await tx.insert(emailVerifications).values({
+			userId,
+			email,
+			tokenHash,
+			expiresAt,
+		});
 	});
 
-	// 5. Enqueue email job
+	// 3. Enqueue email job
 	const verificationUrl = `${deps.config.WEB_ORIGIN}/auth/verify-email?token=${rawToken}`;
 	await deps.emailQueue.add("verification", {
 		to: email,
@@ -100,72 +149,103 @@ export async function verifyEmailToken(
 ): Promise<{ role: string; email: string }> {
 	const tokenHash = hashToken(token);
 
-	// Atomic: find + consume token in one query
-	const [verification] = await deps.db
-		.update(emailVerifications)
-		.set({ verifiedAt: sql`now()` })
-		.where(
-			and(
-				eq(emailVerifications.tokenHash, tokenHash),
-				eq(emailVerifications.userId, sessionInfo.userId),
-				isNull(emailVerifications.verifiedAt),
-				sql`${emailVerifications.expiresAt} > now()`,
-			),
-		)
-		.returning({
-			email: emailVerifications.email,
-			userId: emailVerifications.userId,
+	// All DB work in a single transaction — if user update fails,
+	// the token consumption is rolled back automatically.
+	let verifiedEmail: string;
+	let finalRole: string;
+
+	try {
+		const result = await deps.db.transaction(async (tx) => {
+			// Atomic: find + consume token
+			const [verification] = await tx
+				.update(emailVerifications)
+				.set({ verifiedAt: sql`now()` })
+				.where(
+					and(
+						eq(emailVerifications.tokenHash, tokenHash),
+						eq(emailVerifications.userId, sessionInfo.userId),
+						isNull(emailVerifications.verifiedAt),
+						sql`${emailVerifications.expiresAt} > now()`,
+					),
+				)
+				.returning({
+					email: emailVerifications.email,
+					userId: emailVerifications.userId,
+				});
+
+			if (!verification) {
+				throw new ValidationError(
+					"Invalid or expired verification token",
+				);
+			}
+
+			// Elevate role to organizer (only if participant)
+			const [updatedUser] = await tx
+				.update(users)
+				.set({
+					email: verification.email,
+					role: "organizer",
+				})
+				.where(
+					and(
+						eq(users.id, sessionInfo.userId),
+						eq(users.role, "participant"),
+					),
+				)
+				.returning({ role: users.role });
+
+			// If user was already organizer/admin, just update email
+			if (!updatedUser) {
+				await tx
+					.update(users)
+					.set({ email: verification.email })
+					.where(eq(users.id, sessionInfo.userId));
+			}
+
+			// Read the actual current role from DB (prevents role downgrade bug)
+			const [currentUser] = await tx
+				.select({ role: users.role })
+				.from(users)
+				.where(eq(users.id, sessionInfo.userId));
+
+			if (!currentUser) {
+				throw new ValidationError("User not found");
+			}
+
+			return {
+				email: verification.email,
+				role: currentUser.role,
+			};
 		});
 
-	if (!verification) {
-		throw new ValidationError("Invalid or expired verification token");
-	}
-
-	// Update user: set email + elevate role to organizer (only if participant)
-	const [updatedUser] = await deps.db
-		.update(users)
-		.set({
-			email: verification.email,
-			role: "organizer",
-		})
-		.where(
-			and(
-				eq(users.id, sessionInfo.userId),
-				eq(users.role, "participant"),
-			),
-		)
-		.returning({ role: users.role });
-
-	// If user was already organizer/admin, just update email
-	if (!updatedUser) {
-		await deps.db
-			.update(users)
-			.set({ email: verification.email })
-			.where(eq(users.id, sessionInfo.userId));
-	}
-
-	const newRole = updatedUser?.role ?? "organizer";
-
-	// Refresh Redis session with new role
-	const existingSession = await deps.sessionRedis.get(
-		sessionInfo.sessionId,
-	);
-	if (existingSession) {
-		const sessionData = JSON.parse(existingSession) as Record<
-			string,
-			unknown
-		>;
-		sessionData.role = newRole;
-		const ttl = await deps.sessionRedis.ttl(sessionInfo.sessionId);
-		if (ttl > 0) {
-			await deps.sessionRedis.set(
-				sessionInfo.sessionId,
-				JSON.stringify(sessionData),
-				"EX",
-				ttl,
-			);
+		verifiedEmail = result.email;
+		finalRole = result.role;
+	} catch (error) {
+		// Catch email uniqueness violation and return clear 409
+		if (isUniqueViolation(error, "users_email_unique")) {
+			throw new ConflictError("Email address is already in use");
 		}
+		throw error;
 	}
 
-	return { role: newRole, email: verification.email };
+	// Refresh Redis session with actual role (AFTER transaction commit).
+	// Uses Lua script to atomically check existence + update,
+	// preventing resurrection of a deleted (logged-out) session.
+	try {
+		await deps.sessionRedis.eval(
+			REFRESH_SESSION_ROLE_LUA,
+			1,
+			sessionInfo.sessionId,
+			finalRole,
+		);
+	} catch (redisError) {
+		// Redis failure is non-fatal — session will have stale role
+		// until next login. Log and continue.
+		deps.log.error(
+			{ err: redisError, sessionId: sessionInfo.sessionId },
+			"Failed to refresh session role in Redis after email verification",
+		);
+	}
+
+	return { role: finalRole, email: verifiedEmail };
 }

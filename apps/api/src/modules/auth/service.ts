@@ -17,6 +17,8 @@ import {
 	acquireOtpSendLock,
 	generateOtp,
 	getOtpCooldownTtl,
+	releaseOtpSendLock,
+	shortenOtpCooldown,
 	storeOtp,
 	verifyAndConsumeOtp,
 } from "../../lib/otp.js";
@@ -82,14 +84,19 @@ export async function sendOtpForPhone(
 			templateId: config.MSG91_OTP_TEMPLATE_ID,
 		};
 
-		const result: OtpDeliveryResult = await sendOtpWithFallback(
-			phone,
-			otp,
-			msg91Config,
-			log,
-		);
+		let result: OtpDeliveryResult;
+		try {
+			result = await sendOtpWithFallback(phone, otp, msg91Config, log);
+		} catch (error) {
+			// Delivery threw unexpectedly — release the cooldown lock
+			// so the user can retry immediately
+			await releaseOtpSendLock(redis, phone);
+			throw error;
+		}
 
 		if (!result.success) {
+			// Delivery failed gracefully — shorten cooldown to allow quick retry
+			await shortenOtpCooldown(redis, phone, 5);
 			throw new OtpDeliveryError(
 				"Unable to send OTP. Please try again later.",
 				{ channel: result.channel, error: result.error },

@@ -21,6 +21,7 @@ import {
 	emailVerificationSendResponseSchema,
 	emailVerificationVerifyBodySchema,
 	emailVerificationVerifyResponseSchema,
+	emailConflictResponseSchema,
 } from "./schemas.js";
 import {
 	SESSION_COOKIE_NAME,
@@ -264,6 +265,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 					200: emailVerificationVerifyResponseSchema,
 					400: otpErrorResponseSchema,
 					401: logoutErrorResponseSchema,
+					409: emailConflictResponseSchema,
 				},
 			},
 			onRequest: [requireAuth],

@@ -111,3 +111,10 @@ export class IpNotAllowedError extends ForbiddenError {
 		this.name = "IpNotAllowedError";
 	}
 }
+
+export class ConflictError extends AppError {
+	constructor(message = "Resource already exists") {
+		super(message, 409, "CONFLICT");
+		this.name = "ConflictError";
+	}
+}

@@ -75,6 +75,28 @@ export async function acquireOtpSendLock(
 }
 
 /**
+ * Release the OTP send cooldown lock (e.g. on delivery failure).
+ */
+export async function releaseOtpSendLock(
+	redis: Redis,
+	phone: string,
+): Promise<void> {
+	await redis.del(`cooldown:${phone}`);
+}
+
+/**
+ * Shorten cooldown to a brief retry window after a delivery failure.
+ * Uses EXPIRE to reduce TTL instead of DEL to avoid racing with concurrent requests.
+ */
+export async function shortenOtpCooldown(
+	redis: Redis,
+	phone: string,
+	seconds: number,
+): Promise<void> {
+	await redis.expire(`cooldown:${phone}`, seconds);
+}
+
+/**
  * Get remaining cooldown time for a phone number.
  * @returns Seconds remaining, or 0 if no cooldown.
  */

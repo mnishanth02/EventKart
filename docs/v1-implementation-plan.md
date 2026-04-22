@@ -173,6 +173,8 @@ These are non-coding prerequisites that must be satisfied before production laun
 | 4 | I-0.3.4 | Error handling patterns — error boundaries, 404, API error display | — | ✦ | — | I-0.3.1, I-0.3.6 | Consistent error UI across all surfaces |
 | 5 | I-0.3.5 | Loading state patterns — skeleton screens, spinners, optimistic UI foundations | — | ✦ | — | I-0.3.1 | Consistent loading UX |
 | 6 | I-0.3.3 | Role-based routing and navigation structure | — | ✦ | — | I-0.3.1, **I-0.2.4** | `/` public, `/org/*` organizer, `/admin/*` admin, `/my/*` participant. **Cross-dep on Module 0.2 RBAC middleware.** |
+| 7 | I-0.2.9 | Session forwarding for SSR — TanStack Start forwards cookie in server-to-server calls | — | ✦ | — | **I-0.2.3**, I-0.3.6 | `X-Request-ID` propagation, `INTERNAL_API_URL` for SSR. **Deferred from Module 0.2 — depends on I-0.3.6 API client.** |
+| 8 | I-0.2.7 | Deferred authentication pattern — browsing unauthenticated, OTP at booking | ✦ | ✦ | — | **I-0.2.1**, **I-0.2.2**, I-0.3.1 | Frontend routing respects auth state; booking flow triggers OTP. **Deferred from Module 0.2 — depends on I-0.3.1 layout shell.** |
 
 **Deliverables:**
 - API client with hybrid SSR/browser communication
@@ -180,6 +182,8 @@ These are non-coding prerequisites that must be satisfied before production laun
 - Core shadcn/ui components configured and styled
 - Error and loading state patterns established
 - Role-based routing and navigation (after RBAC is ready)
+- SSR session forwarding from TanStack Start (deferred from Module 0.2)
+- Deferred auth pattern for unauthenticated browsing (deferred from Module 0.2)
 
 ### Module 0.4: Observability, Metrics & Error Infrastructure
 

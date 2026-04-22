@@ -80,3 +80,11 @@ export const emailVerificationVerifyResponseSchema = z.object({
 		message: z.string(),
 	}),
 });
+
+export const emailConflictResponseSchema = z.object({
+	success: z.literal(false),
+	error: z.object({
+		code: z.string(),
+		message: z.string(),
+	}),
+});

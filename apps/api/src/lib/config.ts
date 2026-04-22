@@ -162,6 +162,21 @@ export function loadConfig(
 		);
 	}
 
+	// Reject known default secrets in production
+	const INSECURE_DEFAULTS = [
+		"eventkart-otp-hash-v1",
+		"eventkart-csrf-secret-v1",
+	];
+	if (
+		process.env.NODE_ENV === "production" &&
+		(INSECURE_DEFAULTS.includes(config.OTP_HMAC_SECRET) ||
+			INSECURE_DEFAULTS.includes(config.CSRF_SECRET))
+	) {
+		throw new Error(
+			"Invalid configuration: OTP_HMAC_SECRET and CSRF_SECRET must be set to strong random values in production.",
+		);
+	}
+
 	return {
 		...config,
 		WEB_ORIGIN: webOrigin.origin,

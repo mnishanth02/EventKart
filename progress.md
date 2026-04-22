@@ -41,8 +41,8 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 | Phase | Module | Status | Notes |
 |-------|--------|--------|-------|
 | Phase 0 | 0.1 — Shared Packages & Database Foundation | ✅ Complete | All features complete: I-0.1.1 through I-0.1.9. |
-| Phase 0 | 0.2 — Authentication & Identity | 🔄 In Progress | I-0.2.12 security headers + I-0.2.1 OTP send + I-0.2.2 OTP verify + I-0.2.3 session middleware + I-0.2.4 RBAC + I-0.2.8 logout + I-0.2.11 CSRF + I-0.2.10 internal API key + I-0.2.5 email verify + I-0.2.6 admin IP allowlist complete |
-| Phase 0 | 0.3 — Design System & App Shell | 🔄 Partial | App shell, shadcn/ui, Tailwind v4 configured |
+| Phase 0 | 0.2 — Authentication & Identity | ✅ Complete (backend) | All backend auth items complete (I-0.2.1–I-0.2.6, I-0.2.8, I-0.2.10–I-0.2.12). 312 API tests passing. I-0.2.9 (SSR session forwarding) and I-0.2.7 (deferred auth) deferred to Module 0.3 — depend on frontend app shell + API client. |
+| Phase 0 | 0.3 — Design System & App Shell | 🔄 Partial | App shell, shadcn/ui, Tailwind v4 configured. Includes deferred I-0.2.9 (SSR session forwarding) + I-0.2.7 (deferred auth) from Module 0.2. |
 | Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | ⬜ Not Started | — |
 | Phase 1 | 1.1 — Organizer Signup & Verification | ⬜ Not Started | — |
 | Phase 1 | 1.2 — Event Creation & Management | ⬜ Not Started | — |
