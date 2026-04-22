@@ -70,6 +70,7 @@ export const appConfigSchema = Type.Object({
 		{ default: "info" },
 	),
 	WEB_ORIGIN: Type.String({ default: "http://localhost:3000" }),
+	REDIS_URL: Type.String({ default: "redis://localhost:6379" }),
 	INTERNAL_API_KEY: Type.Optional(Type.String({ minLength: 1 })),
 });
 

@@ -43,6 +43,8 @@ The following foundation work is already complete or in progress:
 | Deployment topology | 🔄 In progress | Separate web/api deployment plan exists |
 | I-0.1.1: `packages/shared` | ✅ Complete | Zod v4 schemas, types, constants, phone E.164 normalization. 58 tests passing. |
 | I-0.1.4: Docker Compose | ✅ Complete | PostgreSQL 17 + Redis 7 local dev infrastructure. `docker-compose.yml` at repo root. |
+| I-0.1.2: `packages/db` | ✅ Complete | Drizzle ORM client with `prepare: false`, postgres.js driver, Drizzle Kit migrations, seed skeleton. 1 test passing. |
+| I-0.1.5: Redis client setup | ✅ Complete | ioredis namespaced connections (sess:, bull:, rl:, cache:, otp:), Fastify plugin, BullMQ connection factory. 35 API tests passing. |
 
 **What remains:** All product feature development (Phases 0–7 from requirements doc).
 
@@ -91,11 +93,11 @@ These are non-coding prerequisites that must be satisfied before production laun
 
 | Order | ID | Feature | Backend | Frontend | Shared | Depends on | Notes |
 |-------|----|---------|---------|----------|--------|------------|-------|
-| 1 | I-0.1.1 | `packages/shared` — Shared Zod schemas, types, constants | — | — | ✦ | — | Schemas imported by both `apps/web` and `apps/api`. Phone number normalization to E.164 format defined here. |
-| 2 | I-0.1.4 | Local development infrastructure — Docker Compose for PostgreSQL + Redis | ✦ | — | — | — | `docker-compose.yml` at repo root. Can run in parallel with I-0.1.1. |
-| 3 | I-0.1.2 | `packages/db` — Drizzle ORM schema, migrations, seed, client | ✦ | — | — | I-0.1.1, I-0.1.4 | PostgreSQL 17, `prepare: false` for PgBouncer, Drizzle Kit migrations. Needs shared types + running DB. |
+| 1 ✅ | I-0.1.1 | `packages/shared` — Shared Zod schemas, types, constants | — | — | ✦ | — | Schemas imported by both `apps/web` and `apps/api`. Phone number normalization to E.164 format defined here. |
+| 2 ✅ | I-0.1.4 | Local development infrastructure — Docker Compose for PostgreSQL + Redis | ✦ | — | — | — | `docker-compose.yml` at repo root. Can run in parallel with I-0.1.1. |
+| 3  🔄 | I-0.1.2 | `packages/db` — Drizzle ORM schema, migrations, seed, client | ✦ | — | — | I-0.1.1, I-0.1.4 | PostgreSQL 17, `prepare: false` for PgBouncer, Drizzle Kit migrations. Needs shared types + running DB. |
 | 4 | I-0.1.3 | Core database tables — users, roles, sessions, consent_records, audit_log | ✦ | — | — | I-0.1.2 | Foundation tables referenced by every module. All timestamps stored as UTC with IST display in frontend. |
-| 5 | I-0.1.5 | Redis client setup — namespaced connections (sess:, bull:, rl:, cache:, otp:) | ✦ | — | — | I-0.1.4 | `apps/api/src/lib/redis.ts`, `volatile-lru` eviction policy. Needs running Redis from Docker Compose. |
+| 5 ✅ | I-0.1.5 | Redis client setup — namespaced connections (sess:, bull:, rl:, cache:, otp:) | ✦ | — | — | I-0.1.4 | `apps/api/src/lib/redis.ts`, `volatile-lru` eviction policy. Needs running Redis from Docker Compose. |
 | 6 | I-0.1.6 | BullMQ queue infrastructure — queue definitions, worker service skeleton, DLQ pattern | ✦ | — | — | I-0.1.5 | Queues: payment-webhook, email, cleanup, exports. Custom failed-jobs queue with alerting via `failed` event handler. Replay tooling for DLQ items. |
 | 7 | I-0.1.8 | Object storage client — S3/R2 presigned URL helper, server-side encryption, access logging | ✦ | — | — | I-0.1.3 | Used by KYC upload (Phase 1), event images (Phase 1), roster PDFs (Phase 5). Access log entries written to audit_log table. |
 | 8 | I-0.1.7 | Database migration CI pipeline | ✦ | — | — | I-0.1.2, I-0.1.3 | Expand/contract pattern, rollback SQL, lock-risk assessment. CI validates what's already working locally. |

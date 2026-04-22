@@ -11,6 +11,7 @@ export async function buildTestApp(): Promise<FastifyInstance> {
 			LOG_LEVEL: "info",
 			WEB_ORIGIN: "http://localhost:3000",
 			INTERNAL_API_KEY: "test-internal-key",
+			REDIS_URL: "redis://localhost:6379",
 		},
 	});
 
