@@ -19,6 +19,8 @@
 | 8 | I-0.1.8 — Object storage client (S3/R2) | [impl-plan](docs/impl-plan/feature-0.1-I-0.1.8.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
 | 9 | I-0.1.9 — CI/CD deployment pipeline | [impl-plan](docs/impl-plan/feature-0.1-I-0.1.9.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
 | 10 | I-0.2.12 — Security headers | [impl-plan](docs/impl-plan/feature-0.2-I-0.2.12.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
+| 11 | I-0.2.1 — OTP send (MSG91 + WhatsApp fallback) | [impl-plan](docs/impl-plan/feature-0.2-I-0.2.1.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
+| 12 | I-0.2.2 — OTP verify → session creation | [impl-plan](docs/impl-plan/feature-0.2-I-0.2.2.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
 
 ## Completed Implementation Plans
 
@@ -33,7 +35,7 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 | Phase | Module | Status | Notes |
 |-------|--------|--------|-------|
 | Phase 0 | 0.1 — Shared Packages & Database Foundation | ✅ Complete | All features complete: I-0.1.1 through I-0.1.9. |
-| Phase 0 | 0.2 — Authentication & Identity | 🔄 In Progress | I-0.2.12 security headers complete |
+| Phase 0 | 0.2 — Authentication & Identity | 🔄 In Progress | I-0.2.12 security headers + I-0.2.1 OTP send + I-0.2.2 OTP verify complete |
 | Phase 0 | 0.3 — Design System & App Shell | 🔄 Partial | App shell, shadcn/ui, Tailwind v4 configured |
 | Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | ⬜ Not Started | — |
 | Phase 1 | 1.1 — Organizer Signup & Verification | ⬜ Not Started | — |

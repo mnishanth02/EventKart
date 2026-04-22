@@ -1,32 +1,47 @@
-export { phoneSchema, phoneInputSchema } from "./phone";
-export type { PhoneInput, Phone } from "./phone";
+export { phoneSchema, phoneInputSchema } from "./phone.js";
+export type { PhoneInput, Phone } from "./phone.js";
 
-export { emailSchema } from "./email";
-export type { EmailInput, Email } from "./email";
+export { emailSchema } from "./email.js";
+export type { EmailInput, Email } from "./email.js";
 
-export { uuidSchema } from "./id";
-export type { UUID } from "./id";
+export { uuidSchema } from "./id.js";
+export type { UUID } from "./id.js";
 
 export {
 	offsetPaginationSchema,
 	cursorPaginationSchema,
 	offsetPaginationMetaSchema,
 	cursorPaginationMetaSchema,
-} from "./pagination";
+} from "./pagination.js";
 export type {
 	OffsetPagination,
 	CursorPagination,
 	OffsetPaginationMeta,
 	CursorPaginationMeta,
-} from "./pagination";
+} from "./pagination.js";
 
 export {
 	successResponseSchema,
 	errorResponseSchema,
 	paginatedResponseSchema,
 	cursorPaginatedResponseSchema,
-} from "./api-response";
-export type { ErrorResponse } from "./api-response";
+} from "./api-response.js";
+export type { ErrorResponse } from "./api-response.js";
 
-export { dateSchema, datetimeSchema, timestampSchema } from "./date";
-export type { DateString, DateTimeString, Timestamp } from "./date";
+export { dateSchema, datetimeSchema, timestampSchema } from "./date.js";
+export type { DateString, DateTimeString, Timestamp } from "./date.js";
+
+export {
+	otpSendRequestSchema,
+	otpSendDataSchema,
+	otpVerifyRequestSchema,
+	otpVerifyDataSchema,
+} from "./otp.js";
+export type {
+	OtpSendRequest,
+	OtpSendRequestParsed,
+	OtpSendData,
+	OtpVerifyRequest,
+	OtpVerifyRequestParsed,
+	OtpVerifyData,
+} from "./otp.js";

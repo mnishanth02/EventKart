@@ -6,10 +6,31 @@ vi.mock("ioredis", () => {
 	class MockRedis {
 		ping = vi.fn().mockResolvedValue("PONG");
 		quit = vi.fn().mockResolvedValue("OK");
+		get = vi.fn().mockResolvedValue(null);
+		set = vi.fn().mockResolvedValue("OK");
+		del = vi.fn().mockResolvedValue(1);
+		ttl = vi.fn().mockResolvedValue(-2);
+		eval = vi.fn().mockResolvedValue(null);
+		pipeline = vi.fn().mockReturnValue({
+			set: vi.fn().mockReturnThis(),
+			exec: vi.fn().mockResolvedValue([]),
+		});
+		defineCommand: ReturnType<typeof vi.fn>;
 		options: Record<string, unknown>;
 
 		constructor(_url: string, options?: Record<string, unknown>) {
 			this.options = options ?? {};
+			const self = this as Record<string, unknown>;
+			this.defineCommand = vi.fn().mockImplementation((name: string) => {
+				self[name] = vi.fn().mockImplementation((...args: unknown[]) => {
+					const lastArg = args[args.length - 1];
+					if (typeof lastArg === "function") {
+						(lastArg as (err: null, result: number[]) => void)(null, [0, 0]);
+						return;
+					}
+					return Promise.resolve([0, 0]);
+				});
+			});
 		}
 	}
 	return { Redis: MockRedis, default: MockRedis };

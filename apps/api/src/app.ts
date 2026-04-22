@@ -3,16 +3,20 @@ import {
 	validatorCompiler,
 	type ZodTypeProvider,
 } from "@fastify/type-provider-zod";
+import cookie from "@fastify/cookie";
 import Fastify, { type FastifyServerOptions } from "fastify";
 
 import { type AppConfig, loadConfig } from "./lib/config.js";
 import configPlugin from "./plugins/config.js";
 import corsPlugin from "./plugins/cors.js";
 import databasePlugin from "./plugins/database.js";
+import errorHandlerPlugin from "./plugins/error-handler.js";
+import rateLimitPlugin from "./plugins/rate-limit.js";
 import securityHeadersPlugin from "./plugins/security-headers.js";
 import queuePlugin from "./plugins/queue.js";
 import redisPlugin from "./plugins/redis.js";
 import storagePlugin from "./plugins/storage.js";
+import authRoutes from "./modules/auth/routes.js";
 import healthRoutes from "./routes/health.js";
 
 export interface BuildAppOptions {
@@ -45,8 +49,12 @@ export function buildApp(options: BuildAppOptions = {}) {
 	app.register(redisPlugin);
 	app.register(queuePlugin);
 	app.register(corsPlugin);
+	app.register(cookie);
 	app.register(storagePlugin);
+	app.register(errorHandlerPlugin);
+	app.register(rateLimitPlugin);
 	app.register(healthRoutes);
+	app.register(authRoutes, { prefix: "/api/v1/auth" });
 
 	app.setNotFoundHandler((request, reply) => {
 		reply.code(404);

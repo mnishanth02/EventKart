@@ -52,6 +52,18 @@ function normalizeConfigData(data: Record<string, unknown>) {
 		delete normalizedData.S3_BUCKET;
 	}
 
+	if (normalizedData.MSG91_AUTH_KEY === "") {
+		delete normalizedData.MSG91_AUTH_KEY;
+	}
+
+	if (normalizedData.MSG91_OTP_TEMPLATE_ID === "") {
+		delete normalizedData.MSG91_OTP_TEMPLATE_ID;
+	}
+
+	if (normalizedData.COOKIE_DOMAIN === "") {
+		delete normalizedData.COOKIE_DOMAIN;
+	}
+
 	return normalizedData;
 }
 
@@ -99,6 +111,14 @@ export const appConfigSchema = Type.Object({
 	S3_SECRET_ACCESS_KEY: Type.Optional(Type.String({ minLength: 1 })),
 	S3_BUCKET: Type.Optional(Type.String({ minLength: 1 })),
 	S3_FORCE_PATH_STYLE: Type.Optional(Type.Boolean({ default: true })),
+	MSG91_AUTH_KEY: Type.Optional(Type.String({ minLength: 1 })),
+	MSG91_OTP_TEMPLATE_ID: Type.Optional(Type.String({ minLength: 1 })),
+	OTP_DELIVERY_MODE: Type.Union(
+		[Type.Literal("msg91"), Type.Literal("log")],
+		{ default: "log" },
+	),
+	COOKIE_DOMAIN: Type.Optional(Type.String({ minLength: 1 })),
+	OTP_HMAC_SECRET: Type.String({ default: "eventkart-otp-hash-v1" }),
 });
 
 export type AppConfig = Static<typeof appConfigSchema>;
@@ -121,6 +141,12 @@ export function loadConfig(
 	if (!webOrigin) {
 		throw new Error(
 			"Invalid configuration: WEB_ORIGIN must be an absolute origin without a path, query, or hash.",
+		);
+	}
+
+	if (config.OTP_DELIVERY_MODE === "msg91" && !config.MSG91_AUTH_KEY) {
+		throw new Error(
+			"Invalid configuration: OTP_DELIVERY_MODE is 'msg91' but MSG91_AUTH_KEY is not set.",
 		);
 	}
 

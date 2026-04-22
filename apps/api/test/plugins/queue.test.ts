@@ -10,6 +10,17 @@ vi.mock("ioredis", () => {
 
 		constructor(_url: string, options?: Record<string, unknown>) {
 			this.options = options ?? {};
+			const self = this as Record<string, unknown>;
+			self.defineCommand = vi.fn().mockImplementation((name: string) => {
+				self[name] = vi.fn().mockImplementation((...args: unknown[]) => {
+					const cb = args[args.length - 1];
+					if (typeof cb === "function") {
+						(cb as (err: null, r: number[]) => void)(null, [0, 0]);
+						return;
+					}
+					return Promise.resolve([0, 0]);
+				});
+			});
 		}
 	}
 	return { Redis: MockRedis, default: MockRedis };

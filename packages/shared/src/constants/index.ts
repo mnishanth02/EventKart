@@ -1,3 +1,12 @@
-export { USER_ROLES, userRoleSchema } from "./roles";
-export type { UserRole } from "./roles";
-export { PAGINATION_DEFAULTS } from "./pagination";
+export { USER_ROLES, userRoleSchema } from "./roles.js";
+export type { UserRole } from "./roles.js";
+export { PAGINATION_DEFAULTS } from "./pagination.js";
+export {
+	OTP_LENGTH,
+	OTP_TTL_SECONDS,
+	OTP_MAX_ATTEMPTS,
+	OTP_RATE_LIMIT_WINDOW_SECONDS,
+	OTP_DELIVERY_MODES,
+} from "./otp.js";
+export type { OtpDeliveryMode } from "./otp.js";
+export { SESSION_TTL_SECONDS, SESSION_COOKIE_NAME } from "./session.js";
