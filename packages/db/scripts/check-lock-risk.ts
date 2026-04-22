@@ -47,8 +47,7 @@ const rules: Rule[] = [
 		id: "index-not-concurrent",
 		severity: "CRITICAL",
 		message: "CREATE INDEX without CONCURRENTLY blocks writes",
-		test: (statement, filename) => {
-			if (INITIAL_MIGRATION_RE.test(filename)) return false;
+		test: (statement) => {
 			return /\bCREATE\s+(UNIQUE\s+)?INDEX\s+(?!CONCURRENTLY\b)/i.test(
 				statement,
 			);

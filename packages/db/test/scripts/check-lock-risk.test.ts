@@ -17,8 +17,8 @@ describe("analyzeMigrationSQL", () => {
 		const findings = analyzeMigrationSQL(sql, "0001_add_events.sql");
 
 		expect(findings).toHaveLength(1);
-		expect(findings[0]!.severity).toBe("CRITICAL");
-		expect(findings[0]!.rule).toBe("not-null-without-default");
+		expect(findings[0]?.severity).toBe("CRITICAL");
+		expect(findings[0]?.rule).toBe("not-null-without-default");
 	});
 
 	it("allows ADD COLUMN NOT NULL with DEFAULT", () => {
@@ -40,14 +40,17 @@ describe("analyzeMigrationSQL", () => {
 		const findings = analyzeMigrationSQL(sql, "0001_add_events.sql");
 
 		expect(findings).toHaveLength(1);
-		expect(findings[0]!.severity).toBe("CRITICAL");
-		expect(findings[0]!.rule).toBe("index-not-concurrent");
+		expect(findings[0]?.severity).toBe("CRITICAL");
+		expect(findings[0]?.rule).toBe("index-not-concurrent");
 	});
 
-	it("skips CREATE INDEX CONCURRENTLY check for initial migration (0000_*)", () => {
-		const sql = `CREATE INDEX "events_date_idx" ON "events" ("date");`;
-		const findings = analyzeMigrationSQL(sql, "0000_initial_setup.sql");
+	it("skips all checks for initial migration (0000_*)", () => {
+		const sql = [
+			`CREATE INDEX "events_date_idx" ON "events" ("date")`,
+			`ALTER TABLE "bookings" ADD CONSTRAINT "bookings_event_id_fk" FOREIGN KEY ("event_id") REFERENCES "events"("id")`,
+		].join(";\n--> statement-breakpoint\n");
 
+		const findings = analyzeMigrationSQL(sql, "0000_initial_setup.sql");
 		expect(findings).toEqual([]);
 	});
 
@@ -63,8 +66,8 @@ describe("analyzeMigrationSQL", () => {
 		const findings = analyzeMigrationSQL(sql, "0001_add_events.sql");
 
 		expect(findings).toHaveLength(1);
-		expect(findings[0]!.severity).toBe("WARNING");
-		expect(findings[0]!.rule).toBe("alter-column-type");
+		expect(findings[0]?.severity).toBe("WARNING");
+		expect(findings[0]?.rule).toBe("alter-column-type");
 	});
 
 	it("detects DROP COLUMN as WARNING", () => {
@@ -72,8 +75,8 @@ describe("analyzeMigrationSQL", () => {
 		const findings = analyzeMigrationSQL(sql, "0001_add_events.sql");
 
 		expect(findings).toHaveLength(1);
-		expect(findings[0]!.severity).toBe("WARNING");
-		expect(findings[0]!.rule).toBe("drop-column");
+		expect(findings[0]?.severity).toBe("WARNING");
+		expect(findings[0]?.rule).toBe("drop-column");
 	});
 
 	it("detects DROP TABLE as WARNING", () => {
@@ -81,8 +84,8 @@ describe("analyzeMigrationSQL", () => {
 		const findings = analyzeMigrationSQL(sql, "0001_add_events.sql");
 
 		expect(findings).toHaveLength(1);
-		expect(findings[0]!.severity).toBe("WARNING");
-		expect(findings[0]!.rule).toBe("drop-table");
+		expect(findings[0]?.severity).toBe("WARNING");
+		expect(findings[0]?.rule).toBe("drop-table");
 	});
 
 	it("detects ADD FOREIGN KEY without NOT VALID as CRITICAL", () => {
@@ -90,8 +93,8 @@ describe("analyzeMigrationSQL", () => {
 		const findings = analyzeMigrationSQL(sql, "0001_add_events.sql");
 
 		expect(findings).toHaveLength(1);
-		expect(findings[0]!.severity).toBe("CRITICAL");
-		expect(findings[0]!.rule).toBe("fk-without-not-valid");
+		expect(findings[0]?.severity).toBe("CRITICAL");
+		expect(findings[0]?.rule).toBe("fk-without-not-valid");
 	});
 
 	it("allows ADD FOREIGN KEY with NOT VALID", () => {
@@ -106,8 +109,8 @@ describe("analyzeMigrationSQL", () => {
 		const findings = analyzeMigrationSQL(sql, "0001_add_events.sql");
 
 		expect(findings).toHaveLength(1);
-		expect(findings[0]!.severity).toBe("WARNING");
-		expect(findings[0]!.rule).toBe("lock-table");
+		expect(findings[0]?.severity).toBe("WARNING");
+		expect(findings[0]?.rule).toBe("lock-table");
 	});
 
 	it("detects multiple findings in one file", () => {
@@ -131,7 +134,7 @@ describe("analyzeMigrationSQL", () => {
 		const findings = analyzeMigrationSQL(sql, "0001_add_events.sql");
 
 		expect(findings).toHaveLength(1);
-		expect(findings[0]!.severity).toBe("CRITICAL");
-		expect(findings[0]!.rule).toBe("index-not-concurrent");
+		expect(findings[0]?.severity).toBe("CRITICAL");
+		expect(findings[0]?.rule).toBe("index-not-concurrent");
 	});
 });
