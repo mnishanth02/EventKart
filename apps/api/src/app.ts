@@ -10,6 +10,7 @@ import configPlugin from "./plugins/config.js";
 import corsPlugin from "./plugins/cors.js";
 import queuePlugin from "./plugins/queue.js";
 import redisPlugin from "./plugins/redis.js";
+import storagePlugin from "./plugins/storage.js";
 import healthRoutes from "./routes/health.js";
 
 export interface BuildAppOptions {
@@ -40,6 +41,7 @@ export function buildApp(options: BuildAppOptions = {}) {
 	app.register(redisPlugin);
 	app.register(queuePlugin);
 	app.register(corsPlugin);
+	app.register(storagePlugin);
 	app.register(healthRoutes);
 
 	app.setNotFoundHandler((request, reply) => {

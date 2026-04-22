@@ -1,0 +1,69 @@
+name: Migration CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/db/**"
+  workflow_dispatch:
+
+concurrency:
+  group: migration-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-check:
+    name: Migration Checks
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: eventkart
+          POSTGRES_PASSWORD: eventkart_dev
+          POSTGRES_DB: eventkart_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev
+      MIGRATION_DATABASE_URL: postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check schema drift
+        run: pnpm --filter @repo/db db:check:drift
+
+      - name: Run migrations
+        run: pnpm --filter @repo/db db:migrate:run
+
+      - name: Lock-risk analysis
+        run: pnpm --filter @repo/db db:check:lock-risk
+
+      - name: Validate rollback files
+        run: pnpm --filter @repo/db db:check:rollbacks
+
+      - name: Run DB package tests
+        run: pnpm --filter @repo/db test

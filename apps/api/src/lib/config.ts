@@ -32,6 +32,22 @@ function normalizeConfigData(data: Record<string, unknown>) {
 		delete normalizedData.INTERNAL_API_KEY;
 	}
 
+	if (normalizedData.S3_ENDPOINT === "") {
+		delete normalizedData.S3_ENDPOINT;
+	}
+
+	if (normalizedData.S3_ACCESS_KEY_ID === "") {
+		delete normalizedData.S3_ACCESS_KEY_ID;
+	}
+
+	if (normalizedData.S3_SECRET_ACCESS_KEY === "") {
+		delete normalizedData.S3_SECRET_ACCESS_KEY;
+	}
+
+	if (normalizedData.S3_BUCKET === "") {
+		delete normalizedData.S3_BUCKET;
+	}
+
 	return normalizedData;
 }
 
@@ -72,6 +88,12 @@ export const appConfigSchema = Type.Object({
 	WEB_ORIGIN: Type.String({ default: "http://localhost:3000" }),
 	REDIS_URL: Type.String({ default: "redis://localhost:6379" }),
 	INTERNAL_API_KEY: Type.Optional(Type.String({ minLength: 1 })),
+	S3_ENDPOINT: Type.Optional(Type.String({ minLength: 1 })),
+	S3_REGION: Type.Optional(Type.String({ default: "auto" })),
+	S3_ACCESS_KEY_ID: Type.Optional(Type.String({ minLength: 1 })),
+	S3_SECRET_ACCESS_KEY: Type.Optional(Type.String({ minLength: 1 })),
+	S3_BUCKET: Type.Optional(Type.String({ minLength: 1 })),
+	S3_FORCE_PATH_STYLE: Type.Optional(Type.Boolean({ default: true })),
 });
 
 export type AppConfig = Static<typeof appConfigSchema>;
