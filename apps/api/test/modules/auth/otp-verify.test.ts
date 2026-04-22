@@ -19,6 +19,7 @@ import {
 } from "../../../src/lib/errors.js";
 
 const VERIFY_URL = "/api/v1/auth/otp/verify";
+const VALID_HEADERS = { origin: "http://localhost:3000" };
 
 function parseCookies(setCookieHeader: string): Record<string, string> {
 	const attrs: Record<string, string> = {};
@@ -28,6 +29,18 @@ function parseCookies(setCookieHeader: string): Record<string, string> {
 		attrs[key!.toLowerCase()] = rest.join("=");
 	}
 	return attrs;
+}
+
+/** Find a specific cookie string from set-cookie header (may be string or string[]) */
+function findCookie(
+	setCookieHeader: string | string[] | undefined,
+	name: string,
+): string | undefined {
+	if (!setCookieHeader) return undefined;
+	const cookies = Array.isArray(setCookieHeader)
+		? setCookieHeader
+		: [setCookieHeader];
+	return cookies.find((c) => c.startsWith(`${name}=`));
 }
 
 describe("POST /api/v1/auth/otp/verify", () => {
@@ -60,6 +73,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			const response = await app.inject({
 				method: "POST",
 				url: VERIFY_URL,
+				headers: VALID_HEADERS,
 				payload: { phone: "9876543210", otp: "123456" },
 			});
 
@@ -85,13 +99,15 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			const response = await app.inject({
 				method: "POST",
 				url: VERIFY_URL,
+				headers: VALID_HEADERS,
 				payload: { phone: "9876543210", otp: "123456" },
 			});
 
-			const setCookie = response.headers["set-cookie"] as string;
-			expect(setCookie).toBeDefined();
+			const setCookieRaw = response.headers["set-cookie"];
+			const sessionCookie = findCookie(setCookieRaw, "kiran_session");
+			expect(sessionCookie).toBeDefined();
 
-			const cookie = parseCookies(setCookie);
+			const cookie = parseCookies(sessionCookie!);
 			expect(cookie["kiran_session"]).toBe("test-session-id");
 			expect(cookie).toHaveProperty("httponly");
 			expect(cookie["samesite"]).toBe("Lax");
@@ -109,6 +125,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			await app.inject({
 				method: "POST",
 				url: VERIFY_URL,
+				headers: VALID_HEADERS,
 				payload: { phone: "9876543210", otp: "654321" },
 			});
 
@@ -134,6 +151,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			const response = await app.inject({
 				method: "POST",
 				url: VERIFY_URL,
+				headers: VALID_HEADERS,
 				payload: { phone: "8765432109", otp: "111111" },
 			});
 
@@ -232,6 +250,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			const response = await app.inject({
 				method: "POST",
 				url: VERIFY_URL,
+				headers: VALID_HEADERS,
 				payload: { phone: "9876543210", otp: "123456" },
 			});
 
@@ -258,6 +277,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			const response = await app.inject({
 				method: "POST",
 				url: VERIFY_URL,
+				headers: VALID_HEADERS,
 				payload: { phone: "9876543210", otp: "999999" },
 			});
 
@@ -281,6 +301,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			const response = await app.inject({
 				method: "POST",
 				url: VERIFY_URL,
+				headers: VALID_HEADERS,
 				payload: { phone: "9876543210", otp: "000000" },
 			});
 
@@ -302,6 +323,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			const response = await app.inject({
 				method: "POST",
 				url: VERIFY_URL,
+				headers: VALID_HEADERS,
 				payload: { phone: "9876543210", otp: "123456" },
 			});
 

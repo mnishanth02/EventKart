@@ -119,6 +119,7 @@ export const appConfigSchema = Type.Object({
 	),
 	COOKIE_DOMAIN: Type.Optional(Type.String({ minLength: 1 })),
 	OTP_HMAC_SECRET: Type.String({ default: "eventkart-otp-hash-v1" }),
+	CSRF_SECRET: Type.String({ default: "eventkart-csrf-secret-v1" }),
 });
 
 export type AppConfig = Static<typeof appConfigSchema>;

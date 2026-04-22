@@ -53,6 +53,8 @@ The following foundation work is already complete or in progress:
 | I-0.2.1: OTP send (MSG91 + WhatsApp fallback) | ✅ Complete | POST /api/v1/auth/otp/send. HMAC-SHA256 hashed OTP in Redis, atomic cooldown lock (SET NX EX), @fastify/rate-limit, MSG91 SMS+WhatsApp fallback, dev log mode. 166 API tests passing. |
 | I-0.2.2: OTP verify → session creation | ✅ Complete | POST /api/v1/auth/otp/verify. Atomic Lua-script OTP verification, user upsert (INSERT ON CONFLICT), dual-write session (Redis + DB, fail-closed), @fastify/cookie with HttpOnly/Secure/SameSite=Lax cookie. 202 API tests passing. |
 | I-0.2.3: Session middleware | ✅ Complete | Fastify plugin (plugins/auth.ts) reads `kiran_session` cookie → Redis lookup → decorates `request.session` (SessionInfo \| null). Handles stale cookies, expired sessions, Redis errors (fail-open, no cookie clear). 217 API tests passing. |
+| I-0.2.8: Logout endpoint | ✅ Complete | POST /api/v1/auth/logout. Deletes session from Redis, sets revokedAt in DB (audit trail, fail-open). Clears session + CSRF cookies. 273 API tests passing. |
+| I-0.2.11: CSRF protection | ✅ Complete | HMAC-signed double-submit cookie plugin (plugins/csrf.ts). Validates X-CSRF-Token header on state-changing authenticated requests. Origin validation on OTP verify for login-CSRF protection. Token bound to sessionId. 273 API tests passing. |
 
 **What remains:** All product feature development (Phases 0–7 from requirements doc).
 
@@ -134,9 +136,9 @@ These are non-coding prerequisites that must be satisfied before production laun
 | 2 ✅ | I-0.2.1 | OTP send (phone → MSG91) with WhatsApp OTP fallback | ✦ | — | ✦ | **I-0.1.1**, **I-0.1.5** | Rate limited: 1/phone/60s. Redis OTP storage with 5-min TTL. WhatsApp OTP delivery as fallback for SMS failures. |
 | 3 ✅ | I-0.2.2 | OTP verify → session creation | ✦ | — | ✦ | I-0.2.1, **I-0.1.5** | Redis session (sess:), cookie: `kiran_session`, HttpOnly, Secure, SameSite=Lax, Domain=.eventkart.app, 30-day TTL |
 | 4 ✅ | I-0.2.3 | Session middleware — decorates `request.session` | ✦ | — | — | I-0.2.2 | Fastify plugin, session from Redis |
-| 5 | I-0.2.8 | Logout endpoint — clear session | ✦ | — | — | I-0.2.3 | `POST /api/v1/auth/logout`. Simple, build alongside session middleware. |
-| 6 | I-0.2.11 | CSRF protection — anti-CSRF token on state-changing requests | ✦ | ✦ | — | I-0.2.3 | SameSite cookies + CSRF token validation |
-| 7 | I-0.2.4 | Role-based access control (public, participant, organizer, admin) | ✦ | — | ✦ | I-0.2.3, **I-0.1.3** | `requireAuth`, `requireRole('organizer')`, `requireRole('admin')` middleware. Needs users table. |
+| 5 ✅ | I-0.2.8 | Logout endpoint — clear session | ✦ | — | — | I-0.2.3 | `POST /api/v1/auth/logout`. Simple, build alongside session middleware. |
+| 6 ✅ | I-0.2.11 | CSRF protection — anti-CSRF token on state-changing requests | ✦ | ✦ | — | I-0.2.3 | SameSite cookies + CSRF token validation |
+| 7 ✅ | I-0.2.4 | Role-based access control (public, participant, organizer, admin) | ✦ | — | ✦ | I-0.2.3, **I-0.1.3** | `requireAuth`, `requireRole('organizer')`, `requireRole('admin')` middleware. Needs users table. |
 | 8 | I-0.2.10 | Internal API key for server-to-server calls | ✦ | ✦ | — | I-0.2.3 | `X-Internal-Key` header, higher rate limits (1000/min) |
 | 9 | I-0.2.6 | Admin IP allowlist middleware | ✦ | — | — | I-0.2.4 | Architecture §6: "Admin: Phone OTP + IP allowlist during pilot." Configurable allowlist via env var. |
 | 10 | I-0.2.5 | Organizer email verification | ✦ | ✦ | ✦ | I-0.2.4 | Architecture §6: "Organizer: Phone OTP + email verification." Elevated role assigned after email verification + admin approval. |

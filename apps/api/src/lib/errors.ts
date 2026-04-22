@@ -71,3 +71,36 @@ export class OtpMaxAttemptsError extends AppError {
 		this.name = "OtpMaxAttemptsError";
 	}
 }
+
+export class UnauthorizedError extends AppError {
+	constructor(message = "Authentication required") {
+		super(message, 401, "UNAUTHORIZED");
+		this.name = "UnauthorizedError";
+	}
+}
+
+export class ForbiddenError extends AppError {
+	constructor(message = "Forbidden", code = "FORBIDDEN") {
+		super(message, 403, code);
+		this.name = "ForbiddenError";
+	}
+}
+
+export class InsufficientRoleError extends AppError {
+	constructor(requiredRole: string) {
+		super(
+			`Insufficient permissions. ${requiredRole} role required`,
+			403,
+			"INSUFFICIENT_ROLE",
+			{ requiredRole },
+		);
+		this.name = "InsufficientRoleError";
+	}
+}
+
+export class CsrfError extends ForbiddenError {
+	constructor() {
+		super("Invalid or missing CSRF token", "CSRF_VALIDATION_FAILED");
+		this.name = "CsrfError";
+	}
+}

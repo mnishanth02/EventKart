@@ -236,3 +236,36 @@ export async function verifyOtpAndCreateSession(
 		isNewUser,
 	};
 }
+
+export interface LogoutDeps {
+	sessionRedis: Redis;
+	db: Database;
+	log: FastifyBaseLogger;
+}
+
+export async function logoutSession(
+	deps: LogoutDeps,
+	sessionId: string,
+): Promise<void> {
+	const { sessionRedis, db, log } = deps;
+
+	// Delete from Redis first (invalidates session immediately)
+	await deleteRedisSession(sessionRedis, sessionId);
+
+	// Mark as revoked in DB (audit trail)
+	try {
+		await db
+			.update(sessions)
+			.set({ revokedAt: new Date() })
+			.where(eq(sessions.id, sessionId));
+	} catch (dbError) {
+		// Redis deletion succeeded — session is already invalidated.
+		// Log the DB error but don't throw (fail-open for audit).
+		log.error(
+			{ err: dbError, sessionId },
+			"Failed to mark session as revoked in DB",
+		);
+	}
+
+	log.info({ sessionId }, "Session revoked");
+}

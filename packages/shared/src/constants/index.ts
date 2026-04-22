@@ -1,4 +1,4 @@
-export { USER_ROLES, userRoleSchema } from "./roles.js";
+export { USER_ROLES, userRoleSchema, ROLE_HIERARCHY, hasMinimumRole } from "./roles.js";
 export type { UserRole } from "./roles.js";
 export { PAGINATION_DEFAULTS } from "./pagination.js";
 export {
@@ -10,3 +10,4 @@ export {
 } from "./otp.js";
 export type { OtpDeliveryMode } from "./otp.js";
 export { SESSION_TTL_SECONDS, SESSION_COOKIE_NAME } from "./session.js";
+export { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "./csrf.js";

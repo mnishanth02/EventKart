@@ -35,3 +35,18 @@ export const otpVerifyResponseSchema = z.object({
 		isNewUser: z.boolean(),
 	}),
 });
+
+export const logoutResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.object({
+		message: z.string(),
+	}),
+});
+
+export const logoutErrorResponseSchema = z.object({
+	success: z.literal(false),
+	error: z.object({
+		code: z.string(),
+		message: z.string(),
+	}),
+});

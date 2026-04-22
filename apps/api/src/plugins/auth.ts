@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
-import { SESSION_COOKIE_NAME } from "@repo/shared/constants";
-import { getRedisSession } from "../lib/session.js";
+import { SESSION_COOKIE_NAME, userRoleSchema } from "@repo/shared/constants";
+import { getRedisSession, type SessionData } from "../lib/session.js";
 import { buildSessionCookieOptions } from "../lib/session.js";
 
 const authPlugin: FastifyPluginAsync = async (fastify) => {
@@ -15,7 +15,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 			return;
 		}
 
-		let sessionData;
+		let sessionData: SessionData | null;
 		try {
 			sessionData = await getRedisSession(
 				fastify.redis.session,
@@ -50,9 +50,22 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 			return;
 		}
 
+		// Validate role from Redis is a known UserRole
+		const roleResult = userRoleSchema.safeParse(sessionData.role);
+		if (!roleResult.success) {
+			request.log.warn(
+				{ sessionId, role: sessionData.role },
+				"Session has invalid role — treating as unauthenticated",
+			);
+			await safeDeleteSession(fastify.redis.session, sessionId, request);
+			clearStaleCookie(reply, fastify.config.COOKIE_DOMAIN);
+			request.session = null;
+			return;
+		}
+
 		request.session = {
 			userId: sessionData.userId,
-			role: sessionData.role,
+			role: roleResult.data,
 			sessionId,
 		};
 	});

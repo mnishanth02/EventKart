@@ -1,5 +1,5 @@
 import {
-	vi,
+	type vi,
 	describe,
 	it,
 	expect,
