@@ -9,7 +9,7 @@
 
 | # | Plan | Source | Status | Started | Last Updated |
 |---|------|--------|--------|---------|--------------|
-| 1 | Infrastructure: Separate Web/API Deployment | [impl-plan](docs/impl-plan/infrastructure-separate-web-api-deployment-1.md) | ⬜ Not Started | — | — |
+| 1 |  |  |  |  |  |
 
 ## Completed Implementation Plans
 
