@@ -6,7 +6,6 @@ const mockDestroy = vi.fn();
 vi.mock("@aws-sdk/client-s3", () => {
 	class MockS3Client {
 		destroy = mockDestroy;
-		constructor(_config: Record<string, unknown>) {}
 	}
 	return {
 		S3Client: MockS3Client,

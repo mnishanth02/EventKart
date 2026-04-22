@@ -256,7 +256,8 @@ describe("createStorageClient", () => {
 			});
 
 			expect(mockGetSignedUrl).toHaveBeenCalledTimes(1);
-			const [, command, options] = mockGetSignedUrl.mock.calls[0]!;
+			const callArgs = mockGetSignedUrl.mock.calls[0] ?? [];
+			const [, command, options] = callArgs;
 			expect(command.input.Bucket).toBe("test-bucket");
 			expect(command.input.ContentType).toBe("application/pdf");
 			expect(command.input.ServerSideEncryption).toBe("AES256");
@@ -285,7 +286,8 @@ describe("createStorageClient", () => {
 			});
 
 			expect(mockGetSignedUrl).toHaveBeenCalledTimes(1);
-			const [, command] = mockGetSignedUrl.mock.calls[0]!;
+			const downloadCallArgs = mockGetSignedUrl.mock.calls[0] ?? [];
+			const [, command] = downloadCallArgs;
 			expect(command.input.ResponseContentDisposition).toBe(
 				'attachment; filename="doc.pdf"',
 			);
@@ -298,7 +300,7 @@ describe("createStorageClient", () => {
 			await client.deleteObject("kyc/user-1/abc.pdf");
 
 			expect(mockSend).toHaveBeenCalledTimes(1);
-			const command = mockSend.mock.calls[0]![0];
+			const command = mockSend.mock.calls[0]?.[0];
 			expect(command.input.Bucket).toBe("test-bucket");
 			expect(command.input.Key).toBe("kyc/user-1/abc.pdf");
 		});
