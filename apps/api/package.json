@@ -20,6 +20,7 @@
 		"@aws-sdk/client-s3": "^3.1034.0",
 		"@aws-sdk/s3-request-presigner": "^3.1034.0",
 		"@fastify/cors": "^11.2.0",
+		"@fastify/helmet": "^13.0.2",
 		"@fastify/type-provider-zod": "^1.0.0",
 		"@repo/shared": "workspace:*",
 		"@sinclair/typebox": "^0.34.41",
