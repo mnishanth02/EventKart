@@ -55,6 +55,7 @@ The following foundation work is already complete or in progress:
 | I-0.2.3: Session middleware | ✅ Complete | Fastify plugin (plugins/auth.ts) reads `kiran_session` cookie → Redis lookup → decorates `request.session` (SessionInfo \| null). Handles stale cookies, expired sessions, Redis errors (fail-open, no cookie clear). 217 API tests passing. |
 | I-0.2.8: Logout endpoint | ✅ Complete | POST /api/v1/auth/logout. Deletes session from Redis, sets revokedAt in DB (audit trail, fail-open). Clears session + CSRF cookies. 273 API tests passing. |
 | I-0.2.11: CSRF protection | ✅ Complete | HMAC-signed double-submit cookie plugin (plugins/csrf.ts). Validates X-CSRF-Token header on state-changing authenticated requests. Origin validation on OTP verify for login-CSRF protection. Token bound to sessionId. 273 API tests passing. |
+| I-0.2.10: Internal API key | ✅ Complete | `X-Internal-Key` header validation plugin (plugins/internal-key.ts). Timing-safe comparison, 401 fail-closed on invalid/unconfigured keys. Higher rate limits (1000/min vs 100/min). CSRF bypass for internal requests. Session coexistence for SSR user context. 293 API tests passing. |
 
 **What remains:** All product feature development (Phases 0–7 from requirements doc).
 
@@ -139,9 +140,9 @@ These are non-coding prerequisites that must be satisfied before production laun
 | 5 ✅ | I-0.2.8 | Logout endpoint — clear session | ✦ | — | — | I-0.2.3 | `POST /api/v1/auth/logout`. Simple, build alongside session middleware. |
 | 6 ✅ | I-0.2.11 | CSRF protection — anti-CSRF token on state-changing requests | ✦ | ✦ | — | I-0.2.3 | SameSite cookies + CSRF token validation |
 | 7 ✅ | I-0.2.4 | Role-based access control (public, participant, organizer, admin) | ✦ | — | ✦ | I-0.2.3, **I-0.1.3** | `requireAuth`, `requireRole('organizer')`, `requireRole('admin')` middleware. Needs users table. |
-| 8 | I-0.2.10 | Internal API key for server-to-server calls | ✦ | ✦ | — | I-0.2.3 | `X-Internal-Key` header, higher rate limits (1000/min) |
-| 9 | I-0.2.6 | Admin IP allowlist middleware | ✦ | — | — | I-0.2.4 | Architecture §6: "Admin: Phone OTP + IP allowlist during pilot." Configurable allowlist via env var. |
-| 10 | I-0.2.5 | Organizer email verification | ✦ | ✦ | ✦ | I-0.2.4 | Architecture §6: "Organizer: Phone OTP + email verification." Elevated role assigned after email verification + admin approval. |
+| 8 ✅ | I-0.2.10 | Internal API key for server-to-server calls | ✦ | ✦ | — | I-0.2.3 | `X-Internal-Key` header, higher rate limits (1000/min) |
+| 9 ✅ | I-0.2.6 | Admin IP allowlist middleware | ✦ | — | — | I-0.2.4 | Architecture §6: "Admin: Phone OTP + IP allowlist during pilot." Configurable allowlist via env var. |
+| 10 ✅ | I-0.2.5 | Organizer email verification | ✦ | ✦ | ✦ | I-0.2.4 | Architecture §6: "Organizer: Phone OTP + email verification." Elevated role assigned after email verification + admin approval. |
 | 11 | I-0.2.9 | Session forwarding for SSR — TanStack Start forwards cookie in server-to-server calls | — | ✦ | — | I-0.2.3, **I-0.3.6** | `X-Request-ID` propagation, `INTERNAL_API_URL` for SSR. **Cross-dep on Module 0.3 API client.** |
 | 12 | I-0.2.7 | Deferred authentication pattern — browsing unauthenticated, OTP at booking | ✦ | ✦ | — | I-0.2.1, I-0.2.2, **I-0.3.1** | Frontend routing respects auth state; booking flow triggers OTP. **Cross-dep on Module 0.3 layout shell.** |
 

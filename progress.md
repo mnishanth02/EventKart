@@ -25,6 +25,8 @@
 | 14 | I-0.2.4 — Role-based access control (RBAC middleware) | [impl-plan](docs/impl-plan/feature-0.2-I-0.2.4.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
 | 15 | I-0.2.8 — Logout endpoint | [impl-plan](docs/impl-plan/feature-0.2-I-0.2.8.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
 | 16 | I-0.2.11 — CSRF protection | [impl-plan](docs/impl-plan/feature-0.2-I-0.2.11.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
+| 17 | I-0.2.10 — Internal API key for server-to-server calls | [impl-plan](docs/impl-plan/feature-0.2-I-0.2.10.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
+| 18 | I-0.2.5 + I-0.2.6 — Email verification + Admin IP allowlist | [impl-plan](docs/impl-plan/feature-0.2-I-0.2.5-I-0.2.6.md) | ✅ Complete | 2026-04-22 | 2026-04-22 |
 
 ## Completed Implementation Plans
 
@@ -39,7 +41,7 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 | Phase | Module | Status | Notes |
 |-------|--------|--------|-------|
 | Phase 0 | 0.1 — Shared Packages & Database Foundation | ✅ Complete | All features complete: I-0.1.1 through I-0.1.9. |
-| Phase 0 | 0.2 — Authentication & Identity | 🔄 In Progress | I-0.2.12 security headers + I-0.2.1 OTP send + I-0.2.2 OTP verify + I-0.2.3 session middleware + I-0.2.4 RBAC + I-0.2.8 logout + I-0.2.11 CSRF complete |
+| Phase 0 | 0.2 — Authentication & Identity | 🔄 In Progress | I-0.2.12 security headers + I-0.2.1 OTP send + I-0.2.2 OTP verify + I-0.2.3 session middleware + I-0.2.4 RBAC + I-0.2.8 logout + I-0.2.11 CSRF + I-0.2.10 internal API key + I-0.2.5 email verify + I-0.2.6 admin IP allowlist complete |
 | Phase 0 | 0.3 — Design System & App Shell | 🔄 Partial | App shell, shadcn/ui, Tailwind v4 configured |
 | Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | ⬜ Not Started | — |
 | Phase 1 | 1.1 — Organizer Signup & Verification | ⬜ Not Started | — |

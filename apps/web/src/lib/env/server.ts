@@ -9,12 +9,19 @@ const optionalUrl = z.preprocess(
 	z.string().url().optional(),
 );
 
+const optionalString = z.preprocess(
+	(value) => (value === "" ? undefined : value),
+	z.string().min(1).optional(),
+);
+
 const serverEnvSchema = z.object({
 	INTERNAL_API_URL: optionalUrl,
 	SERVER_URL: optionalUrl,
+	INTERNAL_API_KEY: optionalString,
 });
 
 export const serverEnv = serverEnvSchema.parse({
 	INTERNAL_API_URL: process.env.INTERNAL_API_URL,
 	SERVER_URL: process.env.SERVER_URL,
+	INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
 });

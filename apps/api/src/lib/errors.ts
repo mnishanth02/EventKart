@@ -104,3 +104,10 @@ export class CsrfError extends ForbiddenError {
 		this.name = "CsrfError";
 	}
 }
+
+export class IpNotAllowedError extends ForbiddenError {
+	constructor() {
+		super("Access denied: IP address not allowed", "IP_NOT_ALLOWED");
+		this.name = "IpNotAllowedError";
+	}
+}
