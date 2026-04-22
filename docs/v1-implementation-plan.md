@@ -49,6 +49,7 @@ The following foundation work is already complete or in progress:
 | I-0.1.7: Database migration CI pipeline | ✅ Complete | GitHub Actions workflow, lock-risk SQL linter (7 rules), schema drift checker, rollback validator, programmatic migration runner. 22 DB tests passing. |
 | I-0.1.8: Object storage client | ✅ Complete | S3/R2 presigned URL helper, server-side encryption, Fastify plugin. 92 API tests passing. |
 | I-0.1.9: CI/CD deployment pipeline | ✅ Complete | GitHub Actions CI (lint, types, test, build), staging auto-deploy, production manual promote via Railway. |
+| I-0.2.12: Security headers | ✅ Complete | `@fastify/helmet` plugin for API (CSP, X-Frame-Options, HSTS, nosniff). Nitro server middleware for TanStack Start (environment-aware CSP). 98 API tests passing. |
 
 **What remains:** All product feature development (Phases 0–7 from requirements doc).
 
@@ -126,7 +127,7 @@ These are non-coding prerequisites that must be satisfied before production laun
 
 | Order | ID | Feature | Backend | Frontend | Shared | Depends on | Notes |
 |-------|----|---------|---------|----------|--------|------------|-------|
-| 1 | I-0.2.12 | Security headers — CSP, X-Frame-Options, X-Content-Type-Options | ✦ | ✦ | — | — | Fastify helmet plugin + TanStack Start response headers. No auth deps, do first. |
+| 1 ✅ | I-0.2.12 | Security headers — CSP, X-Frame-Options, X-Content-Type-Options | ✦ | ✦ | — | — | Fastify helmet plugin + TanStack Start response headers. No auth deps, do first. |
 | 2 | I-0.2.1 | OTP send (phone → MSG91) with WhatsApp OTP fallback | ✦ | — | ✦ | **I-0.1.1**, **I-0.1.5** | Rate limited: 1/phone/60s. Redis OTP storage with 5-min TTL. WhatsApp OTP delivery as fallback for SMS failures. |
 | 3 | I-0.2.2 | OTP verify → session creation | ✦ | — | ✦ | I-0.2.1, **I-0.1.5** | Redis session (sess:), cookie: `eventkart_session`, HttpOnly, Secure, SameSite=Lax, Domain=.eventkart.app, 30-day TTL |
 | 4 | I-0.2.3 | Session middleware — decorates `request.session` | ✦ | — | — | I-0.2.2 | Fastify plugin, session from Redis |

@@ -1,7 +1,7 @@
 # Feature I-0.2.12: Security Headers
 
 **Module:** 0.2 — Authentication & Identity
-**Status:** Planned
+**Status:** ✅ Complete (2026-04-22)
 **Dependencies:** None (first item in Module 0.2, independent)
 **Complexity:** S (small — plugin + middleware + tests)
 
@@ -148,11 +148,11 @@ N/A — No new routes. Security headers applied via Nitro server middleware.
 ---
 
 ## Completion Checklist
-- [ ] `@fastify/helmet` installed
-- [ ] Security-headers plugin created and registered
-- [x] Nitro middleware created for frontend ✅ 2026-07-25
-- [ ] API tests pass (6 test cases)
-- [ ] `check-types` passes for both workspaces
-- [ ] `lint` passes for both workspaces
-- [ ] `test` passes for both workspaces
-- [ ] Existing health route tests still pass with new headers
+- [x] `@fastify/helmet` installed
+- [x] Security-headers plugin created and registered
+- [x] Nitro middleware created for frontend
+- [x] API tests pass (6 test cases)
+- [x] `check-types` passes for both workspaces
+- [x] `lint` passes for both workspaces
+- [x] `test` passes for both workspaces (98/98)
+- [x] Existing health route tests still pass with new headers
