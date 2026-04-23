@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ReadyRouteImport } from './routes/ready'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
@@ -19,6 +21,16 @@ import { Route as AuthedOrgIndexRouteImport } from './routes/_authed/org/index'
 import { Route as AuthedMyIndexRouteImport } from './routes/_authed/my/index'
 import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
 
+const ReadyRoute = ReadyRouteImport.update({
+  id: '/ready',
+  path: '/ready',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PublicRoute = PublicRouteImport.update({
   id: '/_public',
   getParentRoute: () => rootRouteImport,
@@ -65,6 +77,8 @@ const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
+  '/health': typeof HealthRoute
+  '/ready': typeof ReadyRoute
   '/admin': typeof AuthedAdminRouteWithChildren
   '/my': typeof AuthedMyRouteWithChildren
   '/org': typeof AuthedOrgRouteWithChildren
@@ -74,6 +88,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
+  '/health': typeof HealthRoute
+  '/ready': typeof ReadyRoute
   '/admin': typeof AuthedAdminIndexRoute
   '/my': typeof AuthedMyIndexRoute
   '/org': typeof AuthedOrgIndexRoute
@@ -82,6 +98,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
+  '/health': typeof HealthRoute
+  '/ready': typeof ReadyRoute
   '/_authed/admin': typeof AuthedAdminRouteWithChildren
   '/_authed/my': typeof AuthedMyRouteWithChildren
   '/_authed/org': typeof AuthedOrgRouteWithChildren
@@ -92,13 +110,24 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/my' | '/org' | '/admin/' | '/my/' | '/org/'
+  fullPaths:
+    | '/'
+    | '/health'
+    | '/ready'
+    | '/admin'
+    | '/my'
+    | '/org'
+    | '/admin/'
+    | '/my/'
+    | '/org/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/my' | '/org'
+  to: '/' | '/health' | '/ready' | '/admin' | '/my' | '/org'
   id:
     | '__root__'
     | '/_authed'
     | '/_public'
+    | '/health'
+    | '/ready'
     | '/_authed/admin'
     | '/_authed/my'
     | '/_authed/org'
@@ -111,10 +140,26 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
+  HealthRoute: typeof HealthRoute
+  ReadyRoute: typeof ReadyRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/ready': {
+      id: '/ready'
+      path: '/ready'
+      fullPath: '/ready'
+      preLoaderRoute: typeof ReadyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_public': {
       id: '/_public'
       path: ''
@@ -246,6 +291,8 @@ const PublicRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,
+  HealthRoute: HealthRoute,
+  ReadyRoute: ReadyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
