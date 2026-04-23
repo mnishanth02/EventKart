@@ -9,6 +9,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { ThemeProvider } from "@repo/ui/components/theme-provider";
 import { Toaster } from "@repo/ui/components/ui/sonner";
+import { NotFoundPage } from "#/components/error";
 import { publicEnv } from "#/lib/env/public";
 import PostHogProvider from "../integrations/posthog/provider";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
@@ -40,6 +41,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 		],
 	}),
 	component: RootComponent,
+	notFoundComponent: NotFoundPage,
 	shellComponent: RootDocument,
 });
 

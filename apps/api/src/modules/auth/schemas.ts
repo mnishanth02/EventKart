@@ -81,6 +81,22 @@ export const emailVerificationVerifyResponseSchema = z.object({
 	}),
 });
 
+export const sessionResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.object({
+		userId: z.string().uuid(),
+		role: z.string(),
+	}),
+});
+
+export const sessionErrorResponseSchema = z.object({
+	success: z.literal(false),
+	error: z.object({
+		code: z.string(),
+		message: z.string(),
+	}),
+});
+
 export const emailConflictResponseSchema = z.object({
 	success: z.literal(false),
 	error: z.object({

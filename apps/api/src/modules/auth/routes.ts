@@ -17,6 +17,8 @@ import {
 	otpErrorResponseSchema,
 	logoutResponseSchema,
 	logoutErrorResponseSchema,
+	sessionResponseSchema,
+	sessionErrorResponseSchema,
 	emailVerificationSendBodySchema,
 	emailVerificationSendResponseSchema,
 	emailVerificationVerifyBodySchema,
@@ -209,6 +211,34 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				success: true as const,
 				data: {
 					message: "Logged out successfully",
+				},
+			});
+		},
+	);
+
+	app.get(
+		"/session",
+		{
+			schema: {
+				response: {
+					200: sessionResponseSchema,
+					401: sessionErrorResponseSchema,
+				},
+			},
+			onRequest: [requireAuth],
+		},
+		async (request, reply) => {
+			if (!request.session) {
+				throw new UnauthorizedError();
+			}
+
+			reply.header("Cache-Control", "private, no-store");
+
+			return reply.code(200).send({
+				success: true as const,
+				data: {
+					userId: request.session.userId,
+					role: request.session.role,
 				},
 			});
 		},

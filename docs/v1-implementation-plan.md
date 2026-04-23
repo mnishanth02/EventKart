@@ -60,6 +60,8 @@ The following foundation work is already complete or in progress:
 
 | I-0.3.1: Mobile-first responsive layout shell | ✅ Complete | Pathless `_public` layout route with PublicHeader (glass top nav, scroll effect), PublicFooter, MobileBottomNav (Discover + Search). Fixed header/bottom nav with safe-area offsets. `_authed` layout deferred to I-0.3.3 (no children yet). |
 | I-0.3.2: Core UI component library | ✅ Complete | ThemeProvider (next-themes, attribute="class", defaultTheme="system") and mount-gated ThemeToggle in `packages/ui`. 57 shadcn/ui components already installed. Dark/light mode fully wired with CSS variables. |
+| I-0.2.9: SSR session forwarding | ✅ Complete | `getForwardedAuthHeaders()` filters only `kiran_session` cookie + `X-Request-ID` for SSR→API calls. `getCurrentUser` server function returns `AuthSession \| null`. 8 web tests passing. 320 API tests, 57 web tests passing. |
+| I-0.2.7: Deferred authentication pattern | ✅ Complete | `GET /api/v1/auth/session` endpoint (Cache-Control: private, no-store). `useAuth()`, `useAuthActions()`, `useRequireAuth()` hooks. OTP login dialog (phone → OTP → verify). Auth query invalidation after login/logout. 320 API tests, 57 web tests passing. |
 
 **What remains:** All product feature development (Phases 0–7 from requirements doc).
 
@@ -147,8 +149,8 @@ These are non-coding prerequisites that must be satisfied before production laun
 | 8 ✅ | I-0.2.10 | Internal API key for server-to-server calls | ✦ | ✦ | — | I-0.2.3 | `X-Internal-Key` header, higher rate limits (1000/min) |
 | 9 ✅ | I-0.2.6 | Admin IP allowlist middleware | ✦ | — | — | I-0.2.4 | Architecture §6: "Admin: Phone OTP + IP allowlist during pilot." Configurable allowlist via env var. |
 | 10 ✅ | I-0.2.5 | Organizer email verification | ✦ | ✦ | ✦ | I-0.2.4 | Architecture §6: "Organizer: Phone OTP + email verification." Elevated role assigned after email verification + admin approval. |
-| 11 | I-0.2.9 | Session forwarding for SSR — TanStack Start forwards cookie in server-to-server calls | — | ✦ | — | I-0.2.3, **I-0.3.6** | `X-Request-ID` propagation, `INTERNAL_API_URL` for SSR. **Cross-dep on Module 0.3 API client.** |
-| 12 | I-0.2.7 | Deferred authentication pattern — browsing unauthenticated, OTP at booking | ✦ | ✦ | — | I-0.2.1, I-0.2.2, **I-0.3.1** | Frontend routing respects auth state; booking flow triggers OTP. **Cross-dep on Module 0.3 layout shell.** |
+| 11 ✅ | I-0.2.9 | Session forwarding for SSR — TanStack Start forwards cookie in server-to-server calls | — | ✦ | — | I-0.2.3, **I-0.3.6** | `X-Request-ID` propagation, `INTERNAL_API_URL` for SSR. **Cross-dep on Module 0.3 API client.** |
+| 12 ✅ | I-0.2.7 | Deferred authentication pattern — browsing unauthenticated, OTP at booking | ✦ | ✦ | — | I-0.2.1, I-0.2.2, **I-0.3.1** | Frontend routing respects auth state; booking flow triggers OTP. **Cross-dep on Module 0.3 layout shell.** |
 
 **Deliverables:**
 - Security headers on both Fastify and TanStack Start
@@ -172,13 +174,13 @@ These are non-coding prerequisites that must be satisfied before production laun
 | Order | ID | Feature | Backend | Frontend | Shared | Depends on | Notes |
 |-------|----|---------|---------|----------|--------|------------|-------|
 | 1 ✅ | I-0.3.6 | API client setup — hybrid communication (INTERNAL_API_URL for SSR, public for browser) | — | ✦ | — | — | `apps/web/src/lib/api-client.ts`. Foundation for all frontend-API communication. |
-| 2 | I-0.3.1 | Mobile-first responsive layout shell | — | ✦ | — | — | `__root.tsx`, `_public` layout (SSR), `_authed` layout (CSR). Can parallel with I-0.3.6. |
-| 3 | I-0.3.2 | Core UI component library — buttons, forms, cards, modals, navigation, toasts | — | ✦ | — | — | shadcn/ui v4 components in `apps/web/src/components` and `packages/ui`. Can parallel with I-0.3.1. |
-| 4 | I-0.3.4 | Error handling patterns — error boundaries, 404, API error display | — | ✦ | — | I-0.3.1, I-0.3.6 | Consistent error UI across all surfaces |
-| 5 | I-0.3.5 | Loading state patterns — skeleton screens, spinners, optimistic UI foundations | — | ✦ | — | I-0.3.1 | Consistent loading UX |
-| 6 | I-0.3.3 | Role-based routing and navigation structure | — | ✦ | — | I-0.3.1, **I-0.2.4** | `/` public, `/org/*` organizer, `/admin/*` admin, `/my/*` participant. **Cross-dep on Module 0.2 RBAC middleware.** |
-| 7 | I-0.2.9 | Session forwarding for SSR — TanStack Start forwards cookie in server-to-server calls | — | ✦ | — | **I-0.2.3**, I-0.3.6 | `X-Request-ID` propagation, `INTERNAL_API_URL` for SSR. **Deferred from Module 0.2 — depends on I-0.3.6 API client.** |
-| 8 | I-0.2.7 | Deferred authentication pattern — browsing unauthenticated, OTP at booking | ✦ | ✦ | — | **I-0.2.1**, **I-0.2.2**, I-0.3.1 | Frontend routing respects auth state; booking flow triggers OTP. **Deferred from Module 0.2 — depends on I-0.3.1 layout shell.** |
+| 2 ✅ | I-0.3.1 | Mobile-first responsive layout shell | — | ✦ | — | — | `__root.tsx`, `_public` layout (SSR), `_authed` layout (CSR). Can parallel with I-0.3.6. |
+| 3 ✅ | I-0.3.2 | Core UI component library — buttons, forms, cards, modals, navigation, toasts | — | ✦ | — | — | shadcn/ui v4 components in `apps/web/src/components` and `packages/ui`. Can parallel with I-0.3.1. |
+| 4 ✅ | I-0.3.4 | Error handling patterns — error boundaries, 404, API error display | — | ✦ | — | I-0.3.1, I-0.3.6 | Consistent error UI across all surfaces |
+| 5 ✅ | I-0.3.5 | Loading state patterns — skeleton screens, spinners, optimistic UI foundations | — | ✦ | — | I-0.3.1 | Consistent loading UX |
+| 6 ✅ | I-0.3.3 | Role-based routing and navigation structure | — | ✦ | — | I-0.3.1, **I-0.2.4** | `/` public, `/org/*` organizer, `/admin/*` admin, `/my/*` participant. **Cross-dep on Module 0.2 RBAC middleware.** |
+| 7 ✅ | I-0.2.9 | Session forwarding for SSR — TanStack Start forwards cookie in server-to-server calls | — | ✦ | — | **I-0.2.3**, I-0.3.6 | `X-Request-ID` propagation, `INTERNAL_API_URL` for SSR. **Deferred from Module 0.2 — depends on I-0.3.6 API client.** |
+| 8 ✅ | I-0.2.7 | Deferred authentication pattern — browsing unauthenticated, OTP at booking | ✦ | ✦ | — | **I-0.2.1**, **I-0.2.2**, I-0.3.1 | Frontend routing respects auth state; booking flow triggers OTP. **Deferred from Module 0.2 — depends on I-0.3.1 layout shell.** |
 
 **Deliverables:**
 - API client with hybrid SSR/browser communication

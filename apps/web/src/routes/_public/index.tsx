@@ -1,12 +1,33 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { z } from "zod/v4";
+import { toast } from "sonner";
 import { Badge } from "@repo/ui/components/ui/badge";
 import { Separator } from "@repo/ui/components/ui/separator";
 
+const searchSchema = z.object({
+	reason: z.enum(["auth-required", "forbidden"]).optional(),
+});
+
 export const Route = createFileRoute("/_public/")({
 	component: Home,
+	validateSearch: searchSchema,
 });
 
 function Home() {
+	const { reason } = Route.useSearch();
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		if (reason === "auth-required") {
+			toast.error("Please sign in to access that page");
+			void navigate({ to: "/", replace: true });
+		} else if (reason === "forbidden") {
+			toast.error("You don't have access to that area");
+			void navigate({ to: "/", replace: true });
+		}
+	}, [reason, navigate]);
+
 	return (
 		<div className="page-wrap py-12 md:py-16">
 			{/* Hero section */}
