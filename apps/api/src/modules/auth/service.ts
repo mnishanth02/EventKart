@@ -29,6 +29,11 @@ import {
 	type SessionData,
 } from "../../lib/session.js";
 import { OTP_TTL_SECONDS, SESSION_TTL_SECONDS } from "@repo/shared/constants";
+import {
+	otpSendTotal,
+	otpVerifyTotal,
+	funnelStepTotal,
+} from "../../lib/metrics.js";
 
 export interface OtpSendDeps {
 	redis: Redis;
@@ -68,6 +73,7 @@ export async function sendOtpForPhone(
 	const lockAcquired = await acquireOtpSendLock(redis, phone);
 
 	if (!lockAcquired) {
+		otpSendTotal.add(1, { status: "rate_limited" });
 		const cooldown = await getOtpCooldownTtl(redis, phone);
 		throw new OtpRateLimitError(cooldown);
 	}
@@ -97,6 +103,7 @@ export async function sendOtpForPhone(
 		if (!result.success) {
 			// Delivery failed gracefully — shorten cooldown to allow quick retry
 			await shortenOtpCooldown(redis, phone, 5);
+			otpSendTotal.add(1, { status: "delivery_error" });
 			throw new OtpDeliveryError(
 				"Unable to send OTP. Please try again later.",
 				{ channel: result.channel, error: result.error },
@@ -114,6 +121,9 @@ export async function sendOtpForPhone(
 
 	// Store hashed OTP in Redis
 	await storeOtp(redis, phone, otp, channel, config.OTP_HMAC_SECRET);
+
+	otpSendTotal.add(1, { status: "success" });
+	funnelStepTotal.add(1, { step: "otp_sent" });
 
 	return {
 		message: "OTP sent successfully",
@@ -147,10 +157,13 @@ export async function verifyOtpAndCreateSession(
 
 	switch (otpResult.status) {
 		case "expired":
+			otpVerifyTotal.add(1, { status: "expired" });
 			throw new OtpExpiredError();
 		case "invalid":
+			otpVerifyTotal.add(1, { status: "invalid" });
 			throw new OtpInvalidError(otpResult.attemptsRemaining);
 		case "max_attempts":
+			otpVerifyTotal.add(1, { status: "max_attempts" });
 			throw new OtpMaxAttemptsError();
 		case "success":
 			break;
@@ -235,6 +248,9 @@ export async function verifyOtpAndCreateSession(
 		{ userId, sessionId, isNewUser },
 		"Session created",
 	);
+
+	otpVerifyTotal.add(1, { status: "success" });
+	funnelStepTotal.add(1, { step: "otp_verified" });
 
 	return {
 		sessionId,

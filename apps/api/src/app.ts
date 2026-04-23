@@ -20,6 +20,7 @@ import storagePlugin from "./plugins/storage.js";
 import internalKeyPlugin from "./plugins/internal-key.js";
 import authPlugin from "./plugins/auth.js";
 import csrfPlugin from "./plugins/csrf.js";
+import metricsPlugin from "./plugins/metrics.js";
 import authRoutes from "./modules/auth/routes.js";
 import healthRoutes from "./routes/health.js";
 
@@ -52,6 +53,7 @@ export function buildApp(options: BuildAppOptions = {}) {
 	app.register(securityHeadersPlugin);
 	app.register(redisPlugin);
 	app.register(queuePlugin);
+	app.register(metricsPlugin);
 	app.register(corsPlugin);
 	app.register(cookie);
 	app.register(storagePlugin);

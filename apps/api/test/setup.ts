@@ -1,5 +1,34 @@
 import { vi } from "vitest";
 
+// Global mock for @opentelemetry/api — prevents real meter/instrument creation in tests.
+// All metric instruments become no-ops.
+vi.mock("@opentelemetry/api", () => {
+	const noopObservableResult = { observe: vi.fn() };
+	const noopInstrument = {
+		add: vi.fn(),
+		record: vi.fn(),
+		addCallback: vi.fn((cb: (result: typeof noopObservableResult) => void) => {
+			cb(noopObservableResult);
+		}),
+	};
+	const noopMeter = {
+		createCounter: vi.fn().mockReturnValue(noopInstrument),
+		createHistogram: vi.fn().mockReturnValue(noopInstrument),
+		createObservableGauge: vi.fn().mockReturnValue(noopInstrument),
+		createObservableCounter: vi.fn().mockReturnValue(noopInstrument),
+		createUpDownCounter: vi.fn().mockReturnValue(noopInstrument),
+	};
+	return {
+		metrics: {
+			getMeter: vi.fn().mockReturnValue(noopMeter),
+			setGlobalMeterProvider: vi.fn(),
+		},
+		trace: {
+			getTracer: vi.fn().mockReturnValue({}),
+		},
+	};
+});
+
 // Global mock for ioredis — prevents real Redis connections in all tests.
 // Individual test files can override with their own vi.mock("ioredis", ...).
 vi.mock("ioredis", () => {
@@ -11,6 +40,9 @@ vi.mock("ioredis", () => {
 		del = vi.fn().mockResolvedValue(1);
 		ttl = vi.fn().mockResolvedValue(-2);
 		eval = vi.fn().mockResolvedValue(null);
+		info = vi.fn().mockResolvedValue(
+			"used_memory:1024000\r\nevicted_keys:0\r\nconnected_clients:5\r\n",
+		);
 		pipeline = vi.fn().mockReturnValue({
 			set: vi.fn().mockReturnThis(),
 			exec: vi.fn().mockResolvedValue([]),

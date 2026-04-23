@@ -5,7 +5,7 @@ import { loadConfig } from "./lib/config.js";
 
 const config = loadConfig();
 initSentry(config);
-const sdk = initTelemetry(config);
+const telemetry = initTelemetry(config);
 
 // Now safe to import modules that OTEL instruments
 const { buildApp } = await import("./app.js");
@@ -27,7 +27,7 @@ async function shutdown(signal: string) {
 	app.log.info({ signal }, "Received shutdown signal");
 	await app.close();
 	await flushSentry();
-	await shutdownTelemetry(sdk);
+	await shutdownTelemetry(telemetry);
 	process.exit(0);
 }
 
@@ -37,6 +37,6 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 start().catch(async (error) => {
 	app.log.error({ err: error }, "Failed to start API server");
 	await flushSentry();
-	await shutdownTelemetry(sdk);
+	await shutdownTelemetry(telemetry);
 	process.exit(1);
 });

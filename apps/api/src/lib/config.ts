@@ -92,6 +92,10 @@ function normalizeConfigData(data: Record<string, unknown>) {
 		delete normalizedData.SENTRY_RELEASE;
 	}
 
+	if (normalizedData.OTEL_METRICS_EXPORT_INTERVAL_MS === "") {
+		delete normalizedData.OTEL_METRICS_EXPORT_INTERVAL_MS;
+	}
+
 	return normalizedData;
 }
 
@@ -159,6 +163,9 @@ export const appConfigSchema = Type.Object({
 	SENTRY_RELEASE: Type.Optional(Type.String({ minLength: 1 })),
 	SENTRY_TRACES_SAMPLE_RATE: Type.Optional(Type.Number({ minimum: 0, maximum: 1 })),
 	LOG_PRETTY: Type.Optional(Type.Boolean({ default: false })),
+	OTEL_METRICS_EXPORT_INTERVAL_MS: Type.Optional(
+		Type.Integer({ default: 60000, minimum: 1000, maximum: 300000 }),
+	),
 });
 
 export type AppConfig = Static<typeof appConfigSchema>;

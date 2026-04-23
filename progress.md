@@ -35,6 +35,8 @@
 | 24 | I-0.4.2 — Pino structured logging + OpenTelemetry bridge | [impl-plan](docs/impl-plan/feature-0.4-I-0.4.2.md) | ✅ Complete | 2026-04-23 | 2026-04-23 |
 | 25 | I-0.4.1 — Sentry integration (API + web: client + SSR) | [impl-plan](docs/impl-plan/feature-0.4-I-0.4.1.md) | ✅ Complete | 2026-07-23 | 2026-07-23 |
 | 26 | I-0.4.3 — Health check endpoints (API + Web) | — | ✅ Complete | 2026-04-23 | 2026-04-23 |
+| 27 | I-0.4.4 — Audit log table and logging utility | [impl-plan](docs/impl-plan/feature-0.4-I-0.4.4.md) | ✅ Complete | 2026-04-23 | 2026-04-23 |
+| 28 | I-0.4.5 — Production metrics emitter | [impl-plan](docs/impl-plan/feature-0.4-I-0.4.5.md) | ✅ Complete | 2026-04-23 | 2026-04-23 |
 
 ## Completed Implementation Plans
 
@@ -51,7 +53,7 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 | Phase 0 | 0.1 — Shared Packages & Database Foundation | ✅ Complete | All features complete: I-0.1.1 through I-0.1.9. |
 | Phase 0 | 0.2 — Authentication & Identity | ✅ Complete | All auth items complete including I-0.2.9 (SSR session forwarding) and I-0.2.7 (deferred auth). 320 API tests, 57 web tests passing. |
 | Phase 0 | 0.3 — Design System & App Shell | ✅ Complete | All features complete: I-0.3.1 through I-0.3.6, plus I-0.2.9 and I-0.2.7. |
-| Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | 🔧 In Progress | I-0.4.2 (Pino logging + OTEL) complete. I-0.4.1 (Sentry API + web) complete. I-0.4.3 (Health checks) complete. Remaining: I-0.4.4, I-0.4.5, I-0.4.6. |
+| Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | 🔧 In Progress | I-0.4.2 (Pino logging + OTEL) complete. I-0.4.1 (Sentry API + web) complete. I-0.4.3 (Health checks) complete. I-0.4.4 (Audit log utility) complete. I-0.4.5 (Production metrics) complete. Remaining: I-0.4.6. |
 | Phase 1 | 1.1 — Organizer Signup & Verification | ⬜ Not Started | — |
 | Phase 1 | 1.2 — Event Creation & Management | ⬜ Not Started | — |
 

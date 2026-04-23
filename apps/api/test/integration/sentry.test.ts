@@ -417,15 +417,15 @@ describe("OTEL conditional", () => {
 		vi.resetModules();
 	});
 
-	it("initTelemetry returns null when SENTRY_DSN is set", async () => {
+	it("initTelemetry returns null SDK when SENTRY_DSN is set", async () => {
 		const { initTelemetry } = await import("../../src/lib/otel.js");
 
-		const sdk = initTelemetry({
+		const handle = initTelemetry({
 			SENTRY_DSN: "https://key@o0.ingest.sentry.io/0",
 			OTEL_SERVICE_NAME: "test-service",
 		});
 
-		expect(sdk).toBeNull();
+		expect(handle.sdk).toBeNull();
 	}, 15_000);
 
 	it("initTelemetry returns NodeSDK when SENTRY_DSN is absent", async () => {
@@ -433,13 +433,13 @@ describe("OTEL conditional", () => {
 			"../../src/lib/otel.js"
 		);
 
-		const sdk = initTelemetry({
+		const handle = initTelemetry({
 			OTEL_SERVICE_NAME: "test-service",
 		});
 
-		expect(sdk).not.toBeNull();
-		expect(typeof sdk!.shutdown).toBe("function");
-		await shutdownTelemetry(sdk);
+		expect(handle.sdk).not.toBeNull();
+		expect(typeof handle.sdk!.shutdown).toBe("function");
+		await shutdownTelemetry(handle);
 	}, 15_000);
 });
 
