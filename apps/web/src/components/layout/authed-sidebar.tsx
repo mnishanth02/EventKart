@@ -21,6 +21,7 @@ import {
 	SidebarRail,
 } from "@repo/ui/components/ui/sidebar";
 import { Badge } from "@repo/ui/components/ui/badge";
+import { toast } from "sonner";
 import { apiClient } from "#/lib/api-client";
 import { useAuthActions } from "#/features/auth/hooks";
 import type { AuthSession } from "#/lib/auth/server-fns";
@@ -58,17 +59,20 @@ interface AuthedSidebarProps {
 
 function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 	const navigate = useNavigate();
-	const { invalidateSession } = useAuthActions();
+	const { clearSession, invalidateSession } = useAuthActions();
 	const areaConfig = AREA_CONFIG[area];
 	const navItems = NAV_ITEMS[area];
 
 	async function handleLogout() {
 		try {
 			await apiClient("/auth/logout", { method: "POST" });
+			invalidateSession();
 		} catch {
-			// Proceed with client-side cleanup even if API call fails
+			// API failed — clear local cache so UI reflects logged-out state,
+			// but warn the user that the server session may persist.
+			clearSession();
+			toast.error("Logout may not have completed. Please close your browser if issues persist.");
 		}
-		invalidateSession();
 		void navigate({ to: "/" });
 	}
 

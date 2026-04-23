@@ -41,6 +41,10 @@ export function useAuthActions() {
  * a callback. If the user is not authenticated, opens the OTP login dialog.
  * After successful login, executes the callback.
  *
+ * If the session query is still loading, the callback is deferred until
+ * the query resolves — the dialog is only shown if the user is truly
+ * unauthenticated.
+ *
  * The returned `loginDialog` element **must** be rendered by the consuming
  * component for the dialog to appear.
  *
@@ -63,8 +67,9 @@ export function useAuthActions() {
  * ```
  */
 export function useRequireAuth() {
-	const { isAuthenticated } = useAuth();
+	const { isAuthenticated, isLoading } = useAuth();
 	const { invalidateSession } = useAuthActions();
+	const queryClient = useQueryClient();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const pendingCallbackRef = useRef<(() => void) | null>(null);
 
@@ -73,6 +78,20 @@ export function useRequireAuth() {
 			callback();
 			return;
 		}
+
+		// If session query is still loading, wait for it before deciding
+		if (isLoading) {
+			void queryClient.ensureQueryData(sessionQueryOptions()).then((session) => {
+				if (session) {
+					callback();
+				} else {
+					pendingCallbackRef.current = callback;
+					setDialogOpen(true);
+				}
+			});
+			return;
+		}
+
 		pendingCallbackRef.current = callback;
 		setDialogOpen(true);
 	}

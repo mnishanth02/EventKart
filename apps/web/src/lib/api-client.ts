@@ -35,7 +35,7 @@ function getCsrfToken(): string | undefined {
 	const match = document.cookie
 		.split("; ")
 		.find((row) => row.startsWith(`${CSRF_COOKIE_NAME}=`));
-	return match?.split("=")[1];
+	return match?.split("=").slice(1).join("=");
 }
 
 function getApiBaseUrl(): string {

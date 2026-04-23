@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useMatches } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { SearchIcon } from "lucide-react";
 import { ThemeToggle } from "@repo/ui/components/theme-toggle";
 import { cn } from "@repo/ui/lib/utils";
@@ -74,16 +74,12 @@ function PublicHeader() {
 }
 
 function NavLink({ to, label }: { to: string; label: string }) {
-	const matches = useMatches();
-	const isActive = matches.some((m) => m.fullPath === to);
-
 	return (
 		<Link
 			to={to}
-			className={cn(
-				"nav-link px-3 py-2 text-sm font-medium",
-				isActive && "is-active",
-			)}
+			activeOptions={{ exact: true }}
+			className="nav-link px-3 py-2 text-sm font-medium"
+			activeProps={{ className: "nav-link px-3 py-2 text-sm font-medium is-active" }}
 		>
 			{label}
 		</Link>

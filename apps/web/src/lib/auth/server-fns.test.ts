@@ -42,7 +42,7 @@ describe("getForwardedAuthHeaders", () => {
 		);
 
 		const { getForwardedAuthHeaders } = await import(
-			"#/lib/auth/server-fns"
+			"#/lib/auth/server-fns.server"
 		);
 		const headers = getForwardedAuthHeaders();
 
@@ -57,7 +57,7 @@ describe("getForwardedAuthHeaders", () => {
 		mockHeaders.set("x-request-id", "req-12345");
 
 		const { getForwardedAuthHeaders } = await import(
-			"#/lib/auth/server-fns"
+			"#/lib/auth/server-fns.server"
 		);
 		const headers = getForwardedAuthHeaders();
 
@@ -69,7 +69,7 @@ describe("getForwardedAuthHeaders", () => {
 		mockHeaders.set("cookie", "theme=dark; _ga=GA1.2.xxx");
 
 		const { getForwardedAuthHeaders } = await import(
-			"#/lib/auth/server-fns"
+			"#/lib/auth/server-fns.server"
 		);
 		const headers = getForwardedAuthHeaders();
 
@@ -81,7 +81,7 @@ describe("getForwardedAuthHeaders", () => {
 		// No headers set at all
 
 		const { getForwardedAuthHeaders } = await import(
-			"#/lib/auth/server-fns"
+			"#/lib/auth/server-fns.server"
 		);
 		const headers = getForwardedAuthHeaders();
 
@@ -92,7 +92,7 @@ describe("getForwardedAuthHeaders", () => {
 		mockHeaders.set("cookie", "kiran_session=abc=def=ghi; other=val");
 
 		const { getForwardedAuthHeaders } = await import(
-			"#/lib/auth/server-fns"
+			"#/lib/auth/server-fns.server"
 		);
 		const headers = getForwardedAuthHeaders();
 
@@ -113,8 +113,9 @@ describe("getCurrentUser", () => {
 			data: { userId: "user_1", role: "participant" },
 		});
 
-		const { getCurrentUser } = await import("#/lib/auth/server-fns");
-		const result = await getCurrentUser();
+		// getCurrentUser handler calls fetchCurrentUser via dynamic import
+		const { fetchCurrentUser } = await import("#/lib/auth/server-fns.server");
+		const result = await fetchCurrentUser();
 
 		expect(result).toEqual({ userId: "user_1", role: "participant" });
 		expect(mockClient).toHaveBeenCalledWith("/auth/session", {
@@ -133,8 +134,8 @@ describe("getCurrentUser", () => {
 			new ApiClientError(401, "UNAUTHORIZED", "Session expired"),
 		);
 
-		const { getCurrentUser } = await import("#/lib/auth/server-fns");
-		const result = await getCurrentUser();
+		const { fetchCurrentUser } = await import("#/lib/auth/server-fns.server");
+		const result = await fetchCurrentUser();
 
 		expect(result).toBeNull();
 	});
@@ -148,8 +149,8 @@ describe("getCurrentUser", () => {
 			new ApiClientError(500, "INTERNAL_ERROR", "Server exploded"),
 		);
 
-		const { getCurrentUser } = await import("#/lib/auth/server-fns");
+		const { fetchCurrentUser } = await import("#/lib/auth/server-fns.server");
 
-		await expect(getCurrentUser()).rejects.toThrow("Server exploded");
+		await expect(fetchCurrentUser()).rejects.toThrow("Server exploded");
 	});
 });

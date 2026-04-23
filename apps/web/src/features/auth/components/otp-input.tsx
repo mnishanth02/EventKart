@@ -29,7 +29,7 @@ function OtpInput({
 		}
 	}, [autoFocus]);
 
-	const digits = value.padEnd(OTP_LENGTH, "").slice(0, OTP_LENGTH).split("");
+	const digits = Array.from({ length: OTP_LENGTH }, (_, i) => value[i] ?? "");
 
 	function focusInput(index: number) {
 		inputsRef.current[index]?.focus();
@@ -39,7 +39,7 @@ function OtpInput({
 		const digit = inputValue.replace(/\D/g, "").slice(-1);
 		const newDigits = [...digits];
 		newDigits[index] = digit;
-		const newValue = newDigits.join("").replace(/ /g, "");
+		const newValue = newDigits.join("");
 		onChange(newValue);
 
 		if (digit && index < OTP_LENGTH - 1) {
@@ -53,7 +53,7 @@ function OtpInput({
 				e.preventDefault();
 				const newDigits = [...digits];
 				newDigits[index - 1] = "";
-				onChange(newDigits.join("").replace(/ /g, ""));
+				onChange(newDigits.join(""));
 				focusInput(index - 1);
 			}
 		} else if (e.key === "ArrowLeft" && index > 0) {
@@ -89,7 +89,7 @@ function OtpInput({
 						type="text"
 						inputMode="numeric"
 						maxLength={1}
-						value={digit === " " ? "" : digit}
+						value={digit}
 						onChange={(e) => handleChange(index, e.target.value)}
 						onKeyDown={(e) => handleKeyDown(index, e)}
 						onPaste={handlePaste}

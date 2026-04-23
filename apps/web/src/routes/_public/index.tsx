@@ -6,7 +6,7 @@ import { Badge } from "@repo/ui/components/ui/badge";
 import { Separator } from "@repo/ui/components/ui/separator";
 
 const searchSchema = z.object({
-	reason: z.enum(["auth-required", "forbidden"]).optional(),
+	reason: z.enum(["auth-required", "forbidden"]).optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/_public/")({
