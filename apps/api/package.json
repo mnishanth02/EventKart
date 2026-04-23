@@ -32,6 +32,7 @@
 		"@opentelemetry/sdk-node": "^0.215.0",
 		"@repo/db": "workspace:*",
 		"@repo/shared": "workspace:*",
+		"@sentry/node": "^10.49.0",
 		"@sinclair/typebox": "^0.34.49",
 		"bullmq": "^5.76.0",
 		"drizzle-orm": "^0.45.2",

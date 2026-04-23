@@ -199,9 +199,9 @@ These are non-coding prerequisites that must be satisfied before production laun
 
 | Order | ID | Feature | Backend | Frontend | Shared | Depends on | Notes |
 |-------|----|---------|---------|----------|--------|------------|-------|
-| 1 | I-0.4.2 | Pino structured logging with request correlation IDs + OpenTelemetry bridge | ✦ | — | — | — | ✅ `X-Request-ID` in every log line. Pino + OpenTelemetry bridge for log↔trace correlation. Foundation for all observability. |
-| 2 | I-0.4.1 | Sentry integration — separate projects for client-side, SSR server, API server | ✦ | ✦ | — | — | Source maps, error tracking. Can parallel with I-0.4.2. |
-| 3 | I-0.4.3 | Health check endpoints — Fastify (`GET /health`, `GET /ready`) + TanStack Start (`GET /health`) | ✦ | ✦ | — | **I-0.1.2**, **I-0.1.5** | Fastify: PostgreSQL + Redis checks. TanStack Start: SSR rendering + Fastify API reachability. |
+| 1  ✅ | I-0.4.2 | Pino structured logging with request correlation IDs + OpenTelemetry bridge | ✦ | — | — | — | ✅ `X-Request-ID` in every log line. Pino + OpenTelemetry bridge for log↔trace correlation. Foundation for all observability. |
+| 2 ✅ | I-0.4.1 | Sentry integration — separate projects for client-side, SSR server, API server | ✦ | ✦ | — | — | ✅ @sentry/node for API (conditional OTEL, PII scrubbing, 5xx capture). @sentry/tanstackstart-react for web (browserTracing, replay, error boundaries). Graceful no-op when DSN unset. |
+| 3 ✅ | I-0.4.3 | Health check endpoints — Fastify (`GET /health`, `GET /ready`) + TanStack Start (`GET /health`, `GET /ready`) | ✦ | ✦ | — | **I-0.1.2**, **I-0.1.5** | ✅ Fastify: liveness + readiness with parallel PostgreSQL + Redis checks. TanStack Start: liveness + readiness with API reachability check. |
 | 4 | I-0.4.4 | Audit log table and logging utility | ✦ | — | — | **I-0.1.3** | actor_id, action, resource_type, resource_id, metadata JSONB, ip_address, created_at. Needs audit_log table from core tables. |
 | 5 | I-0.4.5 | Production metrics emitter — booking RPS, payment latency, webhook ACK latency, queue depth, DB pool wait, Redis usage | ✦ | — | — | I-0.4.2, **I-0.1.5** | Architecture §4.3: track from day one. Include conversion funnel events (page view → OTP → booking → payment). |
 | 6 | I-0.4.6 | BullMQ observability — queue depth, oldest job age, retry count, DLQ count per queue | ✦ | — | — | I-0.4.2, **I-0.1.6** | Wire BullMQ v5.71+ native OpenTelemetry support. Needs BullMQ infrastructure from Module 0.1. |

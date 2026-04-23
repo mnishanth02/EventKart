@@ -38,11 +38,35 @@ vi.mock("ioredis", () => {
 
 // Global mock for @repo/db — prevents real PostgreSQL connections in all tests.
 vi.mock("@repo/db", () => {
+	const mockDb = {
+		execute: vi.fn().mockResolvedValue([{ "?column?": 1 }]),
+	};
 	return {
-		createDatabase: vi.fn().mockReturnValue({}),
+		createDatabase: vi.fn().mockReturnValue(mockDb),
 		createMigrationClient: vi.fn().mockReturnValue({}),
+		pingDatabase: vi.fn().mockResolvedValue(undefined),
 	};
 });
+
+// Global mock for @sentry/node — prevents real Sentry connections in all tests.
+vi.mock("@sentry/node", () => ({
+	init: vi.fn(),
+	captureException: vi.fn(),
+	close: vi.fn().mockResolvedValue(true),
+	fastifyIntegration: vi.fn().mockReturnValue({ name: "Fastify" }),
+	setupFastifyErrorHandler: vi.fn(),
+	setTag: vi.fn(),
+	setExtra: vi.fn(),
+	setUser: vi.fn(),
+	withScope: vi.fn((callback: (scope: unknown) => void) => {
+		callback({
+			setTag: vi.fn(),
+			setExtra: vi.fn(),
+			setExtras: vi.fn(),
+			setUser: vi.fn(),
+		});
+	}),
+}));
 
 // Global mock for bullmq — prevents real queue connections in all tests.
 vi.mock("bullmq", () => {

@@ -80,6 +80,18 @@ function normalizeConfigData(data: Record<string, unknown>) {
 		delete normalizedData.OTEL_EXPORTER_OTLP_HEADERS;
 	}
 
+	if (normalizedData.SENTRY_DSN === "") {
+		delete normalizedData.SENTRY_DSN;
+	}
+
+	if (normalizedData.SENTRY_ENVIRONMENT === "") {
+		delete normalizedData.SENTRY_ENVIRONMENT;
+	}
+
+	if (normalizedData.SENTRY_RELEASE === "") {
+		delete normalizedData.SENTRY_RELEASE;
+	}
+
 	return normalizedData;
 }
 
@@ -142,6 +154,10 @@ export const appConfigSchema = Type.Object({
 	OTEL_SERVICE_NAME: Type.String({ default: "eventkart-api" }),
 	OTEL_EXPORTER_OTLP_ENDPOINT: Type.Optional(Type.String({ minLength: 1 })),
 	OTEL_EXPORTER_OTLP_HEADERS: Type.Optional(Type.String({ minLength: 1 })),
+	SENTRY_DSN: Type.Optional(Type.String({ minLength: 1 })),
+	SENTRY_ENVIRONMENT: Type.Optional(Type.String({ minLength: 1 })),
+	SENTRY_RELEASE: Type.Optional(Type.String({ minLength: 1 })),
+	SENTRY_TRACES_SAMPLE_RATE: Type.Optional(Type.Number({ minimum: 0, maximum: 1 })),
 	LOG_PRETTY: Type.Optional(Type.Boolean({ default: false })),
 });
 

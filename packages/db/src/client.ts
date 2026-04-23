@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { sql } from "drizzle-orm";
 import postgres from "postgres";
 
 import * as schema from "./schema/index.js";
@@ -24,3 +25,8 @@ export function createMigrationClient(url: string) {
 }
 
 export type Database = ReturnType<typeof createDatabase>;
+
+/** Lightweight DB connectivity check for health/readiness probes. */
+export async function pingDatabase(db: Database): Promise<void> {
+	await db.execute(sql`SELECT 1`);
+}

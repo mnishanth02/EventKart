@@ -1,6 +1,7 @@
 import type { FastifyError, FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 import { AppError } from "../lib/errors.js";
+import { captureUnexpectedError } from "../lib/sentry.js";
 
 const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
 	fastify.setErrorHandler((error: FastifyError | AppError, request, reply) => {
@@ -29,8 +30,13 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
 			});
 		}
 
-		// Unexpected errors — log and return generic 500
+		// Unexpected errors — log and report to Sentry
 		request.log.error(error, "Unhandled error");
+		captureUnexpectedError(error, {
+			requestId: request.id,
+			method: request.method,
+			url: request.url,
+		});
 		return reply.code(500).send({
 			success: false,
 			error: {

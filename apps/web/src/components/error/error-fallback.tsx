@@ -1,9 +1,12 @@
+import * as Sentry from "@sentry/tanstackstart-react";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@repo/ui/components/ui/button";
 
 export function ErrorFallback({ error, reset }: ErrorComponentProps) {
 	const isDev = import.meta.env.DEV;
+
+	Sentry.captureException(error);
 
 	return (
 		<div className="flex min-h-[50vh] flex-col items-center justify-center px-4 text-center">

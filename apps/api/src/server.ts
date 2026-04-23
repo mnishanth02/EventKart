@@ -1,8 +1,10 @@
-// OTEL SDK must be initialized before any instrumented module (http, fastify, pino)
+// Sentry must init first — it takes over OpenTelemetry when active
+import { initSentry, flushSentry } from "./lib/sentry.js";
 import { initTelemetry, shutdownTelemetry } from "./lib/otel.js";
 import { loadConfig } from "./lib/config.js";
 
 const config = loadConfig();
+initSentry(config);
 const sdk = initTelemetry(config);
 
 // Now safe to import modules that OTEL instruments
@@ -24,6 +26,7 @@ async function start() {
 async function shutdown(signal: string) {
 	app.log.info({ signal }, "Received shutdown signal");
 	await app.close();
+	await flushSentry();
 	await shutdownTelemetry(sdk);
 	process.exit(0);
 }
@@ -33,6 +36,7 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 
 start().catch(async (error) => {
 	app.log.error({ err: error }, "Failed to start API server");
+	await flushSentry();
 	await shutdownTelemetry(sdk);
 	process.exit(1);
 });

@@ -5,6 +5,7 @@ import { FastifyInstrumentation } from "@opentelemetry/instrumentation-fastify";
 import { PinoInstrumentation } from "@opentelemetry/instrumentation-pino";
 
 interface OTelConfig {
+	SENTRY_DSN?: string;
 	OTEL_SERVICE_NAME?: string;
 	OTEL_EXPORTER_OTLP_ENDPOINT?: string;
 	OTEL_EXPORTER_OTLP_HEADERS?: string;
@@ -27,7 +28,13 @@ function parseHeaders(
 	return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
-export function initTelemetry(config: OTelConfig): NodeSDK {
+export function initTelemetry(config: OTelConfig): NodeSDK | null {
+	// When Sentry is active it manages OpenTelemetry (HTTP, Fastify, Pino
+	// instrumentations) — skip manual setup to avoid duplicate spans.
+	if (config.SENTRY_DSN) {
+		return null;
+	}
+
 	const serviceName = config.OTEL_SERVICE_NAME ?? "eventkart-api";
 
 	let traceExporter: OTLPTraceExporter | undefined;
@@ -57,7 +64,13 @@ export function initTelemetry(config: OTelConfig): NodeSDK {
 	return sdk;
 }
 
-export async function shutdownTelemetry(sdk: NodeSDK): Promise<void> {
+export async function shutdownTelemetry(
+	sdk: NodeSDK | null,
+): Promise<void> {
+	if (!sdk) {
+		return;
+	}
+
 	try {
 		await sdk.shutdown();
 	} catch (error) {
