@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/tanstackstart-react";
 import type { ErrorEvent } from "@sentry/tanstackstart-react";
 
-const PHONE_PATTERN = /(\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}/g;
+const PHONE_PATTERN = /\+\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}/g;
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const SENSITIVE_KEYS = new Set([
 	"password",
@@ -37,7 +37,15 @@ function scrubObject(
 			scrubbed[key] = "[REDACTED]";
 		} else if (typeof value === "string") {
 			scrubbed[key] = redactString(value);
-		} else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+		} else if (Array.isArray(value)) {
+			scrubbed[key] = value.map((item) =>
+				typeof item === "string"
+					? redactString(item)
+					: typeof item === "object" && item !== null && !Array.isArray(item)
+						? scrubObject(item as Record<string, unknown>)
+						: item,
+			);
+		} else if (typeof value === "object" && value !== null) {
 			scrubbed[key] = scrubObject(value as Record<string, unknown>);
 		} else {
 			scrubbed[key] = value;
@@ -98,8 +106,9 @@ export function initSentryServer(): void {
 	Sentry.init({
 		dsn,
 		environment: process.env.VITE_SENTRY_ENVIRONMENT ?? "development",
-		tracesSampleRate:
-			Number(process.env.VITE_SENTRY_TRACES_SAMPLE_RATE) || 0.1,
+		tracesSampleRate: process.env.VITE_SENTRY_TRACES_SAMPLE_RATE != null
+			? Number(process.env.VITE_SENTRY_TRACES_SAMPLE_RATE)
+			: 0.1,
 		beforeSend(event) {
 			return scrubPii(event);
 		},

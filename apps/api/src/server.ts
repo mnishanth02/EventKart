@@ -1,5 +1,11 @@
 // Sentry must init first — it takes over OpenTelemetry when active
-import { initSentry, flushSentry } from "./lib/sentry.js";
+import {
+	initSentry,
+	flushSentry,
+	setupFastifyErrorHandler,
+	isSentryActive,
+	captureUnexpectedError,
+} from "./lib/sentry.js";
 import { initTelemetry, shutdownTelemetry } from "./lib/otel.js";
 import { loadConfig } from "./lib/config.js";
 
@@ -14,6 +20,11 @@ const app = buildApp();
 
 async function start() {
 	await app.ready();
+
+	// Wire Sentry error handler after all routes are registered
+	if (isSentryActive()) {
+		setupFastifyErrorHandler(app);
+	}
 
 	const address = await app.listen({
 		host: app.config.HOST,
@@ -36,6 +47,7 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 
 start().catch(async (error) => {
 	app.log.error({ err: error }, "Failed to start API server");
+	captureUnexpectedError(error, { phase: "startup" });
 	await flushSentry();
 	await shutdownTelemetry(telemetry);
 	process.exit(1);

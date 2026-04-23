@@ -324,7 +324,7 @@ describe("PII scrubbing", () => {
 	it("scrubs phone numbers from exception values", () => {
 		const event = {
 			exception: {
-				values: [{ value: "Error for 9876543210" }],
+				values: [{ value: "Error for +919876543210" }],
 			},
 		};
 
@@ -334,6 +334,26 @@ describe("PII scrubbing", () => {
 		};
 		expect(exception.values[0]!.value).not.toContain("9876543210");
 		expect(exception.values[0]!.value).toContain("[REDACTED_PHONE]");
+	});
+
+	it("does NOT redact bare numeric IDs (avoids false positives)", () => {
+		const event = {
+			message: "Booking 9876543210 failed",
+		};
+
+		const result = beforeSend(event) as Record<string, unknown>;
+		// Bare 10-digit numbers without + prefix should NOT be redacted
+		expect(result.message).toContain("9876543210");
+	});
+
+	it("scrubs international phone numbers (non-Indian)", () => {
+		const event = {
+			message: "User with phone +1 415-555-1234 failed",
+		};
+
+		const result = beforeSend(event) as Record<string, unknown>;
+		expect(result.message).not.toContain("415-555-1234");
+		expect(result.message).toContain("[REDACTED_PHONE]");
 	});
 
 	it("scrubs email addresses from exception values", () => {
@@ -405,6 +425,48 @@ describe("PII scrubbing", () => {
 		};
 
 		expect(result.request.cookies).toEqual({});
+	});
+
+	it("scrubs PII from breadcrumb messages", () => {
+		const event = {
+			breadcrumbs: [
+				{
+					message: "OTP sent to +919876543210",
+					data: { url: "/api/v1/auth/otp/send" },
+				},
+				{
+					message: "Email sent to user@example.com",
+					data: {},
+				},
+			],
+		};
+
+		const result = beforeSend(event) as {
+			breadcrumbs: Array<{ message?: string; data?: Record<string, unknown> }>;
+		};
+
+		expect(result.breadcrumbs[0]!.message).not.toContain("9876543210");
+		expect(result.breadcrumbs[0]!.message).toContain("[REDACTED_PHONE]");
+		expect(result.breadcrumbs[1]!.message).not.toContain("user@example.com");
+		expect(result.breadcrumbs[1]!.message).toContain("[REDACTED_EMAIL]");
+	});
+
+	it("redacts India-specific sensitive keys (aadhaar, pan)", () => {
+		const event = {
+			extra: {
+				aadhaar: "1234-5678-9012",
+				pan: "ABCDE1234F",
+				debug: "safe",
+			},
+		};
+
+		const result = beforeSend(event) as {
+			extra: Record<string, unknown>;
+		};
+
+		expect(result.extra.aadhaar).toBe("[REDACTED]");
+		expect(result.extra.pan).toBe("[REDACTED]");
+		expect(result.extra.debug).toBe("safe");
 	});
 });
 

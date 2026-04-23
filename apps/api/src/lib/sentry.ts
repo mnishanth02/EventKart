@@ -10,17 +10,26 @@ const REDACT_FIELDS = new Set([
 	"phone",
 	"email",
 	"password",
+	"passwd",
 	"token",
 	"secret",
 	"creditcard",
+	"credit_card",
+	"card_number",
+	"cvv",
 	"cookie",
 	"authorization",
+	"ssn",
+	"aadhaar",
+	"pan",
 ]);
 
 /** Headers stripped from Sentry request data. */
 const REDACT_HEADERS = new Set(["cookie", "authorization", "x-internal-key"]);
 
-const PHONE_PATTERN = /(\+91[\s-]?\d{10}|\b\d{10}\b)/g;
+/** Matches international phone numbers with a required `+` prefix to avoid
+ *  false positives on numeric IDs, timestamps, and prices. */
+const PHONE_PATTERN = /\+\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}/g;
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 
 /**
@@ -108,9 +117,14 @@ function scrubPii(event: ErrorEvent, _hint: EventHint): ErrorEvent | null {
 		event.extra = scrubObject(event.extra) as Record<string, unknown>;
 	}
 
-	// Scrub breadcrumb data
+	// Scrub breadcrumb data and messages
 	if (event.breadcrumbs) {
 		for (const breadcrumb of event.breadcrumbs) {
+			if (breadcrumb.message) {
+				breadcrumb.message = breadcrumb.message
+					.replace(PHONE_PATTERN, "[REDACTED_PHONE]")
+					.replace(EMAIL_PATTERN, "[REDACTED_EMAIL]");
+			}
 			if (breadcrumb.data) {
 				breadcrumb.data = scrubObject(breadcrumb.data) as Record<
 					string,

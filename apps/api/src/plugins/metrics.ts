@@ -73,7 +73,11 @@ const metricsPlugin: FastifyPluginAsync = async (fastify) => {
 		connectedClients: 0,
 	};
 
+	let redisPollInFlight = false;
+
 	async function pollRedisInfo(): Promise<void> {
+		if (redisPollInFlight) return;
+		redisPollInFlight = true;
 		try {
 			const info = await fastify.redis.base.info();
 			cachedRedisStats.usedMemoryBytes = parseInfoValue(
@@ -89,8 +93,9 @@ const metricsPlugin: FastifyPluginAsync = async (fastify) => {
 				"connected_clients",
 			);
 		} catch {
-			// Metrics should never break the app — swallow errors
-			fastify.log.debug("Redis INFO poll failed (metrics)");
+			fastify.log.warn("Redis INFO poll failed (metrics)");
+		} finally {
+			redisPollInFlight = false;
 		}
 	}
 
@@ -115,49 +120,61 @@ const metricsPlugin: FastifyPluginAsync = async (fastify) => {
 	const cachedQueueStats = new Map<string, QueueStats>();
 	let cachedDlqDepth = 0;
 
+	let queuePollInFlight = false;
+
 	async function pollQueueStats(): Promise<void> {
+		if (queuePollInFlight) return;
+		queuePollInFlight = true;
 		try {
 			for (const { key, name } of DOMAIN_QUEUES) {
-				const queue = fastify.queues[key];
-				const counts = await queue.getJobCounts(
-					"waiting",
-					"active",
-					"delayed",
-					"failed",
-				);
-				const waiting = counts.waiting ?? 0;
-				const active = counts.active ?? 0;
-				const delayed = counts.delayed ?? 0;
-				const failed = counts.failed ?? 0;
+				try {
+					const queue = fastify.queues[key];
+					const counts = await queue.getJobCounts(
+						"waiting",
+						"active",
+						"delayed",
+						"failed",
+					);
+					const waiting = counts.waiting ?? 0;
+					const active = counts.active ?? 0;
+					const delayed = counts.delayed ?? 0;
+					const failed = counts.failed ?? 0;
 
-				let oldestAgeSeconds = 0;
-				if (waiting > 0) {
-					try {
-						const jobs = await queue.getJobs(["waiting"], 0, 0);
-						if (jobs.length > 0 && jobs[0]?.timestamp) {
-							oldestAgeSeconds = (Date.now() - jobs[0].timestamp) / 1000;
+					let oldestAgeSeconds = 0;
+					if (waiting > 0) {
+						try {
+							const jobs = await queue.getJobs(["waiting"], 0, 0);
+							if (jobs.length > 0 && jobs[0]?.timestamp) {
+								oldestAgeSeconds = (Date.now() - jobs[0].timestamp) / 1000;
+							}
+						} catch {
+							// getJobs may fail on some Redis configs — skip age
 						}
-					} catch {
-						// getJobs may fail on some Redis configs — skip age
 					}
-				}
 
-				cachedQueueStats.set(name, {
-					depth: waiting + active,
-					oldestJobAgeSeconds: oldestAgeSeconds,
-					delayed,
-					failed,
-				});
+					cachedQueueStats.set(name, {
+						depth: waiting + active,
+						oldestJobAgeSeconds: oldestAgeSeconds,
+						delayed,
+						failed,
+					});
+				} catch {
+					fastify.log.warn({ queue: name }, "Queue stats poll failed for queue (metrics)");
+				}
 			}
 
 			// DLQ total depth
-			const dlqCounts = await fastify.queues.failedJobs.getJobCounts(
-				"waiting",
-				"active",
-			);
-			cachedDlqDepth = (dlqCounts.waiting ?? 0) + (dlqCounts.active ?? 0);
-		} catch {
-			fastify.log.debug("Queue stats poll failed (metrics)");
+			try {
+				const dlqCounts = await fastify.queues.failedJobs.getJobCounts(
+					"waiting",
+					"active",
+				);
+				cachedDlqDepth = (dlqCounts.waiting ?? 0) + (dlqCounts.active ?? 0);
+			} catch {
+				fastify.log.warn("DLQ stats poll failed (metrics)");
+			}
+		} finally {
+			queuePollInFlight = false;
 		}
 	}
 

@@ -6,7 +6,6 @@ export const Route = createFileRoute("/health")({
 			GET: async () => {
 				return Response.json({
 					status: "ok",
-					uptime: process.uptime(),
 				});
 			},
 		},
