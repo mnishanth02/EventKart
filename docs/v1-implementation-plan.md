@@ -56,6 +56,10 @@ The following foundation work is already complete or in progress:
 | I-0.2.8: Logout endpoint | ✅ Complete | POST /api/v1/auth/logout. Deletes session from Redis, sets revokedAt in DB (audit trail, fail-open). Clears session + CSRF cookies. 273 API tests passing. |
 | I-0.2.11: CSRF protection | ✅ Complete | HMAC-signed double-submit cookie plugin (plugins/csrf.ts). Validates X-CSRF-Token header on state-changing authenticated requests. Origin validation on OTP verify for login-CSRF protection. Token bound to sessionId. 273 API tests passing. |
 | I-0.2.10: Internal API key | ✅ Complete | `X-Internal-Key` header validation plugin (plugins/internal-key.ts). Timing-safe comparison, 401 fail-closed on invalid/unconfigured keys. Higher rate limits (1000/min vs 100/min). CSRF bypass for internal requests. Session coexistence for SSR user context. 293 API tests passing. |
+| I-0.3.6: API client setup | ✅ Complete | Hybrid SSR/browser API client (`api-client.ts` + `api-client.server.ts`). Browser: `VITE_API_URL`, CSRF auto-attach, `credentials: "include"`. Server: `INTERNAL_API_URL`, `X-Internal-Key`. Shared types/error class in `api-client.shared.ts`. 25 web tests passing. |
+
+| I-0.3.1: Mobile-first responsive layout shell | ✅ Complete | Pathless `_public` layout route with PublicHeader (glass top nav, scroll effect), PublicFooter, MobileBottomNav (Discover + Search). Fixed header/bottom nav with safe-area offsets. `_authed` layout deferred to I-0.3.3 (no children yet). |
+| I-0.3.2: Core UI component library | ✅ Complete | ThemeProvider (next-themes, attribute="class", defaultTheme="system") and mount-gated ThemeToggle in `packages/ui`. 57 shadcn/ui components already installed. Dark/light mode fully wired with CSS variables. |
 
 **What remains:** All product feature development (Phases 0–7 from requirements doc).
 
@@ -167,7 +171,7 @@ These are non-coding prerequisites that must be satisfied before production laun
 
 | Order | ID | Feature | Backend | Frontend | Shared | Depends on | Notes |
 |-------|----|---------|---------|----------|--------|------------|-------|
-| 1 | I-0.3.6 | API client setup — hybrid communication (INTERNAL_API_URL for SSR, public for browser) | — | ✦ | — | — | `apps/web/src/lib/api-client.ts`. Foundation for all frontend-API communication. |
+| 1 ✅ | I-0.3.6 | API client setup — hybrid communication (INTERNAL_API_URL for SSR, public for browser) | — | ✦ | — | — | `apps/web/src/lib/api-client.ts`. Foundation for all frontend-API communication. |
 | 2 | I-0.3.1 | Mobile-first responsive layout shell | — | ✦ | — | — | `__root.tsx`, `_public` layout (SSR), `_authed` layout (CSR). Can parallel with I-0.3.6. |
 | 3 | I-0.3.2 | Core UI component library — buttons, forms, cards, modals, navigation, toasts | — | ✦ | — | — | shadcn/ui v4 components in `apps/web/src/components` and `packages/ui`. Can parallel with I-0.3.1. |
 | 4 | I-0.3.4 | Error handling patterns — error boundaries, 404, API error display | — | ✦ | — | I-0.3.1, I-0.3.6 | Consistent error UI across all surfaces |
