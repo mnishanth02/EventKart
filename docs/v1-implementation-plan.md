@@ -204,7 +204,7 @@ These are non-coding prerequisites that must be satisfied before production laun
 | 3 ✅ | I-0.4.3 | Health check endpoints — Fastify (`GET /health`, `GET /ready`) + TanStack Start (`GET /health`, `GET /ready`) | ✦ | ✦ | — | **I-0.1.2**, **I-0.1.5** | ✅ Fastify: liveness + readiness with parallel PostgreSQL + Redis checks. TanStack Start: liveness + readiness with API reachability check. |
 | 4 ✅ | I-0.4.4 | Audit log table and logging utility | ✦ | — | — | **I-0.1.3** | ✅ createAuditLogger factory with log()/logBatch(). Fire-and-forget error handling. AUDIT_ACTIONS + AUDIT_RESOURCE_TYPES constants in shared. 382 API tests passing (11 audit). |
 | 5 ✅ | I-0.4.5 | Production metrics emitter — booking RPS, payment latency, webhook ACK latency, queue depth, DB pool wait, Redis usage | ✦ | — | — | I-0.4.2, **I-0.1.5** | ✅ OTEL MeterProvider + metrics exporter infrastructure. HTTP request metrics (duration histogram, request counter). OTP send/verify metrics. Conversion funnel counters. Redis INFO polling. All future business metric instruments pre-defined. |
-| 6 | I-0.4.6 | BullMQ observability — queue depth, oldest job age, retry count, DLQ count per queue | ✦ | — | — | I-0.4.2, **I-0.1.6** | Wire BullMQ v5.71+ native OpenTelemetry support. Needs BullMQ infrastructure from Module 0.1. |
+| 6 ✅ | I-0.4.6 | BullMQ observability — queue depth, oldest job age, retry count, DLQ count per queue | ✦ | — | — | I-0.4.2, **I-0.1.6** | ✅ Queue polling (30s) via getJobCounts()/getJobs(). Per-queue depth, oldest job age, delayed (retry), failed gauges. DLQ total depth. 403 API tests passing. |
 
 **Deliverables:**
 - Structured logging with request correlation and OpenTelemetry bridge

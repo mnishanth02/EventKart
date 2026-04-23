@@ -41,6 +41,35 @@ vi.mock("ioredis", () => {
 	return { Redis: MockRedis, default: MockRedis };
 });
 
+const mockGetJobCounts = vi.fn().mockResolvedValue({
+	waiting: 5,
+	active: 2,
+	completed: 100,
+	failed: 1,
+	delayed: 3,
+});
+const mockGetJobs = vi
+	.fn()
+	.mockResolvedValue([{ timestamp: Date.now() - 30_000 }]);
+const mockQueueClose = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("bullmq", () => {
+	class MockQueue {
+		name: string;
+		opts: Record<string, unknown>;
+		add = vi.fn().mockResolvedValue({ id: "mock-job-id" });
+		close = mockQueueClose;
+		getJobCounts = mockGetJobCounts;
+		getJobs = mockGetJobs;
+
+		constructor(name: string, opts?: Record<string, unknown>) {
+			this.name = name;
+			this.opts = opts ?? {};
+		}
+	}
+	return { Queue: MockQueue, Worker: vi.fn(), QueueEvents: vi.fn() };
+});
+
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../../src/app.js";
 
@@ -109,5 +138,31 @@ describe("Metrics Plugin", () => {
 
 		// Close should not throw — interval is cleared
 		await expect(localApp.close()).resolves.toBeUndefined();
+	});
+
+	it("polls queue stats on startup", () => {
+		// getJobCounts is called for each domain queue (4) + DLQ (1) = 5 calls
+		expect(mockGetJobCounts).toHaveBeenCalled();
+	});
+
+	it("calls getJobs for oldest job age when waiting > 0", () => {
+		// mockGetJobCounts returns waiting: 5, so getJobs should be called
+		expect(mockGetJobs).toHaveBeenCalledWith(["waiting"], 0, 0);
+	});
+
+	it("handles queue poll failure gracefully", async () => {
+		mockGetJobCounts.mockRejectedValueOnce(new Error("Connection refused"));
+
+		const errorApp = buildPluginTestApp();
+		await errorApp.ready();
+
+		// App should still start — queue poll errors are swallowed
+		const response = await errorApp.inject({
+			method: "GET",
+			url: "/health",
+		});
+		expect(response.statusCode).toBe(200);
+
+		await errorApp.close();
 	});
 });

@@ -15,6 +15,9 @@ import {
 	webhookProcessDuration,
 	queueDepth,
 	queueOldestJobAge,
+	queueDelayedJobs,
+	queueFailedJobs,
+	queueDlqDepth,
 	dbSlowQueryTotal,
 	dbQueryDuration,
 	redisMemoryUsage,
@@ -61,10 +64,16 @@ describe("metrics instrument registry", () => {
 		expect(webhookProcessDuration).toBeDefined();
 	});
 
-	it("exports queue metric instruments (future)", () => {
+	it("exports queue metric instruments", () => {
 		expect(queueDepth).toBeDefined();
 		expect(typeof queueDepth.addCallback).toBe("function");
 		expect(queueOldestJobAge).toBeDefined();
+		expect(queueDelayedJobs).toBeDefined();
+		expect(typeof queueDelayedJobs.addCallback).toBe("function");
+		expect(queueFailedJobs).toBeDefined();
+		expect(typeof queueFailedJobs.addCallback).toBe("function");
+		expect(queueDlqDepth).toBeDefined();
+		expect(typeof queueDlqDepth.addCallback).toBe("function");
 	});
 
 	it("exports database metric instruments", () => {

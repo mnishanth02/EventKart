@@ -140,7 +140,7 @@ export const webhookProcessDuration = meter.createHistogram(
 	},
 );
 
-// ── Queue Metrics (basic — I-0.4.6 will expand with BullMQ OTEL) ──
+// ── Queue Metrics (I-0.4.6 — BullMQ observability via polling) ──────
 
 export const queueDepth = meter.createObservableGauge("queue.depth", {
 	description: "Current queue depth (waiting + active jobs)",
@@ -153,6 +153,24 @@ export const queueOldestJobAge = meter.createObservableGauge(
 		unit: "s",
 	},
 );
+
+export const queueDelayedJobs = meter.createObservableGauge(
+	"queue.delayed_jobs",
+	{
+		description: "Jobs delayed for retry (backoff) per queue",
+	},
+);
+
+export const queueFailedJobs = meter.createObservableGauge(
+	"queue.failed_jobs",
+	{
+		description: "Failed jobs per queue (awaiting retry or exhausted)",
+	},
+);
+
+export const queueDlqDepth = meter.createObservableGauge("queue.dlq.depth", {
+	description: "Total dead-letter queue depth",
+});
 
 // ── Database Metrics ────────────────────────────────────────────────
 // NOTE: postgres.js does not expose pool wait time or connection stats.
