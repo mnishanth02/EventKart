@@ -199,7 +199,7 @@ These are non-coding prerequisites that must be satisfied before production laun
 
 | Order | ID | Feature | Backend | Frontend | Shared | Depends on | Notes |
 |-------|----|---------|---------|----------|--------|------------|-------|
-| 1 | I-0.4.2 | Pino structured logging with request correlation IDs + OpenTelemetry bridge | ✦ | — | — | — | `X-Request-ID` in every log line. Pino + OpenTelemetry bridge for log↔trace correlation. Foundation for all observability. |
+| 1 | I-0.4.2 | Pino structured logging with request correlation IDs + OpenTelemetry bridge | ✦ | — | — | — | ✅ `X-Request-ID` in every log line. Pino + OpenTelemetry bridge for log↔trace correlation. Foundation for all observability. |
 | 2 | I-0.4.1 | Sentry integration — separate projects for client-side, SSR server, API server | ✦ | ✦ | — | — | Source maps, error tracking. Can parallel with I-0.4.2. |
 | 3 | I-0.4.3 | Health check endpoints — Fastify (`GET /health`, `GET /ready`) + TanStack Start (`GET /health`) | ✦ | ✦ | — | **I-0.1.2**, **I-0.1.5** | Fastify: PostgreSQL + Redis checks. TanStack Start: SSR rendering + Fastify API reachability. |
 | 4 | I-0.4.4 | Audit log table and logging utility | ✦ | — | — | **I-0.1.3** | actor_id, action, resource_type, resource_id, metadata JSONB, ip_address, created_at. Needs audit_log table from core tables. |

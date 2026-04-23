@@ -7,6 +7,7 @@ import cookie from "@fastify/cookie";
 import Fastify, { type FastifyServerOptions } from "fastify";
 
 import { type AppConfig, loadConfig } from "./lib/config.js";
+import { createLoggerOptions } from "./lib/logger.js";
 import configPlugin from "./plugins/config.js";
 import corsPlugin from "./plugins/cors.js";
 import databasePlugin from "./plugins/database.js";
@@ -34,7 +35,7 @@ export function buildApp(options: BuildAppOptions = {}) {
 	});
 
 	const app = Fastify({
-		logger: options.logger ?? { level: config.LOG_LEVEL ?? "info" },
+		logger: options.logger ?? createLoggerOptions(config),
 		requestIdHeader: "x-request-id",
 		trustProxy: true,
 	}).withTypeProvider<ZodTypeProvider>();

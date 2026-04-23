@@ -72,6 +72,14 @@ function normalizeConfigData(data: Record<string, unknown>) {
 		delete normalizedData.RESEND_API_KEY;
 	}
 
+	if (normalizedData.OTEL_EXPORTER_OTLP_ENDPOINT === "") {
+		delete normalizedData.OTEL_EXPORTER_OTLP_ENDPOINT;
+	}
+
+	if (normalizedData.OTEL_EXPORTER_OTLP_HEADERS === "") {
+		delete normalizedData.OTEL_EXPORTER_OTLP_HEADERS;
+	}
+
 	return normalizedData;
 }
 
@@ -131,6 +139,10 @@ export const appConfigSchema = Type.Object({
 	ADMIN_IP_ALLOWLIST: Type.Optional(Type.String({ minLength: 1 })),
 	RESEND_API_KEY: Type.Optional(Type.String({ minLength: 1 })),
 	EMAIL_FROM: Type.String({ default: "EventKart <noreply@eventkart.app>" }),
+	OTEL_SERVICE_NAME: Type.String({ default: "eventkart-api" }),
+	OTEL_EXPORTER_OTLP_ENDPOINT: Type.Optional(Type.String({ minLength: 1 })),
+	OTEL_EXPORTER_OTLP_HEADERS: Type.Optional(Type.String({ minLength: 1 })),
+	LOG_PRETTY: Type.Optional(Type.Boolean({ default: false })),
 });
 
 export type AppConfig = Static<typeof appConfigSchema>;
