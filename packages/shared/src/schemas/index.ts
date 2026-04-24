@@ -1,3 +1,21 @@
+export type {
+	AdminApproveBody,
+	AdminRejectBody,
+	AdminReviewActionResponse,
+	AdminVerificationDetail,
+	AdminVerificationListItem,
+	AdminVerificationListParams,
+	DocumentViewUrl,
+} from "./admin-verification.js";
+export {
+	adminApproveBodySchema,
+	adminRejectBodySchema,
+	adminReviewActionResponseSchema,
+	adminVerificationDetailSchema,
+	adminVerificationListItemSchema,
+	adminVerificationListParamsSchema,
+	documentViewUrlSchema,
+} from "./admin-verification.js";
 export type { ErrorResponse } from "./api-response.js";
 export {
 	cursorPaginatedResponseSchema,

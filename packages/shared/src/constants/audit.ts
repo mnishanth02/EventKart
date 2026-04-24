@@ -21,6 +21,7 @@ export const AUDIT_ACTIONS = {
 	ORGANIZER_DOCUMENT_UPLOAD: "organizer.document_upload",
 	ORGANIZER_DOCUMENT_CONFIRM: "organizer.document_confirm",
 	ORGANIZER_DOCUMENT_DELETE: "organizer.document_delete",
+	ORGANIZER_DOCUMENT_VIEW: "organizer.document_view",
 	ORGANIZER_PROFILE_UPDATE: "organizer.profile_update",
 	// Event
 	EVENT_CREATE: "event.create",

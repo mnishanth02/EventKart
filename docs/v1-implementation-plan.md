@@ -66,7 +66,9 @@ The following foundation work is already complete or in progress:
 | I-1.1.8: Organizer profile management | ✅ Complete | `PUT /api/v1/organizers/me` partial update endpoint. Shared `organizerUpdateSchema` (all fields optional, min 1 required). `OrganizerProfileForm` with dirty-field detection. `/org/profile` route. Audit logged. 81 organizer tests passing. |
 | I-1.1.4: Verification status tracking | ✅ Complete | `GET /api/v1/organizers/verification-status` comprehensive endpoint. 4 new DB columns (submittedForReviewAt, reviewedAt, reviewedBy, rejectionReason). SLA tracking (2-business-day target). Policy+docs check for pending_review transition. VerificationStatusTracker component with 5-step stepper, doc checklist, SLA info. Enhanced org dashboard with status card. 18 verification status tests, 81 total organizer tests passing. |
 
-**What remains:** Phase 1 features I-1.1.5 through I-1.1.7, Module 1.2 (Event Creation), and all subsequent phases.
+| I-1.1.5: Admin verification review API (backend) | ✅ Complete | 5 REST endpoints under `/api/v1/admin`: list verifications (paginated), detail, document view URL, approve, reject. Admin service with Drizzle transactions, audit logging. 26 admin tests passing. |
+
+**What remains:** Phase 1 features I-1.1.5 frontend, I-1.1.6, I-1.1.7, Module 1.2 (Event Creation), and all subsequent phases.
 
 ---
 
@@ -309,8 +311,8 @@ I-0.1.5 redis             I-0.3.1 layout shell          I-0.3.4 error handling  
 | 2 ✅ | I-1.1.3 | Policy acceptance workflow — platform terms, refund policy framework | ✦ | ✦ | ✦ | I-1.1.1, **I-0.1.3** | Consent versioning, no pre-checked boxes. Uses `consent_records` table from Phase 0. Can parallel with I-1.1.2. |
 | 3 ✅ | I-1.1.2 | Verification document upload — Aadhaar, PAN, GST certificate, bank proof | ✦ | ✦ | — | I-1.1.1, **I-0.1.8** | Upload to S3/R2 via presigned URLs, server-side encryption at rest, access logged. Can parallel with I-1.1.3. |
 | 4 ✅ | I-1.1.8 | Organizer profile management — view and edit organizer profile | ✦ | ✦ | ✦ | I-1.1.1, **I-0.3.3** | `/org/profile` route. Business name, description, city. Separate from the public-facing profile (Phase 2). |
-| 5 | I-1.1.4 | Verification status tracking — pending → approved/rejected | ✦ | ✦ | ✦ | I-1.1.1, I-1.1.2, I-1.1.3 | Target 2-business-day SLA from complete submission. Status enum in shared package. |
-| 6 | I-1.1.5 | Admin verification review interface — approve/reject with notes | ✦ | ✦ | — | I-1.1.4, **I-0.3.3**, **I-0.4.4** | `/admin/verifications` route, logged access to KYC docs. Needs role-based routing + audit log. |
+| 5 ✅ | I-1.1.4 | Verification status tracking — pending → approved/rejected | ✦ | ✦ | ✦ | I-1.1.1, I-1.1.2, I-1.1.3 | Target 2-business-day SLA from complete submission. Status enum in shared package. |
+| 6 🟡 | I-1.1.5 | Admin verification review interface — approve/reject with notes | ✦ | ✦ | — | I-1.1.4, **I-0.3.3**, **I-0.4.4** | Backend API complete (5 endpoints, 26 tests). `/admin/verifications` frontend route pending. |
 | 7 | I-1.1.6 | Verification badge assignment on approval | ✦ | ✦ | — | I-1.1.5 | Paid-event publishing eligibility gated by verification. Triggered by admin approval action. |
 | 8 | I-1.1.7 | Razorpay Route linked-account creation + KYC sync | ✦ | — | — | I-1.1.5 | On admin approval, create Razorpay Route sub-merchant linked account. Persist `razorpay_account_id` on `organizers` table. Gate event publishing (I-1.2.6) on this. **Required for the locked commercial model (product plan §7).** Can parallel with I-1.1.6. |
 
