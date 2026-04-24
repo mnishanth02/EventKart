@@ -62,8 +62,9 @@ The following foundation work is already complete or in progress:
 | I-0.3.2: Core UI component library | ✅ Complete | ThemeProvider (next-themes, attribute="class", defaultTheme="system") and mount-gated ThemeToggle in `packages/ui`. 57 shadcn/ui components already installed. Dark/light mode fully wired with CSS variables. |
 | I-0.2.9: SSR session forwarding | ✅ Complete | `getForwardedAuthHeaders()` filters only `kiran_session` cookie + `X-Request-ID` for SSR→API calls. `getCurrentUser` server function returns `AuthSession \| null`. 8 web tests passing. 320 API tests, 57 web tests passing. |
 | I-0.2.7: Deferred authentication pattern | ✅ Complete | `GET /api/v1/auth/session` endpoint (Cache-Control: private, no-store). `useAuth()`, `useAuthActions()`, `useRequireAuth()` hooks. OTP login dialog (phone → OTP → verify). Auth query invalidation after login/logout. 320 API tests, 57 web tests passing. |
+| I-1.1.1: Organizer registration form | ✅ Complete | `POST /api/v1/organizers` + `GET /api/v1/organizers/me`. Organizers table + migration (cascade FK). Shared Zod schemas for registration + profile. TanStack Form with live validation. `/org/register` route, dashboard profile check. 422 API tests, 75 web tests passing. |
 
-**What remains:** All product feature development (Phases 0–7 from requirements doc).
+**What remains:** Phase 1 features I-1.1.2 through I-1.1.8, Module 1.2 (Event Creation), and all subsequent phases.
 
 ---
 
@@ -302,7 +303,7 @@ I-0.1.5 redis             I-0.3.1 layout shell          I-0.3.4 error handling  
 
 | Order | ID | Feature | Backend | Frontend | Shared | Depends on | Notes |
 |-------|----|---------|---------|----------|--------|------------|-------|
-| 1 | I-1.1.1 | Organizer registration form — business name, contact details, city | ✦ | ✦ | ✦ | **I-0.1.1**, **I-0.1.3**, **I-0.2.4** | `POST /api/v1/organizers`, Zod schema in shared. Creates `organizers` table + migration. |
+| 1 ✅ | I-1.1.1 | Organizer registration form — business name, contact details, city | ✦ | ✦ | ✦ | **I-0.1.1**, **I-0.1.3**, **I-0.2.4** | `POST /api/v1/organizers`, Zod schema in shared. Creates `organizers` table + migration. |
 | 2 | I-1.1.3 | Policy acceptance workflow — platform terms, refund policy framework | ✦ | ✦ | ✦ | I-1.1.1, **I-0.1.3** | Consent versioning, no pre-checked boxes. Uses `consent_records` table from Phase 0. Can parallel with I-1.1.2. |
 | 3 | I-1.1.2 | Verification document upload — Aadhaar, PAN, GST certificate, bank proof | ✦ | ✦ | — | I-1.1.1, **I-0.1.8** | Upload to S3/R2 via presigned URLs, server-side encryption at rest, access logged. Can parallel with I-1.1.3. |
 | 4 | I-1.1.8 | Organizer profile management — view and edit organizer profile | ✦ | ✦ | ✦ | I-1.1.1, **I-0.3.3** | `/org/profile` route. Business name, description, city. Separate from the public-facing profile (Phase 2). |
