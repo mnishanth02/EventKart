@@ -304,7 +304,7 @@ I-0.1.5 redis             I-0.3.1 layout shell          I-0.3.4 error handling  
 | Order | ID | Feature | Backend | Frontend | Shared | Depends on | Notes |
 |-------|----|---------|---------|----------|--------|------------|-------|
 | 1 ✅ | I-1.1.1 | Organizer registration form — business name, contact details, city | ✦ | ✦ | ✦ | **I-0.1.1**, **I-0.1.3**, **I-0.2.4** | `POST /api/v1/organizers`, Zod schema in shared. Creates `organizers` table + migration. |
-| 2 | I-1.1.3 | Policy acceptance workflow — platform terms, refund policy framework | ✦ | ✦ | ✦ | I-1.1.1, **I-0.1.3** | Consent versioning, no pre-checked boxes. Uses `consent_records` table from Phase 0. Can parallel with I-1.1.2. |
+| 2 ✅ | I-1.1.3 | Policy acceptance workflow — platform terms, refund policy framework | ✦ | ✦ | ✦ | I-1.1.1, **I-0.1.3** | Consent versioning, no pre-checked boxes. Uses `consent_records` table from Phase 0. Can parallel with I-1.1.2. |
 | 3 | I-1.1.2 | Verification document upload — Aadhaar, PAN, GST certificate, bank proof | ✦ | ✦ | — | I-1.1.1, **I-0.1.8** | Upload to S3/R2 via presigned URLs, server-side encryption at rest, access logged. Can parallel with I-1.1.3. |
 | 4 | I-1.1.8 | Organizer profile management — view and edit organizer profile | ✦ | ✦ | ✦ | I-1.1.1, **I-0.3.3** | `/org/profile` route. Business name, description, city. Separate from the public-facing profile (Phase 2). |
 | 5 | I-1.1.4 | Verification status tracking — pending → approved/rejected | ✦ | ✦ | ✦ | I-1.1.1, I-1.1.2, I-1.1.3 | Target 2-business-day SLA from complete submission. Status enum in shared package. |

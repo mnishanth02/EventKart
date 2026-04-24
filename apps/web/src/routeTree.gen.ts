@@ -21,6 +21,7 @@ import { Route as AuthedOrgIndexRouteImport } from './routes/_authed/org/index'
 import { Route as AuthedMyIndexRouteImport } from './routes/_authed/my/index'
 import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
 import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/register'
+import { Route as AuthedOrgPoliciesRouteImport } from './routes/_authed/org/policies'
 
 const ReadyRoute = ReadyRouteImport.update({
   id: '/ready',
@@ -80,6 +81,11 @@ const AuthedOrgRegisterRoute = AuthedOrgRegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => AuthedOrgRoute,
 } as any)
+const AuthedOrgPoliciesRoute = AuthedOrgPoliciesRouteImport.update({
+  id: '/policies',
+  path: '/policies',
+  getParentRoute: () => AuthedOrgRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthedAdminRouteWithChildren
   '/my': typeof AuthedMyRouteWithChildren
   '/org': typeof AuthedOrgRouteWithChildren
+  '/org/policies': typeof AuthedOrgPoliciesRoute
   '/org/register': typeof AuthedOrgRegisterRoute
   '/admin/': typeof AuthedAdminIndexRoute
   '/my/': typeof AuthedMyIndexRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
   '/health': typeof HealthRoute
   '/ready': typeof ReadyRoute
+  '/org/policies': typeof AuthedOrgPoliciesRoute
   '/org/register': typeof AuthedOrgRegisterRoute
   '/admin': typeof AuthedAdminIndexRoute
   '/my': typeof AuthedMyIndexRoute
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   '/_authed/my': typeof AuthedMyRouteWithChildren
   '/_authed/org': typeof AuthedOrgRouteWithChildren
   '/_public/': typeof PublicIndexRoute
+  '/_authed/org/policies': typeof AuthedOrgPoliciesRoute
   '/_authed/org/register': typeof AuthedOrgRegisterRoute
   '/_authed/admin/': typeof AuthedAdminIndexRoute
   '/_authed/my/': typeof AuthedMyIndexRoute
@@ -126,12 +135,21 @@ export interface FileRouteTypes {
     | '/admin'
     | '/my'
     | '/org'
+    | '/org/policies'
     | '/org/register'
     | '/admin/'
     | '/my/'
     | '/org/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/health' | '/ready' | '/org/register' | '/admin' | '/my' | '/org'
+  to:
+    | '/'
+    | '/health'
+    | '/ready'
+    | '/org/policies'
+    | '/org/register'
+    | '/admin'
+    | '/my'
+    | '/org'
   id:
     | '__root__'
     | '/_authed'
@@ -142,6 +160,7 @@ export interface FileRouteTypes {
     | '/_authed/my'
     | '/_authed/org'
     | '/_public/'
+    | '/_authed/org/policies'
     | '/_authed/org/register'
     | '/_authed/admin/'
     | '/_authed/my/'
@@ -241,6 +260,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedOrgRegisterRouteImport
       parentRoute: typeof AuthedOrgRoute
     }
+    '/_authed/org/policies': {
+      id: '/_authed/org/policies'
+      path: '/policies'
+      fullPath: '/org/policies'
+      preLoaderRoute: typeof AuthedOrgPoliciesRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
   }
 }
 
@@ -269,11 +295,13 @@ const AuthedMyRouteWithChildren = AuthedMyRoute._addFileChildren(
 )
 
 interface AuthedOrgRouteChildren {
+  AuthedOrgPoliciesRoute: typeof AuthedOrgPoliciesRoute
   AuthedOrgRegisterRoute: typeof AuthedOrgRegisterRoute
   AuthedOrgIndexRoute: typeof AuthedOrgIndexRoute
 }
 
 const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
+  AuthedOrgPoliciesRoute: AuthedOrgPoliciesRoute,
   AuthedOrgRegisterRoute: AuthedOrgRegisterRoute,
   AuthedOrgIndexRoute: AuthedOrgIndexRoute,
 }

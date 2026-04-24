@@ -6,10 +6,13 @@
  * in `./api.ts` createServerFn handlers.
  */
 
-import { getForwardedAuthHeaders } from "#/lib/auth/server-fns.server";
-import { serverApiClient } from "#/lib/api-client.server";
-import type { OrganizerProfileResponse } from "./types";
 import type { OrganizerRegistrationInput } from "@repo/shared/schemas";
+import { serverApiClient } from "#/lib/api-client.server";
+import { getForwardedAuthHeaders } from "#/lib/auth/server-fns.server";
+import type {
+	OrganizerProfileResponse,
+	PolicyStatusApiResponse,
+} from "./types";
 
 /**
  * Registers an organizer profile via POST /api/v1/organizers.
@@ -34,8 +37,42 @@ export async function fetchOrganizerProfile(): Promise<OrganizerProfileResponse 
 	const headers = getForwardedAuthHeaders();
 
 	try {
-		return await serverApiClient<OrganizerProfileResponse>(
-			"/organizers/me",
+		return await serverApiClient<OrganizerProfileResponse>("/organizers/me", {
+			headers,
+		});
+	} catch (error: unknown) {
+		const { ApiClientError } = await import("#/lib/api-client.server");
+		if (error instanceof ApiClientError && error.status === 404) {
+			return null;
+		}
+		throw error;
+	}
+}
+
+/**
+ * Accepts organizer policies via POST /api/v1/organizers/policies.
+ * Forwards the user's session cookie for auth.
+ */
+export async function acceptPoliciesOnServer(data: {
+	policies: string[];
+}): Promise<PolicyStatusApiResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<PolicyStatusApiResponse>("/organizers/policies", {
+		method: "POST",
+		body: data,
+		headers,
+	});
+}
+
+/**
+ * Fetches the current organizer's policy acceptance status via GET /api/v1/organizers/policies.
+ * Returns `null` when no profile/policies exist (404 from the API).
+ */
+export async function fetchPolicyStatus(): Promise<PolicyStatusApiResponse | null> {
+	const headers = getForwardedAuthHeaders();
+	try {
+		return await serverApiClient<PolicyStatusApiResponse>(
+			"/organizers/policies",
 			{ headers },
 		);
 	} catch (error: unknown) {

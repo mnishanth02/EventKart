@@ -39,6 +39,7 @@
 | 28 | I-0.4.5 — Production metrics emitter | [impl-plan](docs/impl-plan/feature-0.4-I-0.4.5.md) | ✅ Complete | 2026-04-23 | 2026-04-23 |
 | 29 | I-0.4.6 — BullMQ observability | [impl-plan](docs/impl-plan/feature-0.4-I-0.4.6.md) | ✅ Complete | 2026-04-23 | 2026-04-23 |
 | 30 | I-1.1.1 — Organizer Registration Form | — | ✅ Complete | 2026-07-24 | 2026-07-24 |
+| 31 | I-1.1.3 — Policy Acceptance Workflow | — | ✅ Complete | 2026-04-24 | 2026-04-24 |
 
 ## Completed Implementation Plans
 
@@ -56,7 +57,7 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 | Phase 0 | 0.2 — Authentication & Identity | ✅ Complete | All auth items complete including I-0.2.9 (SSR session forwarding) and I-0.2.7 (deferred auth). 320 API tests, 57 web tests passing. |
 | Phase 0 | 0.3 — Design System & App Shell | ✅ Complete | All features complete: I-0.3.1 through I-0.3.6, plus I-0.2.9 and I-0.2.7. |
 | Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | ✅ Complete | All features complete: I-0.4.1 (Sentry), I-0.4.2 (Pino/OTEL), I-0.4.3 (Health checks), I-0.4.4 (Audit log), I-0.4.5 (Production metrics), I-0.4.6 (BullMQ observability). 403 API tests passing. |
-| Phase 1 | 1.1 — Organizer Signup & Verification | 🟡 In Progress | I-1.1.1 (Organizer Registration) complete. 422 API tests, 75 web tests passing. |
+| Phase 1 | 1.1 — Organizer Signup & Verification | 🟡 In Progress | I-1.1.1 (Organizer Registration) and I-1.1.3 (Policy Acceptance) complete. 438 API tests, 75 web tests passing. |
 | Phase 1 | 1.2 — Event Creation & Management | ⬜ Not Started | — |
 
 ## Foundation (Pre-Phase 0) — Completed
