@@ -1,8 +1,11 @@
-import type { FastifyBaseLogger } from "fastify";
 import type { Database } from "@repo/db";
 import { organizers } from "@repo/db/schema";
+import type {
+	OrganizerRegistration,
+	OrganizerUpdate,
+} from "@repo/shared/schemas";
 import { eq } from "drizzle-orm";
-import type { OrganizerRegistration } from "@repo/shared/schemas";
+import type { FastifyBaseLogger } from "fastify";
 import { ConflictError } from "../../lib/errors.js";
 
 function isUniqueViolation(error: unknown): boolean {
@@ -31,6 +34,9 @@ export interface OrganizerRow {
 	website: string | null;
 	verificationStatus: string;
 	isVerified: boolean;
+	submittedForReviewAt: Date | null;
+	reviewedAt: Date | null;
+	rejectionReason: string | null;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -48,6 +54,9 @@ function toProfileResponse(row: OrganizerRow) {
 		website: row.website,
 		verificationStatus: row.verificationStatus,
 		isVerified: row.isVerified,
+		submittedForReviewAt: row.submittedForReviewAt?.toISOString() ?? null,
+		reviewedAt: row.reviewedAt?.toISOString() ?? null,
+		rejectionReason: row.rejectionReason,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 	};
@@ -72,9 +81,7 @@ export async function registerOrganizer(
 		.limit(1);
 
 	if (existing.length > 0) {
-		throw new ConflictError(
-			"Organizer profile already exists for this user",
-		);
+		throw new ConflictError("Organizer profile already exists for this user");
 	}
 
 	let inserted: OrganizerRow;
@@ -100,17 +107,12 @@ export async function registerOrganizer(
 	} catch (error: unknown) {
 		// Handle race condition: unique constraint on userId
 		if (isUniqueViolation(error)) {
-			throw new ConflictError(
-				"Organizer profile already exists for this user",
-			);
+			throw new ConflictError("Organizer profile already exists for this user");
 		}
 		throw error;
 	}
 
-	log.info(
-		{ organizerId: inserted.id, userId },
-		"Organizer profile created",
-	);
+	log.info({ organizerId: inserted.id, userId }, "Organizer profile created");
 
 	return toProfileResponse(inserted as OrganizerRow);
 }
@@ -119,10 +121,7 @@ export async function registerOrganizer(
  * Get the organizer profile for a given user ID.
  * Returns null if no profile exists.
  */
-export async function getOrganizerByUserId(
-	db: Database,
-	userId: string,
-) {
+export async function getOrganizerByUserId(db: Database, userId: string) {
 	const rows = await db
 		.select()
 		.from(organizers)
@@ -133,4 +132,66 @@ export async function getOrganizerByUserId(
 	if (!row) return null;
 
 	return toProfileResponse(row as OrganizerRow);
+}
+
+export interface UpdateOrganizerDeps {
+	db: Database;
+	log: FastifyBaseLogger;
+}
+
+/**
+ * Update an existing organizer profile for the given user.
+ * Returns null if no profile exists (let the route throw 404).
+ */
+export async function updateOrganizer(
+	deps: UpdateOrganizerDeps,
+	userId: string,
+	data: OrganizerUpdate,
+) {
+	const { db, log } = deps;
+
+	const existing = await db
+		.select({ id: organizers.id })
+		.from(organizers)
+		.where(eq(organizers.userId, userId))
+		.limit(1);
+
+	if (existing.length === 0) {
+		return null;
+	}
+
+	const updateFields: Record<string, unknown> = {};
+	if (data.businessName !== undefined)
+		updateFields.businessName = data.businessName;
+	if (data.contactName !== undefined)
+		updateFields.contactName = data.contactName;
+	if (data.contactEmail !== undefined)
+		updateFields.contactEmail = data.contactEmail;
+	if (data.contactPhone !== undefined)
+		updateFields.contactPhone = data.contactPhone;
+	if (data.city !== undefined) updateFields.city = data.city;
+	if (data.description !== undefined)
+		updateFields.description = data.description;
+	if (data.website !== undefined) updateFields.website = data.website;
+
+	const [updated] = await db
+		.update(organizers)
+		.set(updateFields)
+		.where(eq(organizers.userId, userId))
+		.returning();
+
+	if (!updated) {
+		return null;
+	}
+
+	log.info(
+		{
+			organizerId: updated.id,
+			userId,
+			updatedFields: Object.keys(updateFields),
+		},
+		"Organizer profile updated",
+	);
+
+	return toProfileResponse(updated as OrganizerRow);
 }

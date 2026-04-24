@@ -12,6 +12,7 @@ import {
 	AUDIT_RESOURCE_TYPES,
 	REQUIRED_DOCUMENT_COUNT,
 } from "@repo/shared/constants";
+import { hasAcceptedAllPolicies } from "./policy-service.js";
 
 export interface DocumentServiceDeps {
 	db: Database;
@@ -297,11 +298,15 @@ export async function deleteVerificationDocument(
 }
 
 /**
- * Update organizer's verificationStatus based on uploaded document count.
- * - All required types uploaded → "pending_review"
- * - Missing types and was "pending_review" → "pending_documents"
- * - Was "rejected" and all docs re-uploaded → "pending_review"
+ * Update organizer's verificationStatus based on uploaded document count
+ * AND policy acceptance.
+ * - All required types uploaded AND all policies accepted → "pending_review"
+ * - Missing docs/policies and was "pending_review" → "pending_documents"
+ * - Was "rejected" and all ready → "pending_review" (re-enters review queue)
  * - Status "approved" is never changed.
+ *
+ * SLA tracking: sets submittedForReviewAt when entering pending_review.
+ * Clears review-cycle metadata on status transitions.
  */
 async function maybeUpdateOrganizerVerificationStatus(
 	db: Database,
@@ -322,7 +327,10 @@ async function maybeUpdateOrganizerVerificationStatus(
 	const allDocsUploaded = uploadedTypes.size >= REQUIRED_DOCUMENT_COUNT;
 
 	const orgs = await db
-		.select({ verificationStatus: organizers.verificationStatus })
+		.select({
+			verificationStatus: organizers.verificationStatus,
+			userId: organizers.userId,
+		})
 		.from(organizers)
 		.where(eq(organizers.id, organizerId))
 		.limit(1);
@@ -334,21 +342,43 @@ async function maybeUpdateOrganizerVerificationStatus(
 
 	if (currentStatus === "approved") return;
 
+	// Check policy acceptance for "ready for review" invariant
+	const policiesAccepted = await hasAcceptedAllPolicies(db, org.userId);
+	const readyForReview = allDocsUploaded && policiesAccepted;
+
 	let newStatus: typeof currentStatus | null = null;
 
 	if (
-		allDocsUploaded &&
+		readyForReview &&
 		(currentStatus === "pending_documents" || currentStatus === "rejected")
 	) {
 		newStatus = "pending_review";
-	} else if (!allDocsUploaded && currentStatus === "pending_review") {
+	} else if (!readyForReview && currentStatus === "pending_review") {
 		newStatus = "pending_documents";
 	}
 
 	if (newStatus && newStatus !== currentStatus) {
+		const updateFields: Record<string, unknown> = {
+			verificationStatus: newStatus,
+		};
+
+		if (newStatus === "pending_review") {
+			// Entering review queue: stamp SLA start time, clear previous review metadata
+			updateFields.submittedForReviewAt = new Date();
+			updateFields.reviewedAt = null;
+			updateFields.reviewedBy = null;
+			updateFields.rejectionReason = null;
+		} else if (newStatus === "pending_documents") {
+			// Leaving review queue: clear SLA and review metadata
+			updateFields.submittedForReviewAt = null;
+			updateFields.reviewedAt = null;
+			updateFields.reviewedBy = null;
+			updateFields.rejectionReason = null;
+		}
+
 		await db
 			.update(organizers)
-			.set({ verificationStatus: newStatus })
+			.set(updateFields)
 			.where(eq(organizers.id, organizerId));
 
 		log.info(

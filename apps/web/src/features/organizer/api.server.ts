@@ -7,18 +7,21 @@
  */
 
 import type {
-	OrganizerRegistrationInput,
 	DocumentUploadRequest,
+	OrganizerRegistrationInput,
+	OrganizerUpdateInput,
 } from "@repo/shared/schemas";
 import { serverApiClient } from "#/lib/api-client.server";
 import { getForwardedAuthHeaders } from "#/lib/auth/server-fns.server";
 import type {
+	DocumentDeleteResponse,
 	OrganizerProfileResponse,
+	OrganizerUpdateResponse,
 	PolicyStatusApiResponse,
 	PresignedUploadUrlResponse,
 	VerificationDocumentResponse,
 	VerificationDocumentsListResponse,
-	DocumentDeleteResponse,
+	VerificationStatusApiResponse,
 } from "./types";
 
 /**
@@ -54,6 +57,21 @@ export async function fetchOrganizerProfile(): Promise<OrganizerProfileResponse 
 		}
 		throw error;
 	}
+}
+
+/**
+ * Updates the current user's organizer profile via PUT /api/v1/organizers/me.
+ * Only changed fields need to be included in the request body.
+ */
+export async function updateOrganizerOnServer(
+	data: OrganizerUpdateInput,
+): Promise<OrganizerUpdateResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<OrganizerUpdateResponse>("/organizers/me", {
+		method: "PUT",
+		body: data,
+		headers,
+	});
 }
 
 /**
@@ -142,5 +160,17 @@ export async function deleteDocumentOnServer(
 	return serverApiClient<DocumentDeleteResponse>(
 		`/organizers/documents/${documentId}`,
 		{ method: "DELETE", headers },
+	);
+}
+
+/**
+ * Fetches the comprehensive verification status for the current organizer.
+ * GET /api/v1/organizers/verification-status
+ */
+export async function fetchVerificationStatus(): Promise<VerificationStatusApiResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<VerificationStatusApiResponse>(
+		"/organizers/verification-status",
+		{ headers },
 	);
 }

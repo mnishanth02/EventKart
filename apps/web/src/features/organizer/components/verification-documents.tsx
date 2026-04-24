@@ -23,6 +23,7 @@ import {
 } from "../api";
 import {
 	DOCUMENTS_QUERY_KEY,
+	VERIFICATION_STATUS_QUERY_KEY,
 	verificationDocumentsQueryOptions,
 } from "../queries";
 
@@ -215,6 +216,9 @@ export function VerificationDocuments() {
 
 	function handleUploadComplete() {
 		void queryClient.invalidateQueries({ queryKey: DOCUMENTS_QUERY_KEY });
+		void queryClient.invalidateQueries({
+			queryKey: VERIFICATION_STATUS_QUERY_KEY,
+		});
 	}
 
 	// Map existing docs by type for quick lookup

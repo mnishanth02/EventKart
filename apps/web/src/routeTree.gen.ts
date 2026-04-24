@@ -22,6 +22,7 @@ import { Route as AuthedMyIndexRouteImport } from './routes/_authed/my/index'
 import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
 import { Route as AuthedOrgVerificationRouteImport } from './routes/_authed/org/verification'
 import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/register'
+import { Route as AuthedOrgProfileRouteImport } from './routes/_authed/org/profile'
 import { Route as AuthedOrgPoliciesRouteImport } from './routes/_authed/org/policies'
 
 const ReadyRoute = ReadyRouteImport.update({
@@ -87,6 +88,11 @@ const AuthedOrgRegisterRoute = AuthedOrgRegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => AuthedOrgRoute,
 } as any)
+const AuthedOrgProfileRoute = AuthedOrgProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthedOrgRoute,
+} as any)
 const AuthedOrgPoliciesRoute = AuthedOrgPoliciesRouteImport.update({
   id: '/policies',
   path: '/policies',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/my': typeof AuthedMyRouteWithChildren
   '/org': typeof AuthedOrgRouteWithChildren
   '/org/policies': typeof AuthedOrgPoliciesRoute
+  '/org/profile': typeof AuthedOrgProfileRoute
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
   '/admin/': typeof AuthedAdminIndexRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/health': typeof HealthRoute
   '/ready': typeof ReadyRoute
   '/org/policies': typeof AuthedOrgPoliciesRoute
+  '/org/profile': typeof AuthedOrgProfileRoute
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
   '/admin': typeof AuthedAdminIndexRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/_authed/org': typeof AuthedOrgRouteWithChildren
   '/_public/': typeof PublicIndexRoute
   '/_authed/org/policies': typeof AuthedOrgPoliciesRoute
+  '/_authed/org/profile': typeof AuthedOrgProfileRoute
   '/_authed/org/register': typeof AuthedOrgRegisterRoute
   '/_authed/org/verification': typeof AuthedOrgVerificationRoute
   '/_authed/admin/': typeof AuthedAdminIndexRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/my'
     | '/org'
     | '/org/policies'
+    | '/org/profile'
     | '/org/register'
     | '/org/verification'
     | '/admin/'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/ready'
     | '/org/policies'
+    | '/org/profile'
     | '/org/register'
     | '/org/verification'
     | '/admin'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/_authed/org'
     | '/_public/'
     | '/_authed/org/policies'
+    | '/_authed/org/profile'
     | '/_authed/org/register'
     | '/_authed/org/verification'
     | '/_authed/admin/'
@@ -279,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedOrgRegisterRouteImport
       parentRoute: typeof AuthedOrgRoute
     }
+    '/_authed/org/profile': {
+      id: '/_authed/org/profile'
+      path: '/profile'
+      fullPath: '/org/profile'
+      preLoaderRoute: typeof AuthedOrgProfileRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
     '/_authed/org/policies': {
       id: '/_authed/org/policies'
       path: '/policies'
@@ -315,6 +334,7 @@ const AuthedMyRouteWithChildren = AuthedMyRoute._addFileChildren(
 
 interface AuthedOrgRouteChildren {
   AuthedOrgPoliciesRoute: typeof AuthedOrgPoliciesRoute
+  AuthedOrgProfileRoute: typeof AuthedOrgProfileRoute
   AuthedOrgRegisterRoute: typeof AuthedOrgRegisterRoute
   AuthedOrgVerificationRoute: typeof AuthedOrgVerificationRoute
   AuthedOrgIndexRoute: typeof AuthedOrgIndexRoute
@@ -322,6 +342,7 @@ interface AuthedOrgRouteChildren {
 
 const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
   AuthedOrgPoliciesRoute: AuthedOrgPoliciesRoute,
+  AuthedOrgProfileRoute: AuthedOrgProfileRoute,
   AuthedOrgRegisterRoute: AuthedOrgRegisterRoute,
   AuthedOrgVerificationRoute: AuthedOrgVerificationRoute,
   AuthedOrgIndexRoute: AuthedOrgIndexRoute,
@@ -366,12 +387,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

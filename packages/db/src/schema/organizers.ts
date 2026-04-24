@@ -36,6 +36,14 @@ export const organizers = pgTable(
 			.notNull()
 			.default("pending_documents"),
 		isVerified: boolean("is_verified").notNull().default(false),
+		submittedForReviewAt: timestamp("submitted_for_review_at", {
+			withTimezone: true,
+		}),
+		reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+		reviewedBy: uuid("reviewed_by").references(() => users.id, {
+			onDelete: "set null",
+		}),
+		rejectionReason: text("rejection_reason"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),

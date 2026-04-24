@@ -3,10 +3,12 @@ import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from "vites
 // ── Service mocks ────────────────────────────────────────────────
 const mockRegisterOrganizer = vi.fn();
 const mockGetOrganizerByUserId = vi.fn();
+const mockUpdateOrganizer = vi.fn();
 
 vi.mock("../../../src/modules/organizer/service.js", () => ({
 	registerOrganizer: (...args: unknown[]) => mockRegisterOrganizer(...args),
 	getOrganizerByUserId: (...args: unknown[]) => mockGetOrganizerByUserId(...args),
+	updateOrganizer: (...args: unknown[]) => mockUpdateOrganizer(...args),
 }));
 
 import type { FastifyInstance } from "fastify";
@@ -46,6 +48,9 @@ const mockOrganizerProfile = {
 	website: "https://coimbatorerunners.in",
 	verificationStatus: "pending_documents",
 	isVerified: false,
+	submittedForReviewAt: null,
+	reviewedAt: null,
+	rejectionReason: null,
 	createdAt: "2026-04-24T00:00:00.000Z",
 	updatedAt: "2026-04-24T00:00:00.000Z",
 };
@@ -106,6 +111,7 @@ describe("POST /api/v1/organizers", () => {
 		getSessionRedisMock(app).mockReset();
 		mockRegisterOrganizer.mockReset();
 		mockGetOrganizerByUserId.mockReset();
+		mockUpdateOrganizer.mockReset();
 	});
 
 	// ── Happy path ──────────────────────────────────────────────
@@ -340,6 +346,7 @@ describe("GET /api/v1/organizers/me", () => {
 		getSessionRedisMock(app).mockReset();
 		mockRegisterOrganizer.mockReset();
 		mockGetOrganizerByUserId.mockReset();
+		mockUpdateOrganizer.mockReset();
 	});
 
 	// ── Happy path ──────────────────────────────────────────────

@@ -4,14 +4,18 @@
  * the client bundle.
  */
 
-import type { OrganizerRegistrationInput } from "@repo/shared/schemas";
+import type {
+	OrganizerRegistrationInput,
+	OrganizerUpdateInput,
+} from "@repo/shared/schemas";
 import { createServerFn } from "@tanstack/react-start";
 import type {
+	DocumentUploadRequest,
 	OrganizerProfile,
 	PolicyStatusResponse,
-	DocumentUploadRequest,
 	PresignedUploadUrl,
 	VerificationDocument,
+	VerificationStatusResponse,
 } from "./types";
 
 /**
@@ -62,6 +66,19 @@ export const getOrganizerPolicyStatus = createServerFn({
 	return response?.data ?? null;
 });
 
+/**
+ * Server function to update the current user's organizer profile.
+ * Uses POST for TanStack Start (only GET/POST supported), but the
+ * actual API call in api.server.ts uses PUT.
+ */
+export const updateOrganizerProfile = createServerFn({ method: "POST" })
+	.inputValidator((data: OrganizerUpdateInput) => data)
+	.handler(async ({ data }): Promise<OrganizerProfile> => {
+		const { updateOrganizerOnServer } = await import("./api.server");
+		const response = await updateOrganizerOnServer(data);
+		return response.data;
+	});
+
 // ── Document Upload Server Functions ────────────────────────────────
 
 /**
@@ -108,3 +125,21 @@ export const deleteDocument = createServerFn({ method: "POST" })
 		const { deleteDocumentOnServer } = await import("./api.server");
 		await deleteDocumentOnServer(data.documentId);
 	});
+
+// ── Verification Status Server Functions ────────────────────────────
+
+/**
+ * Server function to fetch the comprehensive verification status.
+ * Returns the full status including steps, documents, and review info.
+ */
+export const getVerificationStatus = createServerFn({
+	method: "GET",
+}).handler(async (): Promise<VerificationStatusResponse | null> => {
+	const { fetchVerificationStatus } = await import("./api.server");
+	try {
+		const response = await fetchVerificationStatus();
+		return response.data;
+	} catch {
+		return null;
+	}
+});

@@ -18,6 +18,7 @@ vi.mock("../../../src/modules/organizer/document-service.js", () => ({
 vi.mock("../../../src/modules/organizer/service.js", () => ({
 	registerOrganizer: (...args: unknown[]) => mockRegisterOrganizer(...args),
 	getOrganizerByUserId: (...args: unknown[]) => mockGetOrganizerByUserId(...args),
+	updateOrganizer: vi.fn(),
 }));
 
 import type { FastifyInstance } from "fastify";

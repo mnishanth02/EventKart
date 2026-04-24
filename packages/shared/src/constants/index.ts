@@ -35,6 +35,7 @@ export type {
 	DocumentStatus,
 	VerificationDocumentType,
 	VerificationStatus,
+	VerificationStepId,
 } from "./verification.js";
 export {
 	DOCUMENT_STATUSES,
@@ -42,8 +43,10 @@ export {
 	REQUIRED_DOCUMENT_COUNT,
 	VERIFICATION_DOCUMENT_TYPE_LABELS,
 	VERIFICATION_DOCUMENT_TYPES,
+	VERIFICATION_SLA_BUSINESS_DAYS,
 	VERIFICATION_STATUS_LABELS,
 	VERIFICATION_STATUSES,
+	VERIFICATION_STEPS,
 	verificationDocumentTypeSchema,
 	verificationStatusSchema,
 } from "./verification.js";
