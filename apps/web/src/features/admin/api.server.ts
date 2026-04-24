@@ -54,14 +54,15 @@ export async function fetchAdminVerificationDetail(
 
 /**
  * Fetches a presigned download URL for a verification document.
- * GET /api/v1/admin/verifications/documents/:documentId/view
+ * GET /api/v1/admin/verifications/:organizerId/documents/:documentId/view-url
  */
 export async function fetchDocumentViewUrl(
+	organizerId: string,
 	documentId: string,
 ): Promise<DocumentViewUrlResponse> {
 	const headers = getForwardedAuthHeaders();
 	return serverApiClient<DocumentViewUrlResponse>(
-		`/admin/verifications/documents/${documentId}/view`,
+		`/admin/verifications/${organizerId}/documents/${documentId}/view-url`,
 		{ headers },
 	);
 }

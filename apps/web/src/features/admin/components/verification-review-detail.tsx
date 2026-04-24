@@ -65,10 +65,16 @@ function getStatusBadgeVariant(
 
 // ── Document Viewer Button ─────────────────────────────────────────
 
-function ViewDocumentButton({ documentId }: { documentId: string }) {
+function ViewDocumentButton({
+	organizerId,
+	documentId,
+}: {
+	organizerId: string;
+	documentId: string;
+}) {
 	const mutation = useMutation({
 		mutationFn: async () => {
-			return getDocumentViewUrl({ data: { documentId } });
+			return getDocumentViewUrl({ data: { organizerId, documentId } });
 		},
 		onSuccess: (data) => {
 			window.open(data.url, "_blank", "noopener,noreferrer");
@@ -295,7 +301,10 @@ export function VerificationReviewDetail({
 												>
 													Uploaded
 												</Badge>
-												<ViewDocumentButton documentId={doc.id} />
+												<ViewDocumentButton
+													organizerId={organizerId}
+													documentId={doc.id}
+												/>
 											</>
 										) : (
 											<Badge variant="secondary" className="text-[10px]">

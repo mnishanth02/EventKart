@@ -49,10 +49,13 @@ export const getAdminVerificationDetail = createServerFn({ method: "GET" })
 // ── Document View URL ──────────────────────────────────────────────
 
 export const getDocumentViewUrl = createServerFn({ method: "GET" })
-	.inputValidator((data: { documentId: string }) => data)
+	.inputValidator((data: { organizerId: string; documentId: string }) => data)
 	.handler(async ({ data }): Promise<DocumentViewUrl> => {
 		const { fetchDocumentViewUrl } = await import("./api.server");
-		const response = await fetchDocumentViewUrl(data.documentId);
+		const response = await fetchDocumentViewUrl(
+			data.organizerId,
+			data.documentId,
+		);
 		return response.data;
 	});
 
