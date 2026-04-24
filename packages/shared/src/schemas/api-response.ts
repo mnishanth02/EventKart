@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import {
 	cursorPaginationMetaSchema,
 	offsetPaginationMetaSchema,
-} from "./pagination";
+} from "./pagination.js";
 
 /** Generic success response wrapper. */
 export function successResponseSchema<T extends z.ZodType>(dataSchema: T) {

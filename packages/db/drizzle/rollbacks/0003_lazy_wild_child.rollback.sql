@@ -1,0 +1,13 @@
+-- ROLLBACK for 0003_lazy_wild_child.sql
+-- NOTE: PostgreSQL does not support removing values from an enum type.
+-- To fully roll back, you would need to:
+-- 1. Create a new enum type without the values
+-- 2. Alter all columns using the enum to use the new type
+-- 3. Drop the old enum type
+-- 4. Rename the new type
+--
+-- For practical purposes, leaving the enum values in place is safe —
+-- they are unused if the application code does not reference them.
+--
+-- This is a no-op rollback.
+SELECT 1;

@@ -1,11 +1,16 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import {
+	Outlet,
 	createRootRouteWithContext,
 	HeadContent,
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { ThemeProvider } from "@repo/ui/components/theme-provider";
+import { Toaster } from "@repo/ui/components/ui/sonner";
+import { NotFoundPage } from "#/components/error";
+import "#/integrations/sentry/client";
 import { publicEnv } from "#/lib/env/public";
 import PostHogProvider from "../integrations/posthog/provider";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
@@ -36,12 +41,23 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			},
 		],
 	}),
+	component: RootComponent,
+	notFoundComponent: NotFoundPage,
 	shellComponent: RootDocument,
 });
 
+function RootComponent() {
+	return (
+		<ThemeProvider>
+			<Outlet />
+			<Toaster position="bottom-right" toastOptions={{ duration: 4000 }} />
+		</ThemeProvider>
+	);
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en">
+		<html lang="en-IN" suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>

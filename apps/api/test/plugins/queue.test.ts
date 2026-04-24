@@ -10,6 +10,17 @@ vi.mock("ioredis", () => {
 
 		constructor(_url: string, options?: Record<string, unknown>) {
 			this.options = options ?? {};
+			const self = this as Record<string, unknown>;
+			self.defineCommand = vi.fn().mockImplementation((name: string) => {
+				self[name] = vi.fn().mockImplementation((...args: unknown[]) => {
+					const cb = args[args.length - 1];
+					if (typeof cb === "function") {
+						(cb as (err: null, r: number[]) => void)(null, [0, 0]);
+						return;
+					}
+					return Promise.resolve([0, 0]);
+				});
+			});
 		}
 	}
 	return { Redis: MockRedis, default: MockRedis };
@@ -23,6 +34,14 @@ vi.mock("bullmq", () => {
 		opts: Record<string, unknown>;
 		add = vi.fn().mockResolvedValue({ id: "mock-job-id" });
 		close = mockQueueClose;
+		getJobCounts = vi.fn().mockResolvedValue({
+			waiting: 0,
+			active: 0,
+			completed: 0,
+			failed: 0,
+			delayed: 0,
+		});
+		getJobs = vi.fn().mockResolvedValue([]);
 
 		constructor(name: string, opts?: Record<string, unknown>) {
 			this.name = name;

@@ -9,50 +9,359 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReadyRouteImport } from './routes/ready'
+import { Route as HealthRouteImport } from './routes/health'
+import { Route as PublicRouteImport } from './routes/_public'
+import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as PublicIndexRouteImport } from './routes/_public/index'
+import { Route as AuthedOrgRouteImport } from './routes/_authed/org'
+import { Route as AuthedMyRouteImport } from './routes/_authed/my'
+import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
+import { Route as AuthedOrgIndexRouteImport } from './routes/_authed/org/index'
+import { Route as AuthedMyIndexRouteImport } from './routes/_authed/my/index'
+import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
+import { Route as AuthedOrgVerificationRouteImport } from './routes/_authed/org/verification'
+import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/register'
+import { Route as AuthedOrgPoliciesRouteImport } from './routes/_authed/org/policies'
 
-const IndexRoute = IndexRouteImport.update({
+const ReadyRoute = ReadyRouteImport.update({
+  id: '/ready',
+  path: '/ready',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PublicRoute = PublicRouteImport.update({
+  id: '/_public',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PublicIndexRoute = PublicIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => PublicRoute,
+} as any)
+const AuthedOrgRoute = AuthedOrgRouteImport.update({
+  id: '/org',
+  path: '/org',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedMyRoute = AuthedMyRouteImport.update({
+  id: '/my',
+  path: '/my',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedAdminRoute = AuthedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedOrgIndexRoute = AuthedOrgIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedOrgRoute,
+} as any)
+const AuthedMyIndexRoute = AuthedMyIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedMyRoute,
+} as any)
+const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedAdminRoute,
+} as any)
+const AuthedOrgVerificationRoute = AuthedOrgVerificationRouteImport.update({
+  id: '/verification',
+  path: '/verification',
+  getParentRoute: () => AuthedOrgRoute,
+} as any)
+const AuthedOrgRegisterRoute = AuthedOrgRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AuthedOrgRoute,
+} as any)
+const AuthedOrgPoliciesRoute = AuthedOrgPoliciesRouteImport.update({
+  id: '/policies',
+  path: '/policies',
+  getParentRoute: () => AuthedOrgRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof PublicIndexRoute
+  '/health': typeof HealthRoute
+  '/ready': typeof ReadyRoute
+  '/admin': typeof AuthedAdminRouteWithChildren
+  '/my': typeof AuthedMyRouteWithChildren
+  '/org': typeof AuthedOrgRouteWithChildren
+  '/org/policies': typeof AuthedOrgPoliciesRoute
+  '/org/register': typeof AuthedOrgRegisterRoute
+  '/org/verification': typeof AuthedOrgVerificationRoute
+  '/admin/': typeof AuthedAdminIndexRoute
+  '/my/': typeof AuthedMyIndexRoute
+  '/org/': typeof AuthedOrgIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/': typeof PublicIndexRoute
+  '/health': typeof HealthRoute
+  '/ready': typeof ReadyRoute
+  '/org/policies': typeof AuthedOrgPoliciesRoute
+  '/org/register': typeof AuthedOrgRegisterRoute
+  '/org/verification': typeof AuthedOrgVerificationRoute
+  '/admin': typeof AuthedAdminIndexRoute
+  '/my': typeof AuthedMyIndexRoute
+  '/org': typeof AuthedOrgIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_authed': typeof AuthedRouteWithChildren
+  '/_public': typeof PublicRouteWithChildren
+  '/health': typeof HealthRoute
+  '/ready': typeof ReadyRoute
+  '/_authed/admin': typeof AuthedAdminRouteWithChildren
+  '/_authed/my': typeof AuthedMyRouteWithChildren
+  '/_authed/org': typeof AuthedOrgRouteWithChildren
+  '/_public/': typeof PublicIndexRoute
+  '/_authed/org/policies': typeof AuthedOrgPoliciesRoute
+  '/_authed/org/register': typeof AuthedOrgRegisterRoute
+  '/_authed/org/verification': typeof AuthedOrgVerificationRoute
+  '/_authed/admin/': typeof AuthedAdminIndexRoute
+  '/_authed/my/': typeof AuthedMyIndexRoute
+  '/_authed/org/': typeof AuthedOrgIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/health'
+    | '/ready'
+    | '/admin'
+    | '/my'
+    | '/org'
+    | '/org/policies'
+    | '/org/register'
+    | '/org/verification'
+    | '/admin/'
+    | '/my/'
+    | '/org/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/health'
+    | '/ready'
+    | '/org/policies'
+    | '/org/register'
+    | '/org/verification'
+    | '/admin'
+    | '/my'
+    | '/org'
+  id:
+    | '__root__'
+    | '/_authed'
+    | '/_public'
+    | '/health'
+    | '/ready'
+    | '/_authed/admin'
+    | '/_authed/my'
+    | '/_authed/org'
+    | '/_public/'
+    | '/_authed/org/policies'
+    | '/_authed/org/register'
+    | '/_authed/org/verification'
+    | '/_authed/admin/'
+    | '/_authed/my/'
+    | '/_authed/org/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AuthedRoute: typeof AuthedRouteWithChildren
+  PublicRoute: typeof PublicRouteWithChildren
+  HealthRoute: typeof HealthRoute
+  ReadyRoute: typeof ReadyRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/ready': {
+      id: '/ready'
+      path: '/ready'
+      fullPath: '/ready'
+      preLoaderRoute: typeof ReadyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_public': {
+      id: '/_public'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof PublicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_public/': {
+      id: '/_public/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof PublicIndexRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_authed/org': {
+      id: '/_authed/org'
+      path: '/org'
+      fullPath: '/org'
+      preLoaderRoute: typeof AuthedOrgRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/my': {
+      id: '/_authed/my'
+      path: '/my'
+      fullPath: '/my'
+      preLoaderRoute: typeof AuthedMyRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/admin': {
+      id: '/_authed/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthedAdminRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/org/': {
+      id: '/_authed/org/'
+      path: '/'
+      fullPath: '/org/'
+      preLoaderRoute: typeof AuthedOrgIndexRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
+    '/_authed/my/': {
+      id: '/_authed/my/'
+      path: '/'
+      fullPath: '/my/'
+      preLoaderRoute: typeof AuthedMyIndexRouteImport
+      parentRoute: typeof AuthedMyRoute
+    }
+    '/_authed/admin/': {
+      id: '/_authed/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthedAdminIndexRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/org/verification': {
+      id: '/_authed/org/verification'
+      path: '/verification'
+      fullPath: '/org/verification'
+      preLoaderRoute: typeof AuthedOrgVerificationRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
+    '/_authed/org/register': {
+      id: '/_authed/org/register'
+      path: '/register'
+      fullPath: '/org/register'
+      preLoaderRoute: typeof AuthedOrgRegisterRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
+    '/_authed/org/policies': {
+      id: '/_authed/org/policies'
+      path: '/policies'
+      fullPath: '/org/policies'
+      preLoaderRoute: typeof AuthedOrgPoliciesRouteImport
+      parentRoute: typeof AuthedOrgRoute
     }
   }
 }
 
+interface AuthedAdminRouteChildren {
+  AuthedAdminIndexRoute: typeof AuthedAdminIndexRoute
+}
+
+const AuthedAdminRouteChildren: AuthedAdminRouteChildren = {
+  AuthedAdminIndexRoute: AuthedAdminIndexRoute,
+}
+
+const AuthedAdminRouteWithChildren = AuthedAdminRoute._addFileChildren(
+  AuthedAdminRouteChildren,
+)
+
+interface AuthedMyRouteChildren {
+  AuthedMyIndexRoute: typeof AuthedMyIndexRoute
+}
+
+const AuthedMyRouteChildren: AuthedMyRouteChildren = {
+  AuthedMyIndexRoute: AuthedMyIndexRoute,
+}
+
+const AuthedMyRouteWithChildren = AuthedMyRoute._addFileChildren(
+  AuthedMyRouteChildren,
+)
+
+interface AuthedOrgRouteChildren {
+  AuthedOrgPoliciesRoute: typeof AuthedOrgPoliciesRoute
+  AuthedOrgRegisterRoute: typeof AuthedOrgRegisterRoute
+  AuthedOrgVerificationRoute: typeof AuthedOrgVerificationRoute
+  AuthedOrgIndexRoute: typeof AuthedOrgIndexRoute
+}
+
+const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
+  AuthedOrgPoliciesRoute: AuthedOrgPoliciesRoute,
+  AuthedOrgRegisterRoute: AuthedOrgRegisterRoute,
+  AuthedOrgVerificationRoute: AuthedOrgVerificationRoute,
+  AuthedOrgIndexRoute: AuthedOrgIndexRoute,
+}
+
+const AuthedOrgRouteWithChildren = AuthedOrgRoute._addFileChildren(
+  AuthedOrgRouteChildren,
+)
+
+interface AuthedRouteChildren {
+  AuthedAdminRoute: typeof AuthedAdminRouteWithChildren
+  AuthedMyRoute: typeof AuthedMyRouteWithChildren
+  AuthedOrgRoute: typeof AuthedOrgRouteWithChildren
+}
+
+const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedAdminRoute: AuthedAdminRouteWithChildren,
+  AuthedMyRoute: AuthedMyRouteWithChildren,
+  AuthedOrgRoute: AuthedOrgRouteWithChildren,
+}
+
+const AuthedRouteWithChildren =
+  AuthedRoute._addFileChildren(AuthedRouteChildren)
+
+interface PublicRouteChildren {
+  PublicIndexRoute: typeof PublicIndexRoute
+}
+
+const PublicRouteChildren: PublicRouteChildren = {
+  PublicIndexRoute: PublicIndexRoute,
+}
+
+const PublicRouteWithChildren =
+  PublicRoute._addFileChildren(PublicRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthedRoute: AuthedRouteWithChildren,
+  PublicRoute: PublicRouteWithChildren,
+  HealthRoute: HealthRoute,
+  ReadyRoute: ReadyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

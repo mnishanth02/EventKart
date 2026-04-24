@@ -1,0 +1,110 @@
+/**
+ * Organizer server functions — safe to import from any code.
+ * Server-only helpers are dynamically imported to keep them out of
+ * the client bundle.
+ */
+
+import type { OrganizerRegistrationInput } from "@repo/shared/schemas";
+import { createServerFn } from "@tanstack/react-start";
+import type {
+	OrganizerProfile,
+	PolicyStatusResponse,
+	DocumentUploadRequest,
+	PresignedUploadUrl,
+	VerificationDocument,
+} from "./types";
+
+/**
+ * Server function to register a new organizer profile.
+ * Called from the registration form's onSubmit handler.
+ */
+export const registerOrganizer = createServerFn({ method: "POST" })
+	.inputValidator((data: OrganizerRegistrationInput) => data)
+	.handler(async ({ data }): Promise<OrganizerProfile> => {
+		const { registerOrganizerOnServer } = await import("./api.server");
+		const response = await registerOrganizerOnServer(data);
+		return response.data;
+	});
+
+/**
+ * Server function to fetch the current user's organizer profile.
+ * Returns `null` when no profile exists yet.
+ */
+export const getOrganizerProfile = createServerFn({ method: "GET" }).handler(
+	async (): Promise<OrganizerProfile | null> => {
+		const { fetchOrganizerProfile } = await import("./api.server");
+		const response = await fetchOrganizerProfile();
+		return response?.data ?? null;
+	},
+);
+
+/**
+ * Server function to accept organizer policies.
+ * Called from the policy acceptance form.
+ */
+export const acceptOrganizerPolicies = createServerFn({ method: "POST" })
+	.inputValidator((data: { policies: string[] }) => data)
+	.handler(async ({ data }): Promise<PolicyStatusResponse> => {
+		const { acceptPoliciesOnServer } = await import("./api.server");
+		const response = await acceptPoliciesOnServer(data);
+		return response.data;
+	});
+
+/**
+ * Server function to fetch the current organizer's policy acceptance status.
+ * Returns `null` when no profile/policies exist yet.
+ */
+export const getOrganizerPolicyStatus = createServerFn({
+	method: "GET",
+}).handler(async (): Promise<PolicyStatusResponse | null> => {
+	const { fetchPolicyStatus } = await import("./api.server");
+	const response = await fetchPolicyStatus();
+	return response?.data ?? null;
+});
+
+// ── Document Upload Server Functions ────────────────────────────────
+
+/**
+ * Server function to request a presigned upload URL for a verification document.
+ */
+export const getDocumentUploadUrl = createServerFn({ method: "POST" })
+	.inputValidator((data: DocumentUploadRequest) => data)
+	.handler(async ({ data }): Promise<PresignedUploadUrl> => {
+		const { requestDocumentUploadUrl } = await import("./api.server");
+		const response = await requestDocumentUploadUrl(data);
+		return response.data;
+	});
+
+/**
+ * Server function to confirm a document upload after the file is in S3.
+ */
+export const confirmDocumentUpload = createServerFn({ method: "POST" })
+	.inputValidator((data: { documentId: string }) => data)
+	.handler(async ({ data }): Promise<VerificationDocument> => {
+		const { confirmDocumentUploadOnServer } = await import("./api.server");
+		const response = await confirmDocumentUploadOnServer(data.documentId);
+		return response.data;
+	});
+
+/**
+ * Server function to list all verification documents for the current organizer.
+ */
+export const getVerificationDocuments = createServerFn({
+	method: "GET",
+}).handler(async (): Promise<VerificationDocument[]> => {
+	const { fetchVerificationDocuments } = await import("./api.server");
+	const response = await fetchVerificationDocuments();
+	return response.data;
+});
+
+/**
+ * Server function to delete a verification document.
+ * Uses POST for TanStack Start (only GET/POST supported), but the
+ * actual API call in api.server.ts uses DELETE.
+ */
+export const deleteDocument = createServerFn({ method: "POST" })
+	.inputValidator((data: { documentId: string }) => data)
+	.handler(async ({ data }): Promise<void> => {
+		const { deleteDocumentOnServer } = await import("./api.server");
+		await deleteDocumentOnServer(data.documentId);
+	});

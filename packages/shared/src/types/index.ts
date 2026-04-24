@@ -7,4 +7,4 @@ export type {
 	CursorPaginationMeta,
 	PaginatedResponse,
 	CursorPaginatedResponse,
-} from "./api";
+} from "./api.js";

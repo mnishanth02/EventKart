@@ -1,0 +1,43 @@
+"use client";
+
+import * as React from "react";
+import { MoonIcon, SunIcon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { cn } from "@ui/lib/utils";
+
+function ThemeToggle({ className }: { className?: string }) {
+	const [mounted, setMounted] = React.useState(false);
+	const { setTheme, resolvedTheme } = useTheme();
+
+	React.useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	return (
+		<button
+			type="button"
+			aria-label={
+				mounted
+					? `Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`
+					: "Toggle theme"
+			}
+			className={cn(
+				"inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+				className,
+			)}
+			onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+		>
+			{mounted ? (
+				resolvedTheme === "dark" ? (
+					<SunIcon className="size-[18px]" />
+				) : (
+					<MoonIcon className="size-[18px]" />
+				)
+			) : (
+				<span className="size-[18px]" />
+			)}
+		</button>
+	);
+}
+
+export { ThemeToggle };

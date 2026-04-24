@@ -13,6 +13,8 @@ export const consentTypeEnum = pgEnum("consent_type", [
 	"booking_terms",
 	"data_usage",
 	"marketing",
+	"platform_terms",
+	"refund_policy",
 ]);
 
 /** DPDPA-compliant consent tracking — records retained even after user deletion.

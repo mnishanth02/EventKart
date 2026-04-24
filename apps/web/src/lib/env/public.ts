@@ -6,8 +6,17 @@ export const publicEnv = createEnv({
 	clientPrefix: "VITE_",
 	client: {
 		VITE_APP_TITLE: z.string().min(1).optional(),
+		VITE_API_URL: z.string().url(),
 		VITE_POSTHOG_KEY: z.string().min(1).optional(),
 		VITE_POSTHOG_HOST: z.string().url().optional(),
+		VITE_SENTRY_DSN: z.string().min(1).optional(),
+		VITE_SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+		VITE_SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
+		VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE: z.coerce
+			.number()
+			.min(0)
+			.max(1)
+			.optional(),
 	},
 	runtimeEnv: import.meta.env,
 	emptyStringAsUndefined: true,
