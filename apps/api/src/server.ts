@@ -1,13 +1,14 @@
 // Sentry must init first — it takes over OpenTelemetry when active
-import {
-	initSentry,
-	flushSentry,
-	setupFastifyErrorHandler,
-	isSentryActive,
-	captureUnexpectedError,
-} from "./lib/sentry.js";
-import { initTelemetry, shutdownTelemetry } from "./lib/otel.js";
+
 import { loadConfig } from "./lib/config.js";
+import { initTelemetry, shutdownTelemetry } from "./lib/otel.js";
+import {
+	captureUnexpectedError,
+	flushSentry,
+	initSentry,
+	isSentryActive,
+	setupFastifyErrorHandler,
+} from "./lib/sentry.js";
 
 const config = loadConfig();
 initSentry(config);
@@ -16,7 +17,7 @@ const telemetry = initTelemetry(config);
 // Now safe to import modules that OTEL instruments
 const { buildApp } = await import("./app.js");
 
-const app = buildApp();
+const app = buildApp({ config });
 
 async function start() {
 	await app.ready();
@@ -42,8 +43,22 @@ async function shutdown(signal: string) {
 	process.exit(0);
 }
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+function handleShutdownSignal(signal: string) {
+	void shutdown(signal).catch(async (error) => {
+		app.log.error({ err: error, signal }, "Failed to shut down API server");
+		captureUnexpectedError(error, { phase: "shutdown", signal });
+
+		try {
+			await flushSentry();
+		} finally {
+			await shutdownTelemetry(telemetry);
+			process.exit(1);
+		}
+	});
+}
+
+process.on("SIGTERM", () => handleShutdownSignal("SIGTERM"));
+process.on("SIGINT", () => handleShutdownSignal("SIGINT"));
 
 start().catch(async (error) => {
 	app.log.error({ err: error }, "Failed to start API server");

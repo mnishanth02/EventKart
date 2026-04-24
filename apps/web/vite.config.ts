@@ -7,6 +7,13 @@ import viteReact, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
+const sentryOrg = process.env.SENTRY_ORG;
+const sentryProject = process.env.SENTRY_PROJECT;
+const hasSentryBuildConfig = Boolean(
+	sentryAuthToken && sentryOrg && sentryProject,
+);
+
 const config = defineConfig({
 	build: {
 		chunkSizeWarningLimit: 700,
@@ -24,12 +31,12 @@ const config = defineConfig({
 		tanstackStart(),
 		viteReact(),
 		babel({ presets: [reactCompilerPreset()] }),
-		...(process.env.SENTRY_AUTH_TOKEN
+		...(hasSentryBuildConfig
 			? [
 					sentryTanstackStart({
-						org: process.env.SENTRY_ORG!,
-						project: process.env.SENTRY_PROJECT!,
-						authToken: process.env.SENTRY_AUTH_TOKEN,
+						org: sentryOrg,
+						project: sentryProject,
+						authToken: sentryAuthToken,
 						sourcemaps: {
 							assets: ["./dist/**/*"],
 							filesToDeleteAfterUpload: ["./dist/**/*.map"],

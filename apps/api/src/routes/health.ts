@@ -1,6 +1,6 @@
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
-import type { FastifyPluginAsync } from "fastify";
 import { pingDatabase } from "@repo/db";
+import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 
 const CHECK_TIMEOUT_MS = 3000;
@@ -29,16 +29,10 @@ const readyDegradedSchema = z.object({
 });
 
 function sanitizeErrorMessage(error: unknown): string {
-	if (
-		error instanceof DOMException &&
-		error.name === "TimeoutError"
-	) {
+	if (error instanceof DOMException && error.name === "TimeoutError") {
 		return "Timeout";
 	}
-	if (
-		error instanceof Error &&
-		error.message === "Timeout"
-	) {
+	if (error instanceof Error && error.message === "Timeout") {
 		return "Timeout";
 	}
 	return "Connection failed";
@@ -48,18 +42,28 @@ async function withTimeout<T>(
 	promise: Promise<T>,
 	timeoutMs: number,
 ): Promise<T> {
-	return Promise.race([
-		promise,
-		new Promise<never>((_resolve, reject) => {
-			const timer = setTimeout(() => {
-				reject(new Error("Timeout"));
-			}, timeoutMs);
-			// Avoid holding the process open
-			if (typeof timer === "object" && "unref" in timer) {
-				timer.unref();
-			}
-		}),
-	]);
+	return new Promise<T>((resolve, reject) => {
+		const timer = setTimeout(() => {
+			clearTimeout(timer);
+			reject(new Error("Timeout"));
+		}, timeoutMs);
+
+		// Avoid holding the process open
+		if (typeof timer === "object" && "unref" in timer) {
+			timer.unref();
+		}
+
+		promise.then(
+			(value) => {
+				clearTimeout(timer);
+				resolve(value);
+			},
+			(error: unknown) => {
+				clearTimeout(timer);
+				reject(error);
+			},
+		);
+	});
 }
 
 interface CheckResult {

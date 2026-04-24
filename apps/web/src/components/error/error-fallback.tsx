@@ -1,12 +1,16 @@
+import { Button } from "@repo/ui/components/ui/button";
 import * as Sentry from "@sentry/tanstackstart-react";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { AlertTriangle } from "lucide-react";
-import { Button } from "@repo/ui/components/ui/button";
+import { useEffect } from "react";
+import { isDevMode } from "#/lib/env/runtime";
 
 export function ErrorFallback({ error, reset }: ErrorComponentProps) {
-	const isDev = import.meta.env.DEV;
+	const isDev = isDevMode();
 
-	Sentry.captureException(error);
+	useEffect(() => {
+		Sentry.captureException(error);
+	}, [error]);
 
 	return (
 		<div className="flex min-h-[50vh] flex-col items-center justify-center px-4 text-center">

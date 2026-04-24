@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "@repo/shared/constants";
 import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
-import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "@repo/shared/constants";
 import { CsrfError } from "../lib/errors.js";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -82,18 +82,15 @@ const csrfPlugin: FastifyPluginAsync = async (fastify) => {
 			return;
 		}
 
-		const routeConfig = request.routeOptions.config;
-		if (
-			"csrfProtection" in routeConfig &&
-			routeConfig.csrfProtection === false
-		) {
+		const routeConfig = (request.routeOptions.config ?? {}) as {
+			csrfProtection?: boolean;
+		};
+		if (routeConfig.csrfProtection === false) {
 			return;
 		}
 
 		const cookieToken = request.cookies[CSRF_COOKIE_NAME];
-		const headerToken = request.headers[CSRF_HEADER_NAME] as
-			| string
-			| undefined;
+		const headerToken = request.headers[CSRF_HEADER_NAME] as string | undefined;
 
 		if (!cookieToken || !headerToken) {
 			request.log.warn("CSRF validation failed: missing token");
@@ -116,9 +113,7 @@ const csrfPlugin: FastifyPluginAsync = async (fastify) => {
 		}
 
 		if (!timingSafeCompare(headerToken, cookieToken)) {
-			request.log.warn(
-				"CSRF validation failed: header and cookie mismatch",
-			);
+			request.log.warn("CSRF validation failed: header and cookie mismatch");
 			throw new CsrfError();
 		}
 	});

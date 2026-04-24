@@ -1,7 +1,9 @@
-import * as Sentry from "@sentry/tanstackstart-react";
 import type { ErrorEvent } from "@sentry/tanstackstart-react";
+import * as Sentry from "@sentry/tanstackstart-react";
+import { serverEnv } from "#/lib/env/server";
 
-const PHONE_PATTERN = /\+\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}/g;
+const PHONE_PATTERN =
+	/\+\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}/g;
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const SENSITIVE_KEYS = new Set([
 	"password",
@@ -28,9 +30,7 @@ function redactString(value: string): string {
 		.replace(EMAIL_PATTERN, "[REDACTED_EMAIL]");
 }
 
-function scrubObject(
-	obj: Record<string, unknown>,
-): Record<string, unknown> {
+function scrubObject(obj: Record<string, unknown>): Record<string, unknown> {
 	const scrubbed: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(obj)) {
 		if (isSensitiveKey(key)) {
@@ -100,15 +100,13 @@ function scrubPii(event: ErrorEvent): ErrorEvent {
 }
 
 export function initSentryServer(): void {
-	const dsn = process.env.VITE_SENTRY_DSN;
+	const dsn = serverEnv.SENTRY_DSN;
 	if (!dsn) return;
 
 	Sentry.init({
 		dsn,
-		environment: process.env.VITE_SENTRY_ENVIRONMENT ?? "development",
-		tracesSampleRate: process.env.VITE_SENTRY_TRACES_SAMPLE_RATE != null
-			? Number(process.env.VITE_SENTRY_TRACES_SAMPLE_RATE)
-			: 0.1,
+		environment: serverEnv.SENTRY_ENVIRONMENT ?? "development",
+		tracesSampleRate: serverEnv.SENTRY_TRACES_SAMPLE_RATE ?? 0.1,
 		beforeSend(event) {
 			return scrubPii(event);
 		},
