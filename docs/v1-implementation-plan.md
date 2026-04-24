@@ -64,8 +64,9 @@ The following foundation work is already complete or in progress:
 | I-0.2.7: Deferred authentication pattern | ✅ Complete | `GET /api/v1/auth/session` endpoint (Cache-Control: private, no-store). `useAuth()`, `useAuthActions()`, `useRequireAuth()` hooks. OTP login dialog (phone → OTP → verify). Auth query invalidation after login/logout. 320 API tests, 57 web tests passing. |
 | I-1.1.1: Organizer registration form | ✅ Complete | `POST /api/v1/organizers` + `GET /api/v1/organizers/me`. Organizers table + migration (cascade FK). Shared Zod schemas for registration + profile. TanStack Form with live validation. `/org/register` route, dashboard profile check. 422 API tests, 75 web tests passing. |
 | I-1.1.8: Organizer profile management | ✅ Complete | `PUT /api/v1/organizers/me` partial update endpoint. Shared `organizerUpdateSchema` (all fields optional, min 1 required). `OrganizerProfileForm` with dirty-field detection. `/org/profile` route. Audit logged. 81 organizer tests passing. |
+| I-1.1.4: Verification status tracking | ✅ Complete | `GET /api/v1/organizers/verification-status` comprehensive endpoint. 4 new DB columns (submittedForReviewAt, reviewedAt, reviewedBy, rejectionReason). SLA tracking (2-business-day target). Policy+docs check for pending_review transition. VerificationStatusTracker component with 5-step stepper, doc checklist, SLA info. Enhanced org dashboard with status card. 18 verification status tests, 81 total organizer tests passing. |
 
-**What remains:** Phase 1 features I-1.1.4 through I-1.1.7, Module 1.2 (Event Creation), and all subsequent phases.
+**What remains:** Phase 1 features I-1.1.5 through I-1.1.7, Module 1.2 (Event Creation), and all subsequent phases.
 
 ---
 
