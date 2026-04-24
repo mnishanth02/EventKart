@@ -23,3 +23,9 @@ export {
 	userRoleSchema,
 } from "./roles.js";
 export { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from "./session.js";
+export type { VerificationStatus } from "./verification.js";
+export {
+	VERIFICATION_STATUSES,
+	VERIFICATION_STATUS_LABELS,
+	verificationStatusSchema,
+} from "./verification.js";

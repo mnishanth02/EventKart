@@ -45,3 +45,13 @@ export type {
 	OtpVerifyRequestParsed,
 	OtpVerifyData,
 } from "./otp.js";
+
+export {
+	organizerRegistrationSchema,
+	organizerProfileSchema,
+} from "./organizer.js";
+export type {
+	OrganizerRegistrationInput,
+	OrganizerRegistration,
+	OrganizerProfile,
+} from "./organizer.js";

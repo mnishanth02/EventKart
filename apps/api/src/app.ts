@@ -22,6 +22,7 @@ import authPlugin from "./plugins/auth.js";
 import csrfPlugin from "./plugins/csrf.js";
 import metricsPlugin from "./plugins/metrics.js";
 import authRoutes from "./modules/auth/routes.js";
+import organizerRoutes from "./modules/organizer/routes.js";
 import healthRoutes from "./routes/health.js";
 
 export interface BuildAppOptions {
@@ -64,6 +65,7 @@ export function buildApp(options: BuildAppOptions = {}) {
 	app.register(rateLimitPlugin);
 	app.register(healthRoutes);
 	app.register(authRoutes, { prefix: "/api/v1/auth" });
+	app.register(organizerRoutes, { prefix: "/api/v1/organizers" });
 
 	app.setNotFoundHandler((request, reply) => {
 		reply.code(404);

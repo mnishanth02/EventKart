@@ -8,6 +8,20 @@
       "when": 1776841473042,
       "tag": "0000_dark_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777016315936,
+      "tag": "0001_motionless_thor",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777017671542,
+      "tag": "0002_sharp_steve_rogers",
+      "breakpoints": true
     }
   ]
 }
