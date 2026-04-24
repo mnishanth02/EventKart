@@ -10,9 +10,14 @@ import { defineConfig } from "vite";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 const sentryOrg = process.env.SENTRY_ORG;
 const sentryProject = process.env.SENTRY_PROJECT;
-const hasSentryBuildConfig = Boolean(
-	sentryAuthToken && sentryOrg && sentryProject,
-);
+const sentryBuildConfig =
+	sentryAuthToken && sentryOrg && sentryProject
+		? {
+				authToken: sentryAuthToken,
+				org: sentryOrg,
+				project: sentryProject,
+			}
+		: null;
 
 const config = defineConfig({
 	build: {
@@ -31,12 +36,12 @@ const config = defineConfig({
 		tanstackStart(),
 		viteReact(),
 		babel({ presets: [reactCompilerPreset()] }),
-		...(hasSentryBuildConfig
+		...(sentryBuildConfig
 			? [
 					sentryTanstackStart({
-						org: sentryOrg,
-						project: sentryProject,
-						authToken: sentryAuthToken,
+						org: sentryBuildConfig.org,
+						project: sentryBuildConfig.project,
+						authToken: sentryBuildConfig.authToken,
 						sourcemaps: {
 							assets: ["./dist/**/*"],
 							filesToDeleteAfterUpload: ["./dist/**/*.map"],

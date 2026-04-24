@@ -44,7 +44,6 @@ async function withTimeout<T>(
 ): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
 		const timer = setTimeout(() => {
-			clearTimeout(timer);
 			reject(new Error("Timeout"));
 		}, timeoutMs);
 

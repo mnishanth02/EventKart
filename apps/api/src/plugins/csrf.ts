@@ -82,10 +82,13 @@ const csrfPlugin: FastifyPluginAsync = async (fastify) => {
 			return;
 		}
 
-		const routeConfig = (request.routeOptions.config ?? {}) as {
-			csrfProtection?: boolean;
-		};
-		if (routeConfig.csrfProtection === false) {
+		const routeConfig = request.routeOptions.config;
+		if (
+			routeConfig &&
+			typeof routeConfig === "object" &&
+			"csrfProtection" in routeConfig &&
+			routeConfig.csrfProtection === false
+		) {
 			return;
 		}
 
