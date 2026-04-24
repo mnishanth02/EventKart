@@ -6,7 +6,13 @@
 
 import type { OrganizerRegistrationInput } from "@repo/shared/schemas";
 import { createServerFn } from "@tanstack/react-start";
-import type { OrganizerProfile, PolicyStatusResponse } from "./types";
+import type {
+	OrganizerProfile,
+	PolicyStatusResponse,
+	DocumentUploadRequest,
+	PresignedUploadUrl,
+	VerificationDocument,
+} from "./types";
 
 /**
  * Server function to register a new organizer profile.
@@ -55,3 +61,50 @@ export const getOrganizerPolicyStatus = createServerFn({
 	const response = await fetchPolicyStatus();
 	return response?.data ?? null;
 });
+
+// ── Document Upload Server Functions ────────────────────────────────
+
+/**
+ * Server function to request a presigned upload URL for a verification document.
+ */
+export const getDocumentUploadUrl = createServerFn({ method: "POST" })
+	.inputValidator((data: DocumentUploadRequest) => data)
+	.handler(async ({ data }): Promise<PresignedUploadUrl> => {
+		const { requestDocumentUploadUrl } = await import("./api.server");
+		const response = await requestDocumentUploadUrl(data);
+		return response.data;
+	});
+
+/**
+ * Server function to confirm a document upload after the file is in S3.
+ */
+export const confirmDocumentUpload = createServerFn({ method: "POST" })
+	.inputValidator((data: { documentId: string }) => data)
+	.handler(async ({ data }): Promise<VerificationDocument> => {
+		const { confirmDocumentUploadOnServer } = await import("./api.server");
+		const response = await confirmDocumentUploadOnServer(data.documentId);
+		return response.data;
+	});
+
+/**
+ * Server function to list all verification documents for the current organizer.
+ */
+export const getVerificationDocuments = createServerFn({
+	method: "GET",
+}).handler(async (): Promise<VerificationDocument[]> => {
+	const { fetchVerificationDocuments } = await import("./api.server");
+	const response = await fetchVerificationDocuments();
+	return response.data;
+});
+
+/**
+ * Server function to delete a verification document.
+ * Uses POST for TanStack Start (only GET/POST supported), but the
+ * actual API call in api.server.ts uses DELETE.
+ */
+export const deleteDocument = createServerFn({ method: "POST" })
+	.inputValidator((data: { documentId: string }) => data)
+	.handler(async ({ data }): Promise<void> => {
+		const { deleteDocumentOnServer } = await import("./api.server");
+		await deleteDocumentOnServer(data.documentId);
+	});

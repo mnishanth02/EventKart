@@ -20,6 +20,7 @@ import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
 import { Route as AuthedOrgIndexRouteImport } from './routes/_authed/org/index'
 import { Route as AuthedMyIndexRouteImport } from './routes/_authed/my/index'
 import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
+import { Route as AuthedOrgVerificationRouteImport } from './routes/_authed/org/verification'
 import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/register'
 import { Route as AuthedOrgPoliciesRouteImport } from './routes/_authed/org/policies'
 
@@ -76,6 +77,11 @@ const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedAdminRoute,
 } as any)
+const AuthedOrgVerificationRoute = AuthedOrgVerificationRouteImport.update({
+  id: '/verification',
+  path: '/verification',
+  getParentRoute: () => AuthedOrgRoute,
+} as any)
 const AuthedOrgRegisterRoute = AuthedOrgRegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/org': typeof AuthedOrgRouteWithChildren
   '/org/policies': typeof AuthedOrgPoliciesRoute
   '/org/register': typeof AuthedOrgRegisterRoute
+  '/org/verification': typeof AuthedOrgVerificationRoute
   '/admin/': typeof AuthedAdminIndexRoute
   '/my/': typeof AuthedMyIndexRoute
   '/org/': typeof AuthedOrgIndexRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/ready': typeof ReadyRoute
   '/org/policies': typeof AuthedOrgPoliciesRoute
   '/org/register': typeof AuthedOrgRegisterRoute
+  '/org/verification': typeof AuthedOrgVerificationRoute
   '/admin': typeof AuthedAdminIndexRoute
   '/my': typeof AuthedMyIndexRoute
   '/org': typeof AuthedOrgIndexRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/_public/': typeof PublicIndexRoute
   '/_authed/org/policies': typeof AuthedOrgPoliciesRoute
   '/_authed/org/register': typeof AuthedOrgRegisterRoute
+  '/_authed/org/verification': typeof AuthedOrgVerificationRoute
   '/_authed/admin/': typeof AuthedAdminIndexRoute
   '/_authed/my/': typeof AuthedMyIndexRoute
   '/_authed/org/': typeof AuthedOrgIndexRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/org'
     | '/org/policies'
     | '/org/register'
+    | '/org/verification'
     | '/admin/'
     | '/my/'
     | '/org/'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/ready'
     | '/org/policies'
     | '/org/register'
+    | '/org/verification'
     | '/admin'
     | '/my'
     | '/org'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/_public/'
     | '/_authed/org/policies'
     | '/_authed/org/register'
+    | '/_authed/org/verification'
     | '/_authed/admin/'
     | '/_authed/my/'
     | '/_authed/org/'
@@ -253,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAdminIndexRouteImport
       parentRoute: typeof AuthedAdminRoute
     }
+    '/_authed/org/verification': {
+      id: '/_authed/org/verification'
+      path: '/verification'
+      fullPath: '/org/verification'
+      preLoaderRoute: typeof AuthedOrgVerificationRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
     '/_authed/org/register': {
       id: '/_authed/org/register'
       path: '/register'
@@ -297,12 +316,14 @@ const AuthedMyRouteWithChildren = AuthedMyRoute._addFileChildren(
 interface AuthedOrgRouteChildren {
   AuthedOrgPoliciesRoute: typeof AuthedOrgPoliciesRoute
   AuthedOrgRegisterRoute: typeof AuthedOrgRegisterRoute
+  AuthedOrgVerificationRoute: typeof AuthedOrgVerificationRoute
   AuthedOrgIndexRoute: typeof AuthedOrgIndexRoute
 }
 
 const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
   AuthedOrgPoliciesRoute: AuthedOrgPoliciesRoute,
   AuthedOrgRegisterRoute: AuthedOrgRegisterRoute,
+  AuthedOrgVerificationRoute: AuthedOrgVerificationRoute,
   AuthedOrgIndexRoute: AuthedOrgIndexRoute,
 }
 

@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 import { emailSchema } from "./email.js";
 import { phoneSchema } from "./phone.js";
+import {
+	verificationDocumentTypeSchema,
+	documentStatusSchema,
+} from "../constants/verification.js";
 
 /**
  * Organizer registration request — submitted when an organizer-role user
@@ -63,3 +67,51 @@ export const organizerProfileSchema = z.object({
 });
 
 export type OrganizerProfile = z.infer<typeof organizerProfileSchema>;
+
+// ── Verification document schemas ─────────────────────────────────
+
+/** Allowed file extensions for KYC uploads. */
+export const ALLOWED_KYC_EXTENSIONS = ["pdf", "jpg", "jpeg", "png"] as const;
+
+/** Allowed MIME types for KYC uploads. */
+export const ALLOWED_KYC_CONTENT_TYPES = [
+	"application/pdf",
+	"image/jpeg",
+	"image/png",
+] as const;
+
+/** Request to get a presigned upload URL for a verification document. */
+export const documentUploadRequestSchema = z.object({
+	documentType: verificationDocumentTypeSchema,
+	fileName: z.string().min(1).max(255).trim(),
+	contentType: z.enum(ALLOWED_KYC_CONTENT_TYPES),
+});
+
+export type DocumentUploadRequest = z.infer<typeof documentUploadRequestSchema>;
+
+/** Response containing a presigned upload URL. */
+export const presignedUploadUrlSchema = z.object({
+	documentId: z.string().uuid(),
+	url: z.string().url(),
+	method: z.literal("PUT"),
+	headers: z.record(z.string(), z.string()),
+	key: z.string(),
+	expiresAt: z.string(),
+});
+
+export type PresignedUploadUrl = z.infer<typeof presignedUploadUrlSchema>;
+
+/** A verification document record (as returned by the API). */
+export const verificationDocumentSchema = z.object({
+	id: z.string().uuid(),
+	organizerId: z.string().uuid(),
+	documentType: verificationDocumentTypeSchema,
+	fileName: z.string(),
+	contentType: z.string(),
+	fileSize: z.number().nullable(),
+	status: documentStatusSchema,
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+export type VerificationDocument = z.infer<typeof verificationDocumentSchema>;

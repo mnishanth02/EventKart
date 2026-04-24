@@ -6,12 +6,19 @@
  * in `./api.ts` createServerFn handlers.
  */
 
-import type { OrganizerRegistrationInput } from "@repo/shared/schemas";
+import type {
+	OrganizerRegistrationInput,
+	DocumentUploadRequest,
+} from "@repo/shared/schemas";
 import { serverApiClient } from "#/lib/api-client.server";
 import { getForwardedAuthHeaders } from "#/lib/auth/server-fns.server";
 import type {
 	OrganizerProfileResponse,
 	PolicyStatusApiResponse,
+	PresignedUploadUrlResponse,
+	VerificationDocumentResponse,
+	VerificationDocumentsListResponse,
+	DocumentDeleteResponse,
 } from "./types";
 
 /**
@@ -82,4 +89,58 @@ export async function fetchPolicyStatus(): Promise<PolicyStatusApiResponse | nul
 		}
 		throw error;
 	}
+}
+
+/**
+ * Requests a presigned upload URL for a verification document.
+ * POST /api/v1/organizers/documents/upload-url
+ */
+export async function requestDocumentUploadUrl(
+	data: DocumentUploadRequest,
+): Promise<PresignedUploadUrlResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<PresignedUploadUrlResponse>(
+		"/organizers/documents/upload-url",
+		{ method: "POST", body: data, headers },
+	);
+}
+
+/**
+ * Confirms a document upload after the file has been uploaded to S3.
+ * POST /api/v1/organizers/documents/:documentId/confirm
+ */
+export async function confirmDocumentUploadOnServer(
+	documentId: string,
+): Promise<VerificationDocumentResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<VerificationDocumentResponse>(
+		`/organizers/documents/${documentId}/confirm`,
+		{ method: "POST", headers },
+	);
+}
+
+/**
+ * Fetches all verification documents for the current organizer.
+ * GET /api/v1/organizers/documents
+ */
+export async function fetchVerificationDocuments(): Promise<VerificationDocumentsListResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<VerificationDocumentsListResponse>(
+		"/organizers/documents",
+		{ headers },
+	);
+}
+
+/**
+ * Deletes a verification document.
+ * DELETE /api/v1/organizers/documents/:documentId
+ */
+export async function deleteDocumentOnServer(
+	documentId: string,
+): Promise<DocumentDeleteResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<DocumentDeleteResponse>(
+		`/organizers/documents/${documentId}`,
+		{ method: "DELETE", headers },
+	);
 }

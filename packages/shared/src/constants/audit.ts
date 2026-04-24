@@ -18,6 +18,9 @@ export const AUDIT_ACTIONS = {
 	ORGANIZER_APPROVE: "organizer.approve",
 	ORGANIZER_REJECT: "organizer.reject",
 	ORGANIZER_SUSPEND: "organizer.suspend",
+	ORGANIZER_DOCUMENT_UPLOAD: "organizer.document_upload",
+	ORGANIZER_DOCUMENT_CONFIRM: "organizer.document_confirm",
+	ORGANIZER_DOCUMENT_DELETE: "organizer.document_delete",
 	// Event
 	EVENT_CREATE: "event.create",
 	EVENT_UPDATE: "event.update",
