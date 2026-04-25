@@ -8,6 +8,7 @@ export const QUEUE_NAMES = {
 	cleanup: "cleanup",
 	exports: "exports",
 	failedJobs: "failed-jobs",
+	razorpayAccount: "razorpay-account",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -60,6 +61,15 @@ export const QUEUE_CONFIGS: Record<
 			removeOnFail: false,
 		},
 	},
+	[QUEUE_NAMES.razorpayAccount]: {
+		concurrency: 2,
+		defaultJobOptions: {
+			attempts: 3,
+			backoff: { type: "exponential" as const, delay: 5000 },
+			removeOnComplete: { count: 500 },
+			removeOnFail: { count: 5000 },
+		},
+	},
 };
 
 // Typed queue container
@@ -69,6 +79,7 @@ export interface AppQueues {
 	cleanup: Queue;
 	exports: Queue;
 	failedJobs: Queue;
+	razorpayAccount: Queue;
 }
 
 // Factory: creates all queue instances
@@ -86,9 +97,10 @@ export function createQueues(connection: Redis): AppQueues {
 		email: new Queue(QUEUE_NAMES.email, opts(QUEUE_NAMES.email)),
 		cleanup: new Queue(QUEUE_NAMES.cleanup, opts(QUEUE_NAMES.cleanup)),
 		exports: new Queue(QUEUE_NAMES.exports, opts(QUEUE_NAMES.exports)),
-		failedJobs: new Queue(
-			QUEUE_NAMES.failedJobs,
-			opts(QUEUE_NAMES.failedJobs),
+		failedJobs: new Queue(QUEUE_NAMES.failedJobs, opts(QUEUE_NAMES.failedJobs)),
+		razorpayAccount: new Queue(
+			QUEUE_NAMES.razorpayAccount,
+			opts(QUEUE_NAMES.razorpayAccount),
 		),
 	};
 }
@@ -101,6 +113,7 @@ export async function closeQueues(queues: AppQueues): Promise<void> {
 		queues.cleanup.close(),
 		queues.exports.close(),
 		queues.failedJobs.close(),
+		queues.razorpayAccount.close(),
 	]);
 }
 

@@ -40,9 +40,14 @@ export class OtpDeliveryError extends AppError {
 
 export class OtpRateLimitError extends AppError {
 	constructor(retryAfterSeconds: number) {
-		super("Please wait before requesting another OTP", 429, "OTP_RATE_LIMITED", {
-			retryAfterSeconds,
-		});
+		super(
+			"Please wait before requesting another OTP",
+			429,
+			"OTP_RATE_LIMITED",
+			{
+				retryAfterSeconds,
+			},
+		);
 		this.name = "OtpRateLimitError";
 	}
 }

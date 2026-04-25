@@ -1,10 +1,10 @@
-import { Redis } from "ioredis";
 import { Queue } from "bullmq";
-import { QUEUE_NAMES, createDLQHandler } from "../lib/queue.js";
-import { createPaymentWebhookWorker } from "./payment-webhook.js";
-import { createEmailWorker } from "./email.js";
+import { Redis } from "ioredis";
+import { createDLQHandler, QUEUE_NAMES } from "../lib/queue.js";
 import { createCleanupWorker } from "./cleanup.js";
+import { createEmailWorker } from "./email.js";
 import { createExportsWorker } from "./exports.js";
+import { createPaymentWebhookWorker } from "./payment-webhook.js";
 
 // Worker service entry point — runs as a separate Railway service.
 // Usage: pnpm --filter api start:worker

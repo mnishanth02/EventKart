@@ -21,11 +21,11 @@ vi.mock("bullmq", () => {
 });
 
 import {
-	QUEUE_CONFIGS,
-	QUEUE_NAMES,
 	closeQueues,
 	createDLQHandler,
 	createQueues,
+	QUEUE_CONFIGS,
+	QUEUE_NAMES,
 } from "../../src/lib/queue.js";
 
 describe("Queue Library", () => {
@@ -35,8 +35,8 @@ describe("Queue Library", () => {
 	});
 
 	describe("QUEUE_NAMES", () => {
-		it("has exactly 5 queue names", () => {
-			expect(Object.keys(QUEUE_NAMES)).toHaveLength(5);
+		it("has exactly 6 queue names", () => {
+			expect(Object.keys(QUEUE_NAMES)).toHaveLength(6);
 		});
 
 		it("has correct string values", () => {
@@ -45,12 +45,13 @@ describe("Queue Library", () => {
 			expect(QUEUE_NAMES.cleanup).toBe("cleanup");
 			expect(QUEUE_NAMES.exports).toBe("exports");
 			expect(QUEUE_NAMES.failedJobs).toBe("failed-jobs");
+			expect(QUEUE_NAMES.razorpayAccount).toBe("razorpay-account");
 		});
 	});
 
 	describe("QUEUE_CONFIGS", () => {
-		it("has config for all 5 queues", () => {
-			expect(Object.keys(QUEUE_CONFIGS)).toHaveLength(5);
+		it("has config for all 6 queues", () => {
+			expect(Object.keys(QUEUE_CONFIGS)).toHaveLength(6);
 		});
 
 		it("payment-webhook: concurrency 10, attempts 3, exponential backoff", () => {
@@ -101,7 +102,7 @@ describe("Queue Library", () => {
 	describe("createQueues", () => {
 		const fakeConnection = {} as never;
 
-		it("returns all 5 queue properties", () => {
+		it("returns all 6 queue properties", () => {
 			const queues = createQueues(fakeConnection);
 
 			expect(queues).toHaveProperty("paymentWebhook");
@@ -109,11 +110,12 @@ describe("Queue Library", () => {
 			expect(queues).toHaveProperty("cleanup");
 			expect(queues).toHaveProperty("exports");
 			expect(queues).toHaveProperty("failedJobs");
+			expect(queues).toHaveProperty("razorpayAccount");
 		});
 
-		it("creates 5 Queue instances", () => {
+		it("creates 6 Queue instances", () => {
 			createQueues(fakeConnection);
-			expect(constructorCalls).toHaveLength(5);
+			expect(constructorCalls).toHaveLength(6);
 		});
 
 		it("passes correct queue names to Queue constructor", () => {
@@ -125,6 +127,7 @@ describe("Queue Library", () => {
 			expect(names).toContain("cleanup");
 			expect(names).toContain("exports");
 			expect(names).toContain("failed-jobs");
+			expect(names).toContain("razorpay-account");
 		});
 
 		it("passes connection to all queues", () => {
@@ -139,22 +142,19 @@ describe("Queue Library", () => {
 			createQueues(fakeConnection);
 
 			for (const [name, opts] of constructorCalls) {
-				const config =
-					QUEUE_CONFIGS[name as keyof typeof QUEUE_CONFIGS];
-				expect(opts.defaultJobOptions).toEqual(
-					config.defaultJobOptions,
-				);
+				const config = QUEUE_CONFIGS[name as keyof typeof QUEUE_CONFIGS];
+				expect(opts.defaultJobOptions).toEqual(config.defaultJobOptions);
 			}
 		});
 	});
 
 	describe("closeQueues", () => {
-		it("calls close() on all 5 queues", async () => {
+		it("calls close() on all 6 queues", async () => {
 			const queues = createQueues({} as never);
 			mockClose.mockClear();
 
 			await closeQueues(queues);
-			expect(mockClose).toHaveBeenCalledTimes(5);
+			expect(mockClose).toHaveBeenCalledTimes(6);
 		});
 
 		it("tolerates close() rejections (uses allSettled)", async () => {
@@ -165,10 +165,11 @@ describe("Queue Library", () => {
 				.mockResolvedValueOnce(undefined)
 				.mockRejectedValueOnce(new Error("timeout"))
 				.mockResolvedValueOnce(undefined)
+				.mockResolvedValueOnce(undefined)
 				.mockResolvedValueOnce(undefined);
 
 			await expect(closeQueues(queues)).resolves.toBeUndefined();
-			expect(mockClose).toHaveBeenCalledTimes(5);
+			expect(mockClose).toHaveBeenCalledTimes(6);
 		});
 	});
 

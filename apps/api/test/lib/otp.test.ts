@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import type { Redis } from "ioredis";
+import { describe, expect, it, vi } from "vitest";
 import {
 	acquireOtpSendLock,
 	deleteOtp,
@@ -10,8 +10,8 @@ import {
 	incrementOtpAttempts,
 	isMaxAttemptsExceeded,
 	storeOtp,
-	verifyOtpHash,
 	verifyAndConsumeOtp,
+	verifyOtpHash,
 } from "../../src/lib/otp.js";
 
 const TEST_SECRET = "test-otp-secret";

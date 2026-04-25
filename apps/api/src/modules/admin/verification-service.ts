@@ -5,6 +5,7 @@ import type { AdminVerificationListParams } from "@repo/shared/schemas";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { FastifyBaseLogger } from "fastify";
 import { ConflictError, NotFoundError } from "../../lib/errors.js";
+import type { AppQueues } from "../../lib/queue.js";
 import type { StorageClient } from "../../lib/storage.js";
 import { getPolicyStatus } from "../organizer/policy-service.js";
 
@@ -148,6 +149,7 @@ export async function getVerificationDetail(db: Database, organizerId: string) {
 			website: org.website,
 			verificationStatus: org.verificationStatus,
 			isVerified: org.isVerified,
+			razorpayAccountStatus: org.razorpayAccountStatus,
 			submittedForReviewAt: org.submittedForReviewAt?.toISOString() ?? null,
 			reviewedAt: org.reviewedAt?.toISOString() ?? null,
 			rejectionReason: org.rejectionReason,
@@ -228,10 +230,11 @@ export async function approveOrganizer(
 	organizerId: string,
 	ipAddress: string | null,
 	notes?: string,
+	queues?: AppQueues,
 ) {
 	const now = new Date();
 
-	return db.transaction(async (tx) => {
+	const result = await db.transaction(async (tx) => {
 		const [updated] = await tx
 			.update(organizers)
 			.set({
@@ -239,6 +242,7 @@ export async function approveOrganizer(
 				isVerified: true,
 				reviewedAt: now,
 				reviewedBy: adminUserId,
+				razorpayAccountStatus: "not_started",
 			})
 			.where(
 				and(
@@ -292,6 +296,26 @@ export async function approveOrganizer(
 			reviewedBy,
 		};
 	});
+
+	// Enqueue Razorpay linked account creation (outside transaction)
+	if (queues) {
+		try {
+			await queues.razorpayAccount.add(
+				"create-linked-account",
+				{ organizerId },
+				{ jobId: `razorpay-${organizerId}` },
+			);
+			log.info({ organizerId }, "Razorpay account creation job enqueued");
+		} catch (enqueueError) {
+			// Don't fail the approval — just log
+			log.error(
+				{ organizerId, error: enqueueError },
+				"Failed to enqueue Razorpay account creation job",
+			);
+		}
+	}
+
+	return result;
 }
 
 /**
@@ -369,4 +393,55 @@ export async function rejectOrganizer(
 			reviewedBy,
 		};
 	});
+}
+
+/**
+ * Retry Razorpay linked account creation for an organizer
+ * in a retryable state (not_started, failed, needs_action).
+ */
+export async function retryRazorpayAccount(
+	db: Database,
+	log: FastifyBaseLogger,
+	organizerId: string,
+	queues: AppQueues,
+	adminUserId: string,
+	ipAddress: string | null,
+) {
+	const orgs = await db
+		.select({
+			id: organizers.id,
+			razorpayAccountStatus: organizers.razorpayAccountStatus,
+		})
+		.from(organizers)
+		.where(eq(organizers.id, organizerId))
+		.limit(1);
+
+	const org = orgs[0];
+	if (!org) {
+		throw new NotFoundError("Organizer not found");
+	}
+
+	const RETRYABLE: string[] = ["not_started", "failed", "needs_action"];
+	if (!RETRYABLE.includes(org.razorpayAccountStatus)) {
+		throw new ConflictError(
+			`Cannot retry Razorpay account creation — current status is "${org.razorpayAccountStatus}"`,
+		);
+	}
+
+	await queues.razorpayAccount.add(
+		"create-linked-account",
+		{ organizerId },
+		{ jobId: `razorpay-${organizerId}-${Date.now()}` },
+	);
+
+	log.info(
+		{ organizerId, adminUserId },
+		"Razorpay account retry job enqueued by admin",
+	);
+
+	return {
+		organizerId,
+		razorpayAccountStatus: org.razorpayAccountStatus,
+		message: "Razorpay account creation retry has been enqueued",
+	};
 }

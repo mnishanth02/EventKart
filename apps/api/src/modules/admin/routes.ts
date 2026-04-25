@@ -14,6 +14,7 @@ import {
 	listVerificationsResponseSchema,
 	organizerIdParamsSchema,
 	rejectBodySchema,
+	retryRazorpayResponseSchema,
 	reviewActionResponseSchema,
 	verificationDetailResponseSchema,
 } from "./schemas.js";
@@ -23,6 +24,7 @@ import {
 	getVerificationDetail,
 	listVerifications,
 	rejectOrganizer,
+	retryRazorpayAccount,
 } from "./verification-service.js";
 
 const adminRoutes: FastifyPluginAsync = async (app) => {
@@ -156,6 +158,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 				request.params.organizerId,
 				request.ip,
 				request.body.notes,
+				app.queues,
 			);
 			return { success: true as const, data: result };
 		},
@@ -188,6 +191,38 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 				request.session!.userId,
 				request.params.organizerId,
 				request.body.reason,
+				request.ip,
+			);
+			return { success: true as const, data: result };
+		},
+	);
+
+	/**
+	 * POST /api/v1/admin/verifications/:organizerId/retry-razorpay
+	 * Retry Razorpay linked account creation for a failed/needs_action organizer.
+	 */
+	typedApp.post(
+		"/verifications/:organizerId/retry-razorpay",
+		{
+			preHandler: [requireAuth, requireRole("admin")],
+			schema: {
+				params: organizerIdParamsSchema,
+				response: {
+					200: retryRazorpayResponseSchema,
+					401: adminErrorResponseSchema,
+					403: adminErrorResponseSchema,
+					404: adminErrorResponseSchema,
+					409: adminErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const result = await retryRazorpayAccount(
+				app.db,
+				request.log,
+				request.params.organizerId,
+				app.queues,
+				request.session!.userId,
 				request.ip,
 			);
 			return { success: true as const, data: result };

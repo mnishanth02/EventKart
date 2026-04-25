@@ -49,16 +49,16 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
 	getSignedUrl: (...args: unknown[]) => mockGetSignedUrl(...args),
 }));
 
+import type { StorageClientConfig } from "../../src/lib/storage.js";
 import {
 	ALLOWED_CONTENT_TYPES,
-	MAX_FILE_SIZES,
-	STORAGE_PREFIXES,
-	StorageUnavailableError,
 	createDisabledStorageClient,
 	createStorageClient,
 	generateStorageKey,
+	MAX_FILE_SIZES,
+	STORAGE_PREFIXES,
+	StorageUnavailableError,
 } from "../../src/lib/storage.js";
-import type { StorageClientConfig } from "../../src/lib/storage.js";
 
 const TEST_CONFIG: StorageClientConfig = {
 	endpoint: "https://test.r2.cloudflarestorage.com",
@@ -192,9 +192,7 @@ describe("createStorageClient", () => {
 				contentType: "application/pdf",
 			});
 
-			expect(result.url).toBe(
-				"https://presigned-url.example.com/test",
-			);
+			expect(result.url).toBe("https://presigned-url.example.com/test");
 			expect(result.method).toBe("PUT");
 			expect(result.headers["Content-Type"]).toBe("application/pdf");
 			expect(result.key).toMatch(/^kyc\/user-1\//);
@@ -210,9 +208,7 @@ describe("createStorageClient", () => {
 				contentType: "application/pdf",
 			});
 
-			expect(result.headers["x-amz-server-side-encryption"]).toBe(
-				"AES256",
-			);
+			expect(result.headers["x-amz-server-side-encryption"]).toBe("AES256");
 		});
 
 		it("does not include SSE header for event-image category", async () => {
@@ -223,9 +219,7 @@ describe("createStorageClient", () => {
 				contentType: "image/jpeg",
 			});
 
-			expect(result.headers).not.toHaveProperty(
-				"x-amz-server-side-encryption",
-			);
+			expect(result.headers).not.toHaveProperty("x-amz-server-side-encryption");
 		});
 
 		it("uses custom expiresIn when provided", async () => {
@@ -271,9 +265,7 @@ describe("createStorageClient", () => {
 				key: "kyc/user-1/abc.pdf",
 			});
 
-			expect(result.url).toBe(
-				"https://presigned-url.example.com/test",
-			);
+			expect(result.url).toBe("https://presigned-url.example.com/test");
 			expect(result.method).toBe("GET");
 			expect(result.key).toBe("kyc/user-1/abc.pdf");
 			expect(result.expiresAt).toBeInstanceOf(Date);
@@ -328,9 +320,7 @@ describe("createStorageClient", () => {
 			Object.assign(error, { $metadata: { httpStatusCode: 404 } });
 			mockSend.mockRejectedValue(error);
 
-			const result = await client.headObject(
-				"kyc/user-1/nonexistent.pdf",
-			);
+			const result = await client.headObject("kyc/user-1/nonexistent.pdf");
 			expect(result).toBeNull();
 		});
 

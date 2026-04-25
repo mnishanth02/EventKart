@@ -1,7 +1,7 @@
+import { pingDatabase } from "@repo/db";
 import type { FastifyInstance } from "fastify";
 import type { Mock } from "vitest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { pingDatabase } from "@repo/db";
 
 import { buildTestApp } from "../helpers/build-app.js";
 

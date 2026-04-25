@@ -54,6 +54,7 @@ function toProfileResponse(row: OrganizerRow) {
 		website: row.website,
 		verificationStatus: row.verificationStatus,
 		isVerified: row.isVerified,
+		razorpayAccountStatus: row.razorpayAccountStatus,
 		submittedForReviewAt: row.submittedForReviewAt?.toISOString() ?? null,
 		reviewedAt: row.reviewedAt?.toISOString() ?? null,
 		rejectionReason: row.rejectionReason,

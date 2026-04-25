@@ -1,8 +1,11 @@
+import { SESSION_COOKIE_NAME, userRoleSchema } from "@repo/shared/constants";
 import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
-import { SESSION_COOKIE_NAME, userRoleSchema } from "@repo/shared/constants";
-import { getRedisSession, type SessionData } from "../lib/session.js";
-import { buildSessionCookieOptions } from "../lib/session.js";
+import {
+	buildSessionCookieOptions,
+	getRedisSession,
+	type SessionData,
+} from "../lib/session.js";
 
 const authPlugin: FastifyPluginAsync = async (fastify) => {
 	fastify.decorateRequest("session", null);
@@ -17,10 +20,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
 		let sessionData: SessionData | null;
 		try {
-			sessionData = await getRedisSession(
-				fastify.redis.session,
-				sessionId,
-			);
+			sessionData = await getRedisSession(fastify.redis.session, sessionId);
 		} catch (error) {
 			// Redis unavailable — do NOT clear the cookie (transient failure).
 			request.log.error(
@@ -72,17 +72,22 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 };
 
 function clearStaleCookie(
-	reply: { clearCookie: (name: string, options: Record<string, unknown>) => void },
+	reply: {
+		clearCookie: (name: string, options: Record<string, unknown>) => void;
+	},
 	cookieDomain?: string,
 ) {
-	const { maxAge: _, ...clearOptions } = buildSessionCookieOptions(cookieDomain);
+	const { maxAge: _, ...clearOptions } =
+		buildSessionCookieOptions(cookieDomain);
 	reply.clearCookie(SESSION_COOKIE_NAME, clearOptions);
 }
 
 async function safeDeleteSession(
 	redis: { del: (key: string) => Promise<number> },
 	sessionId: string,
-	request: { log: { error: (obj: Record<string, unknown>, msg: string) => void } },
+	request: {
+		log: { error: (obj: Record<string, unknown>, msg: string) => void };
+	},
 ) {
 	try {
 		await redis.del(sessionId);

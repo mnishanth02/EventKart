@@ -10,6 +10,7 @@ import {
 import { Input } from "@repo/ui/components/ui/input";
 import { Label } from "@repo/ui/components/ui/label";
 import { Textarea } from "@repo/ui/components/ui/textarea";
+import { VerifiedBadge } from "@repo/ui/components/verified-badge";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -110,7 +111,10 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Edit Profile</CardTitle>
+				<CardTitle className="flex items-center gap-2">
+					Edit Profile
+					{profile.isVerified && <VerifiedBadge variant="inline" />}
+				</CardTitle>
 				<CardDescription>
 					Update your organizer information. Only changed fields will be
 					submitted.

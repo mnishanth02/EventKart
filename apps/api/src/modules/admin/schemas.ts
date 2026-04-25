@@ -1,6 +1,7 @@
 import {
 	adminApproveBodySchema,
 	adminRejectBodySchema,
+	adminRetryRazorpayResponseSchema,
 	adminReviewActionResponseSchema,
 	adminVerificationDetailSchema,
 	adminVerificationListItemSchema,
@@ -56,4 +57,9 @@ export const adminErrorResponseSchema = z.object({
 		message: z.string(),
 		details: z.record(z.string(), z.unknown()).optional(),
 	}),
+});
+
+export const retryRazorpayResponseSchema = z.object({
+	success: z.literal(true),
+	data: adminRetryRazorpayResponseSchema,
 });

@@ -19,10 +19,13 @@ vi.mock("../../../src/modules/organizer/service.js", () => ({
 	updateOrganizer: vi.fn(),
 }));
 
-vi.mock("../../../src/modules/organizer/verification-status-service.js", () => ({
-	getVerificationStatus: (...args: unknown[]) =>
-		mockGetVerificationStatus(...args),
-}));
+vi.mock(
+	"../../../src/modules/organizer/verification-status-service.js",
+	() => ({
+		getVerificationStatus: (...args: unknown[]) =>
+			mockGetVerificationStatus(...args),
+	}),
+);
 
 // Mock remaining modules so routes load without side-effects
 vi.mock("../../../src/modules/organizer/document-service.js", () => ({
@@ -39,8 +42,8 @@ vi.mock("../../../src/modules/organizer/policy-service.js", () => ({
 }));
 
 import type { FastifyInstance } from "fastify";
-import { buildTestApp } from "../../helpers/build-app.js";
 import { generateCsrfToken } from "../../../src/plugins/csrf.js";
+import { buildTestApp } from "../../helpers/build-app.js";
 
 // ── Constants ────────────────────────────────────────────────────
 const STATUS_URL = "/api/v1/organizers/verification-status";
@@ -65,6 +68,7 @@ const mockOrganizerProfile = {
 	website: "https://coimbatorerunners.in",
 	verificationStatus: "pending_documents",
 	isVerified: false,
+	razorpayAccountStatus: "not_started",
 	createdAt: "2026-04-24T00:00:00.000Z",
 	updatedAt: "2026-04-24T00:00:00.000Z",
 };
@@ -99,6 +103,14 @@ function buildPendingDocumentsStatus() {
 				expectedBy: null,
 			},
 		},
+		publishingEligibility: {
+			canPublishFreeEvents: false,
+			canPublishPaidEvents: false,
+			reasons: [
+				"Organizer verification required",
+				"Payment account setup incomplete",
+			],
+		},
 	};
 }
 
@@ -129,6 +141,14 @@ function buildAllDocsNoPoliciesStatus() {
 				submittedAt: null,
 				expectedBy: null,
 			},
+		},
+		publishingEligibility: {
+			canPublishFreeEvents: false,
+			canPublishPaidEvents: false,
+			reasons: [
+				"Organizer verification required",
+				"Payment account setup incomplete",
+			],
 		},
 	};
 }
@@ -161,13 +181,18 @@ function buildPendingReviewStatus(submittedAt: string, expectedBy: string) {
 				expectedBy,
 			},
 		},
+		publishingEligibility: {
+			canPublishFreeEvents: false,
+			canPublishPaidEvents: false,
+			reasons: [
+				"Organizer verification required",
+				"Payment account setup incomplete",
+			],
+		},
 	};
 }
 
-function buildPartialDocsStatus(
-	uploaded: string[],
-	missing: string[],
-) {
+function buildPartialDocsStatus(uploaded: string[], missing: string[]) {
 	return {
 		verificationStatus: "pending_documents",
 		isVerified: false,
@@ -195,13 +220,18 @@ function buildPartialDocsStatus(
 				expectedBy: null,
 			},
 		},
+		publishingEligibility: {
+			canPublishFreeEvents: false,
+			canPublishPaidEvents: false,
+			reasons: [
+				"Organizer verification required",
+				"Payment account setup incomplete",
+			],
+		},
 	};
 }
 
-function buildPartialPoliciesStatus(
-	accepted: string[],
-	missing: string[],
-) {
+function buildPartialPoliciesStatus(accepted: string[], missing: string[]) {
 	return {
 		verificationStatus: "pending_documents",
 		isVerified: false,
@@ -228,6 +258,14 @@ function buildPartialPoliciesStatus(
 				submittedAt: null,
 				expectedBy: null,
 			},
+		},
+		publishingEligibility: {
+			canPublishFreeEvents: false,
+			canPublishPaidEvents: false,
+			reasons: [
+				"Organizer verification required",
+				"Payment account setup incomplete",
+			],
 		},
 	};
 }
@@ -259,6 +297,14 @@ function buildRejectedStatus() {
 				submittedAt: "2026-04-24T10:00:00.000Z",
 				expectedBy: "2026-04-28T10:00:00.000Z",
 			},
+		},
+		publishingEligibility: {
+			canPublishFreeEvents: false,
+			canPublishPaidEvents: false,
+			reasons: [
+				"Organizer verification required",
+				"Payment account setup incomplete",
+			],
 		},
 	};
 }

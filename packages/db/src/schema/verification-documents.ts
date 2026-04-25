@@ -1,4 +1,8 @@
 import {
+	DOCUMENT_STATUSES,
+	VERIFICATION_DOCUMENT_TYPES,
+} from "@repo/shared/constants";
+import {
 	index,
 	integer,
 	pgEnum,
@@ -9,10 +13,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizers } from "./organizers.js";
 import { users } from "./users.js";
-import {
-	VERIFICATION_DOCUMENT_TYPES,
-	DOCUMENT_STATUSES,
-} from "@repo/shared/constants";
 
 export const verificationDocumentTypeEnum = pgEnum(
 	"verification_document_type",

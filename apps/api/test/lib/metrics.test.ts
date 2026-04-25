@@ -1,29 +1,29 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
+	bookingCreateDuration,
+	bookingCreateTotal,
+	dbQueryDuration,
+	dbSlowQueryTotal,
+	emailSendTotal,
+	funnelStepTotal,
 	httpRequestDuration,
 	httpRequestTotal,
 	otpSendTotal,
 	otpVerifyTotal,
-	funnelStepTotal,
-	bookingCreateDuration,
-	bookingCreateTotal,
+	paymentConfirmDuration,
 	paymentOrderDuration,
 	paymentOrderTotal,
-	paymentConfirmDuration,
+	queueDelayedJobs,
+	queueDepth,
+	queueDlqDepth,
+	queueFailedJobs,
+	queueOldestJobAge,
+	redisConnectedClients,
+	redisEvictedKeys,
+	redisMemoryUsage,
 	webhookAckDuration,
 	webhookProcessDuration,
-	queueDepth,
-	queueOldestJobAge,
-	queueDelayedJobs,
-	queueFailedJobs,
-	queueDlqDepth,
-	dbSlowQueryTotal,
-	dbQueryDuration,
-	redisMemoryUsage,
-	redisEvictedKeys,
-	redisConnectedClients,
-	emailSendTotal,
 } from "../../src/lib/metrics.js";
 
 describe("metrics instrument registry", () => {
@@ -95,12 +95,24 @@ describe("metrics instrument registry", () => {
 
 	it("instruments are callable without errors (no-op in tests)", () => {
 		// Counters
-		expect(() => httpRequestTotal.add(1, { method: "GET", route: "/health", status: "200" })).not.toThrow();
+		expect(() =>
+			httpRequestTotal.add(1, {
+				method: "GET",
+				route: "/health",
+				status: "200",
+			}),
+		).not.toThrow();
 		expect(() => otpSendTotal.add(1, { status: "success" })).not.toThrow();
 		expect(() => otpVerifyTotal.add(1, { status: "success" })).not.toThrow();
 		expect(() => funnelStepTotal.add(1, { step: "otp_sent" })).not.toThrow();
 
 		// Histograms
-		expect(() => httpRequestDuration.record(42, { method: "GET", route: "/health", status: "200" })).not.toThrow();
+		expect(() =>
+			httpRequestDuration.record(42, {
+				method: "GET",
+				route: "/health",
+				status: "200",
+			}),
+		).not.toThrow();
 	});
 });

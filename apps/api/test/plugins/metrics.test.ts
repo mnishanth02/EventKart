@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-const mockInfo = vi.fn().mockResolvedValue(
-	"# Memory\r\nused_memory:2048000\r\nused_memory_human:2.00M\r\n# Stats\r\nevicted_keys:42\r\n# Clients\r\nconnected_clients:10\r\n",
-);
+const mockInfo = vi
+	.fn()
+	.mockResolvedValue(
+		"# Memory\r\nused_memory:2048000\r\nused_memory_human:2.00M\r\n# Stats\r\nevicted_keys:42\r\n# Clients\r\nconnected_clients:10\r\n",
+	);
 const mockPing = vi.fn().mockResolvedValue("PONG");
 const mockQuit = vi.fn().mockResolvedValue("OK");
 

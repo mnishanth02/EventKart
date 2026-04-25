@@ -20,7 +20,10 @@ export type OtpSendData = z.infer<typeof otpSendDataSchema>;
 /** Request schema for POST /api/v1/auth/otp/verify */
 export const otpVerifyRequestSchema = z.object({
 	phone: phoneSchema,
-	otp: z.string().length(6).regex(/^\d{6}$/, "OTP must be 6 digits"),
+	otp: z
+		.string()
+		.length(6)
+		.regex(/^\d{6}$/, "OTP must be 6 digits"),
 });
 
 export type OtpVerifyRequest = z.input<typeof otpVerifyRequestSchema>;

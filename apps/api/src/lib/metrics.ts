@@ -64,19 +64,14 @@ export const bookingCreateDuration = meter.createHistogram(
 		description: "Booking creation duration",
 		unit: "ms",
 		advice: {
-			explicitBucketBoundaries: [
-				10, 25, 50, 100, 250, 500, 1000, 2500, 5000,
-			],
+			explicitBucketBoundaries: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000],
 		},
 	},
 );
 
-export const bookingCreateTotal = meter.createCounter(
-	"booking.create.total",
-	{
-		description: "Total booking creation attempts",
-	},
-);
+export const bookingCreateTotal = meter.createCounter("booking.create.total", {
+	description: "Total booking creation attempts",
+});
 
 // ── Payment Metrics (future — instruments ready for Module 2.x) ────
 
@@ -86,19 +81,14 @@ export const paymentOrderDuration = meter.createHistogram(
 		description: "Payment order creation duration",
 		unit: "ms",
 		advice: {
-			explicitBucketBoundaries: [
-				50, 100, 250, 500, 1000, 2500, 5000, 10000,
-			],
+			explicitBucketBoundaries: [50, 100, 250, 500, 1000, 2500, 5000, 10000],
 		},
 	},
 );
 
-export const paymentOrderTotal = meter.createCounter(
-	"payment.order.total",
-	{
-		description: "Total payment order creation attempts",
-	},
-);
+export const paymentOrderTotal = meter.createCounter("payment.order.total", {
+	description: "Total payment order creation attempts",
+});
 
 export const paymentConfirmDuration = meter.createHistogram(
 	"payment.confirm.duration",
@@ -107,9 +97,7 @@ export const paymentConfirmDuration = meter.createHistogram(
 			"Payment confirmation end-to-end duration (webhook → booking state update)",
 		unit: "ms",
 		advice: {
-			explicitBucketBoundaries: [
-				100, 250, 500, 1000, 2500, 5000, 10000, 30000,
-			],
+			explicitBucketBoundaries: [100, 250, 500, 1000, 2500, 5000, 10000, 30000],
 		},
 	},
 );

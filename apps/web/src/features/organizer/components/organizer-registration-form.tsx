@@ -1,8 +1,5 @@
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { organizerRegistrationSchema } from "@repo/shared/schemas";
 import type { OrganizerRegistrationInput } from "@repo/shared/schemas";
+import { organizerRegistrationSchema } from "@repo/shared/schemas";
 import { Button } from "@repo/ui/components/ui/button";
 import {
 	Card,
@@ -12,16 +9,22 @@ import {
 	CardTitle,
 } from "@repo/ui/components/ui/card";
 import { Input } from "@repo/ui/components/ui/input";
-import { Textarea } from "@repo/ui/components/ui/textarea";
 import { Label } from "@repo/ui/components/ui/label";
+import { Textarea } from "@repo/ui/components/ui/textarea";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { ApiClientError } from "#/lib/api-client.shared";
 import { registerOrganizer } from "../api";
 import { ORGANIZER_QUERY_KEY } from "../queries";
-import { ApiClientError } from "#/lib/api-client.shared";
 
 function FormFieldError({ errors }: { errors: ReadonlyArray<unknown> }) {
 	const messages = errors
-		.filter((e): e is { message: string } => e != null && typeof e === "object" && "message" in e)
+		.filter(
+			(e): e is { message: string } =>
+				e != null && typeof e === "object" && "message" in e,
+		)
 		.map((e) => e.message);
 	if (messages.length === 0) return null;
 	return (

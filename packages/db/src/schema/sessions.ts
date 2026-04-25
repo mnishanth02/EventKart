@@ -1,10 +1,4 @@
-import {
-	index,
-	pgTable,
-	timestamp,
-	uuid,
-	varchar,
-} from "drizzle-orm/pg-core";
+import { index, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
 
 /** Session metadata table — runtime sessions live in Redis */

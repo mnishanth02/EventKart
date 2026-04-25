@@ -1,13 +1,13 @@
-import {
-	type vi,
-	describe,
-	it,
-	expect,
-	beforeAll,
-	afterAll,
-	beforeEach,
-} from "vitest";
 import type { FastifyInstance } from "fastify";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type vi,
+} from "vitest";
 import { buildApp } from "../../src/app.js";
 
 const SESSION_COOKIE_NAME = "kiran_session";
@@ -188,9 +188,7 @@ describe("internal-key plugin", () => {
 
 	describe("session coexistence", () => {
 		it("populates both isInternalRequest and session", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
 
 			const res = await app.inject({
 				method: "GET",
@@ -215,9 +213,7 @@ describe("internal-key plugin", () => {
 
 	describe("CSRF bypass for internal requests", () => {
 		it("bypasses CSRF validation for POST with valid internal key", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
 
 			const res = await app.inject({
 				method: "POST",
@@ -231,9 +227,7 @@ describe("internal-key plugin", () => {
 		});
 
 		it("enforces CSRF for POST without internal key", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
 
 			const res = await app.inject({
 				method: "POST",

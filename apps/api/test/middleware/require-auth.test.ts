@@ -1,13 +1,13 @@
-import {
-	type vi,
-	describe,
-	it,
-	expect,
-	beforeAll,
-	afterAll,
-	beforeEach,
-} from "vitest";
 import type { FastifyInstance } from "fastify";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type vi,
+} from "vitest";
 import { buildApp } from "../../src/app.js";
 import { requireAuth } from "../../src/middleware/require-auth.js";
 
@@ -39,13 +39,9 @@ function buildTestApp(): FastifyInstance {
 	});
 
 	// Protected route that echoes session data back for assertions
-	app.get(
-		TEST_URL,
-		{ onRequest: [requireAuth] },
-		async (request) => ({
-			session: request.session,
-		}),
-	);
+	app.get(TEST_URL, { onRequest: [requireAuth] }, async (request) => ({
+		session: request.session,
+	}));
 
 	return app;
 }

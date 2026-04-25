@@ -23,14 +23,12 @@ const SSE_CATEGORIES: ReadonlySet<StorageCategory> = new Set(["kyc"]);
 
 // --- Content policy constants (for route-level enforcement) ---
 
-export const ALLOWED_CONTENT_TYPES: Record<
-	StorageCategory,
-	readonly string[]
-> = {
-	kyc: ["application/pdf", "image/jpeg", "image/png"],
-	"event-image": ["image/jpeg", "image/png", "image/webp"],
-	"roster-export": ["application/pdf", "text/csv"],
-} as const;
+export const ALLOWED_CONTENT_TYPES: Record<StorageCategory, readonly string[]> =
+	{
+		kyc: ["application/pdf", "image/jpeg", "image/png"],
+		"event-image": ["image/jpeg", "image/png", "image/webp"],
+		"roster-export": ["application/pdf", "text/csv"],
+	} as const;
 
 export const MAX_FILE_SIZES: Record<StorageCategory, number> = {
 	kyc: 10 * 1024 * 1024, // 10 MB
@@ -195,16 +193,14 @@ export function createStorageClient(
 		async getDownloadUrl(
 			params: DownloadUrlParams,
 		): Promise<PresignedDownloadResult> {
-			const expiresIn =
-				params.expiresIn ?? DEFAULT_DOWNLOAD_EXPIRY_SECONDS;
+			const expiresIn = params.expiresIn ?? DEFAULT_DOWNLOAD_EXPIRY_SECONDS;
 
 			const command = new GetObjectCommand({
 				Bucket: bucket,
 				Key: params.key,
 				...(params.responseContentDisposition
 					? {
-							ResponseContentDisposition:
-								params.responseContentDisposition,
+							ResponseContentDisposition: params.responseContentDisposition,
 						}
 					: {}),
 			});
@@ -220,9 +216,7 @@ export function createStorageClient(
 		},
 
 		async deleteObject(key: string): Promise<void> {
-			await s3.send(
-				new DeleteObjectCommand({ Bucket: bucket, Key: key }),
-			);
+			await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 		},
 
 		async headObject(key: string): Promise<ObjectMetadata | null> {
@@ -240,15 +234,10 @@ export function createStorageClient(
 					typeof error === "object" &&
 					error !== null &&
 					"$metadata" in error &&
-					typeof (error as Record<string, unknown>).$metadata ===
-						"object"
+					typeof (error as Record<string, unknown>).$metadata === "object"
 						? (
-								(
-									error as Record<
-										string,
-										Record<string, unknown>
-									>
-								).$metadata as Record<string, unknown>
+								(error as Record<string, Record<string, unknown>>)
+									.$metadata as Record<string, unknown>
 							).httpStatusCode
 						: undefined;
 
@@ -257,16 +246,11 @@ export function createStorageClient(
 				}
 
 				const errorName =
-					typeof error === "object" &&
-					error !== null &&
-					"name" in error
+					typeof error === "object" && error !== null && "name" in error
 						? (error as { name: string }).name
 						: undefined;
 
-				if (
-					errorName === "NotFound" ||
-					errorName === "NoSuchKey"
-				) {
+				if (errorName === "NotFound" || errorName === "NoSuchKey") {
 					return null;
 				}
 

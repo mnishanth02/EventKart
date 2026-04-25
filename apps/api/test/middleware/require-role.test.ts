@@ -1,13 +1,13 @@
-import {
-	type vi,
-	describe,
-	it,
-	expect,
-	beforeAll,
-	afterAll,
-	beforeEach,
-} from "vitest";
 import type { FastifyInstance } from "fastify";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type vi,
+} from "vitest";
 import { buildApp } from "../../src/app.js";
 import { requireRole } from "../../src/middleware/require-role.js";
 
@@ -52,11 +52,7 @@ function buildTestApp(): FastifyInstance {
 		{ onRequest: [requireRole("organizer")] },
 		handler,
 	);
-	app.get(
-		"/test/admin-only",
-		{ onRequest: [requireRole("admin")] },
-		handler,
-	);
+	app.get("/test/admin-only", { onRequest: [requireRole("admin")] }, handler);
 
 	return app;
 }
@@ -151,11 +147,7 @@ describe("requireRole middleware", () => {
 
 	describe("error responses", () => {
 		it("403 includes INSUFFICIENT_ROLE code and requiredRole in details", async () => {
-			const res = await injectAs(
-				app,
-				"participant",
-				"/test/organizer-only",
-			);
+			const res = await injectAs(app, "participant", "/test/organizer-only");
 
 			expect(res.statusCode).toBe(403);
 			expect(res.json()).toEqual({

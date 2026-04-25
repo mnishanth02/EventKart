@@ -1,4 +1,12 @@
-import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 
 // ── Service mocks ────────────────────────────────────────────────
 const mockRequestDocumentUpload = vi.fn();
@@ -9,21 +17,26 @@ const mockRegisterOrganizer = vi.fn();
 const mockGetOrganizerByUserId = vi.fn();
 
 vi.mock("../../../src/modules/organizer/document-service.js", () => ({
-	requestDocumentUpload: (...args: unknown[]) => mockRequestDocumentUpload(...args),
-	confirmDocumentUpload: (...args: unknown[]) => mockConfirmDocumentUpload(...args),
-	listVerificationDocuments: (...args: unknown[]) => mockListVerificationDocuments(...args),
-	deleteVerificationDocument: (...args: unknown[]) => mockDeleteVerificationDocument(...args),
+	requestDocumentUpload: (...args: unknown[]) =>
+		mockRequestDocumentUpload(...args),
+	confirmDocumentUpload: (...args: unknown[]) =>
+		mockConfirmDocumentUpload(...args),
+	listVerificationDocuments: (...args: unknown[]) =>
+		mockListVerificationDocuments(...args),
+	deleteVerificationDocument: (...args: unknown[]) =>
+		mockDeleteVerificationDocument(...args),
 }));
 
 vi.mock("../../../src/modules/organizer/service.js", () => ({
 	registerOrganizer: (...args: unknown[]) => mockRegisterOrganizer(...args),
-	getOrganizerByUserId: (...args: unknown[]) => mockGetOrganizerByUserId(...args),
+	getOrganizerByUserId: (...args: unknown[]) =>
+		mockGetOrganizerByUserId(...args),
 	updateOrganizer: vi.fn(),
 }));
 
 import type { FastifyInstance } from "fastify";
-import { buildTestApp } from "../../helpers/build-app.js";
 import { generateCsrfToken } from "../../../src/plugins/csrf.js";
+import { buildTestApp } from "../../helpers/build-app.js";
 
 // ── Constants ────────────────────────────────────────────────────
 const BASE_URL = "/api/v1/organizers/documents";
@@ -49,6 +62,7 @@ const mockOrganizerProfile = {
 	website: "https://coimbatorerunners.in",
 	verificationStatus: "pending_documents",
 	isVerified: false,
+	razorpayAccountStatus: "not_started",
 	createdAt: "2026-04-24T00:00:00.000Z",
 	updatedAt: "2026-04-24T00:00:00.000Z",
 };
@@ -57,7 +71,10 @@ const mockUploadUrlResult = {
 	documentId: TEST_DOCUMENT_ID,
 	url: "https://s3.example.com/presigned-url",
 	method: "PUT" as const,
-	headers: { "Content-Type": "application/pdf", "x-amz-server-side-encryption": "AES256" },
+	headers: {
+		"Content-Type": "application/pdf",
+		"x-amz-server-side-encryption": "AES256",
+	},
 	key: `kyc/${TEST_ORGANIZER_ID}/some-uuid.pdf`,
 	expiresAt: new Date(Date.now() + 900_000).toISOString(),
 };

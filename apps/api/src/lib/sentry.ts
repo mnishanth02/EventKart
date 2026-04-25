@@ -29,7 +29,8 @@ const REDACT_HEADERS = new Set(["cookie", "authorization", "x-internal-key"]);
 
 /** Matches international phone numbers with a required `+` prefix to avoid
  *  false positives on numeric IDs, timestamps, and prices. */
-const PHONE_PATTERN = /\+\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}/g;
+const PHONE_PATTERN =
+	/\+\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}/g;
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 
 /**

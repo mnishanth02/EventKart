@@ -1,16 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import {
-	VERIFICATION_STEPS,
-	VERIFICATION_DOCUMENT_TYPE_LABELS,
-	VERIFICATION_STATUS_LABELS,
-} from "@repo/shared/constants";
 import type {
 	VerificationDocumentType,
 	VerificationStatus,
 } from "@repo/shared/constants";
-import type { VerificationStatusResponse } from "../types";
-import { verificationStatusQueryOptions } from "../queries";
+import {
+	VERIFICATION_DOCUMENT_TYPE_LABELS,
+	VERIFICATION_STATUS_LABELS,
+	VERIFICATION_STEPS,
+} from "@repo/shared/constants";
+import {
+	Alert,
+	AlertDescription,
+	AlertTitle,
+} from "@repo/ui/components/ui/alert";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Button } from "@repo/ui/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -18,22 +21,20 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@repo/ui/components/ui/card";
-import { Badge } from "@repo/ui/components/ui/badge";
-import { Button } from "@repo/ui/components/ui/button";
+import { VerifiedBadge } from "@repo/ui/components/verified-badge";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
-} from "@repo/ui/components/ui/alert";
-import {
+	AlertTriangle,
 	CheckCircle2,
 	Circle,
 	Clock,
-	AlertTriangle,
-	ShieldCheck,
 	FileText,
+	ShieldCheck,
 	XCircle,
 } from "lucide-react";
+import { verificationStatusQueryOptions } from "../queries";
+import type { VerificationStatusResponse } from "../types";
 
 function formatDate(dateStr: string | null): string {
 	if (!dateStr) return "—";
@@ -238,10 +239,7 @@ function DocumentChecklist({ data }: { data: VerificationStatusResponse }) {
 									Uploaded
 								</Badge>
 							) : (
-								<Badge
-									variant="secondary"
-									className="ml-auto text-[10px]"
-								>
+								<Badge variant="secondary" className="ml-auto text-[10px]">
 									Missing
 								</Badge>
 							)}
@@ -255,26 +253,18 @@ function DocumentChecklist({ data }: { data: VerificationStatusResponse }) {
 
 // ── Status Banners ──────────────────────────────────────────────────
 
-function PendingReviewBanner({
-	data,
-}: { data: VerificationStatusResponse }) {
+function PendingReviewBanner({ data }: { data: VerificationStatusResponse }) {
 	return (
 		<Alert>
 			<Clock className="size-4" />
 			<AlertTitle>Application Under Review</AlertTitle>
 			<AlertDescription className="space-y-1">
-				<p>
-					Submitted on {formatDate(data.steps.review.submittedAt)}
-				</p>
+				<p>Submitted on {formatDate(data.steps.review.submittedAt)}</p>
 				{data.steps.review.expectedBy ? (
-					<p>
-						Expected review by{" "}
-						{formatDate(data.steps.review.expectedBy)}
-					</p>
+					<p>Expected review by {formatDate(data.steps.review.expectedBy)}</p>
 				) : null}
 				<p className="text-muted-foreground text-xs">
-					Our team typically reviews applications within 2 business
-					days.
+					Our team typically reviews applications within 2 business days.
 				</p>
 			</AlertDescription>
 		</Alert>
@@ -290,10 +280,7 @@ function RejectionBanner({ data }: { data: VerificationStatusResponse }) {
 				{data.rejectionReason ? (
 					<p className="font-medium">{data.rejectionReason}</p>
 				) : null}
-				<p>
-					Please review the feedback and re-upload documents as
-					needed.
-				</p>
+				<p>Please review the feedback and re-upload documents as needed.</p>
 				<Button asChild variant="outline" size="sm" className="mt-2">
 					<Link to="/org/verification">Upload Documents</Link>
 				</Button>
@@ -304,16 +291,33 @@ function RejectionBanner({ data }: { data: VerificationStatusResponse }) {
 
 function ApprovedBanner() {
 	return (
-		<Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
-			<ShieldCheck className="size-4 text-green-600" />
-			<AlertTitle className="text-green-700 dark:text-green-400">
-				Verified Organizer
-			</AlertTitle>
-			<AlertDescription className="text-green-600 dark:text-green-400">
-				Your organizer account is verified. You can now create and
-				publish events.
-			</AlertDescription>
-		</Alert>
+		<div className="space-y-4">
+			<Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
+				<ShieldCheck className="size-4 text-green-600" />
+				<AlertTitle className="flex items-center gap-2 text-green-700 dark:text-green-400">
+					Verified Organizer
+					<VerifiedBadge variant="badge" showLabel={false} />
+				</AlertTitle>
+				<AlertDescription className="text-green-600 dark:text-green-400">
+					Your organizer account is verified. You can now create and publish
+					events.
+				</AlertDescription>
+			</Alert>
+
+			{/* Publishing eligibility */}
+			<div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
+				<h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+					Publishing Eligibility
+				</h4>
+				<p className="mt-1 text-sm text-blue-700 dark:text-blue-400">
+					You can now create and publish events on EventKart.
+				</p>
+				<p className="mt-2 text-xs text-blue-600 dark:text-blue-500">
+					Payment account setup is in progress. You'll be able to publish paid
+					events once it's complete.
+				</p>
+			</div>
+		</div>
 	);
 }
 
@@ -367,16 +371,12 @@ export function VerificationStatusTracker() {
 				<ProgressStepper data={data} />
 
 				{status === "approved" ? <ApprovedBanner /> : null}
-				{status === "rejected" ? (
-					<RejectionBanner data={data} />
-				) : null}
+				{status === "rejected" ? <RejectionBanner data={data} /> : null}
 				{status === "pending_review" ? (
 					<PendingReviewBanner data={data} />
 				) : null}
 
-				{status !== "approved" ? (
-					<DocumentChecklist data={data} />
-				) : null}
+				{status !== "approved" ? <DocumentChecklist data={data} /> : null}
 			</CardContent>
 		</Card>
 	);

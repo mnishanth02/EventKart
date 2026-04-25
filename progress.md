@@ -46,6 +46,7 @@
 | 34 | I-1.1.5 — Admin Verification Review UI (Frontend) | — | ✅ Complete | 2026-07-25 | 2026-07-25 |
 | 35 | I-1.1.5 — Admin Verification Review API (Backend) | — | ✅ Complete | 2026-07-25 | 2026-07-25 |
 | 36 | I-1.1.6 + I-1.1.7 — DB & Shared Schema Foundation (Verification Badge + Razorpay) | — | ✅ Complete | 2026-07-25 | 2026-07-25 |
+| 37 | I-1.1.7 — Razorpay Route Linked-Account Creation (Backend) | — | ✅ Complete | 2026-07-25 | 2026-07-25 |
 
 ## Completed Implementation Plans
 
@@ -63,7 +64,7 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 | Phase 0 | 0.2 — Authentication & Identity | ✅ Complete | All auth items complete including I-0.2.9 (SSR session forwarding) and I-0.2.7 (deferred auth). 320 API tests, 57 web tests passing. |
 | Phase 0 | 0.3 — Design System & App Shell | ✅ Complete | All features complete: I-0.3.1 through I-0.3.6, plus I-0.2.9 and I-0.2.7. |
 | Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | ✅ Complete | All features complete: I-0.4.1 (Sentry), I-0.4.2 (Pino/OTEL), I-0.4.3 (Health checks), I-0.4.4 (Audit log), I-0.4.5 (Production metrics), I-0.4.6 (BullMQ observability). 403 API tests passing. |
-| Phase 1 | 1.1 — Organizer Signup & Verification | 🟡 In Progress | I-1.1.1 (Registration), I-1.1.2 (Document Upload), I-1.1.3 (Policy Acceptance), I-1.1.4 (Verification Status Tracking), I-1.1.5 (Admin Review API + Frontend), I-1.1.8 (Profile Management) complete. 26 admin API tests, 81 organizer API tests, 75 web tests passing. |
+| Phase 1 | 1.1 — Organizer Signup & Verification | 🟡 In Progress | I-1.1.1 (Registration), I-1.1.2 (Document Upload), I-1.1.3 (Policy Acceptance), I-1.1.4 (Verification Status Tracking), I-1.1.5 (Admin Review API + Frontend), I-1.1.7 (Razorpay Linked-Account Backend), I-1.1.8 (Profile Management) complete. 528 API tests passing. |
 | Phase 1 | 1.2 — Event Creation & Management | ⬜ Not Started | — |
 
 ## Foundation (Pre-Phase 0) — Completed

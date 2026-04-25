@@ -1,11 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	VERIFICATION_DOCUMENT_TYPES,
-	VERIFICATION_DOCUMENT_TYPE_LABELS,
-} from "@repo/shared/constants";
 import type { VerificationDocumentType } from "@repo/shared/constants";
-import type { VerificationDocument } from "../types";
+import {
+	VERIFICATION_DOCUMENT_TYPE_LABELS,
+	VERIFICATION_DOCUMENT_TYPES,
+} from "@repo/shared/constants";
 import { ALLOWED_KYC_CONTENT_TYPES } from "@repo/shared/schemas";
+import { Badge } from "@repo/ui/components/ui/badge";
 import { Button } from "@repo/ui/components/ui/button";
 import {
 	Card,
@@ -14,18 +13,19 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@repo/ui/components/ui/card";
-import { Badge } from "@repo/ui/components/ui/badge";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-	getDocumentUploadUrl,
 	confirmDocumentUpload,
 	deleteDocument,
+	getDocumentUploadUrl,
 } from "../api";
 import {
 	DOCUMENTS_QUERY_KEY,
 	VERIFICATION_STATUS_QUERY_KEY,
 	verificationDocumentsQueryOptions,
 } from "../queries";
+import type { VerificationDocument } from "../types";
 
 const ACCEPT_STRING = ".pdf,.jpg,.jpeg,.png";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -186,12 +186,7 @@ function DocumentUploadCard({
 					</div>
 				) : (
 					<label className="cursor-pointer">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={isUploading}
-							asChild
-						>
+						<Button variant="outline" size="sm" disabled={isUploading} asChild>
 							<span>{isUploading ? "Uploading..." : "Upload"}</span>
 						</Button>
 						<input
@@ -229,9 +224,7 @@ export function VerificationDocuments() {
 		}
 	}
 
-	const uploadedCount = documents.filter(
-		(d) => d.status === "uploaded",
-	).length;
+	const uploadedCount = documents.filter((d) => d.status === "uploaded").length;
 	const totalRequired = VERIFICATION_DOCUMENT_TYPES.length;
 
 	if (isLoading) {

@@ -19,11 +19,11 @@ vi.mock("ioredis", () => {
 });
 
 import {
-	REDIS_NAMESPACES,
 	closeRedisClients,
 	createBullMQConnection,
 	createRedisClient,
 	createRedisClients,
+	REDIS_NAMESPACES,
 } from "../../src/lib/redis.js";
 
 function findCallByPrefix(

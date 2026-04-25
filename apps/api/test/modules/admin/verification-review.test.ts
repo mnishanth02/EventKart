@@ -78,6 +78,7 @@ const mockDetailResult = {
 		website: "https://coimbatorerunners.in",
 		verificationStatus: "pending_review",
 		isVerified: false,
+		razorpayAccountStatus: "not_started",
 		submittedForReviewAt: "2026-04-24T00:00:00.000Z",
 		reviewedAt: null,
 		rejectionReason: null,

@@ -1,13 +1,14 @@
 import type { Database } from "@repo/db";
 import { organizers, verificationDocuments } from "@repo/db/schema";
-import { and, eq } from "drizzle-orm";
 import {
 	REQUIRED_DOCUMENT_COUNT,
-	VERIFICATION_DOCUMENT_TYPES,
 	VERIFICATION_DOCUMENT_TYPE_LABELS,
+	VERIFICATION_DOCUMENT_TYPES,
 	VERIFICATION_SLA_BUSINESS_DAYS,
 } from "@repo/shared/constants";
 import type { VerificationStatusResponse } from "@repo/shared/schemas";
+import { and, eq } from "drizzle-orm";
+import { getPublishingEligibility } from "../payment/razorpay-account-service.js";
 import { getPolicyStatus } from "./policy-service.js";
 
 /**
@@ -137,5 +138,9 @@ export async function getVerificationStatus(
 				expectedBy,
 			},
 		},
+		publishingEligibility: getPublishingEligibility({
+			isVerified: org.isVerified,
+			razorpayAccountStatus: org.razorpayAccountStatus,
+		}),
 	};
 }

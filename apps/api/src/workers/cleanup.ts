@@ -1,6 +1,6 @@
-import type { Redis } from "ioredis";
 import { Worker } from "bullmq";
-import { QUEUE_NAMES, QUEUE_CONFIGS } from "../lib/queue.js";
+import type { Redis } from "ioredis";
+import { QUEUE_CONFIGS, QUEUE_NAMES } from "../lib/queue.js";
 
 type DLQHandler = (
 	job:

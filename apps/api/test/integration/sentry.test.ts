@@ -1,15 +1,15 @@
-import {
-	describe,
-	it,
-	expect,
-	vi,
-	beforeEach,
-	afterAll,
-	beforeAll,
-} from "vitest";
-import type { Mock } from "vitest";
 import * as Sentry from "@sentry/node";
 import type { FastifyInstance } from "fastify";
+import type { Mock } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import { buildApp } from "../../src/app.js";
 import { AppError } from "../../src/lib/errors.js";
 

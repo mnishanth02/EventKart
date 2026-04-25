@@ -1,8 +1,8 @@
-import type { Redis } from "ioredis";
 import { Worker } from "bullmq";
-import { QUEUE_NAMES, QUEUE_CONFIGS } from "../lib/queue.js";
-import { sendEmail } from "../lib/email.js";
 import type { FastifyBaseLogger } from "fastify";
+import type { Redis } from "ioredis";
+import { sendEmail } from "../lib/email.js";
+import { QUEUE_CONFIGS, QUEUE_NAMES } from "../lib/queue.js";
 
 type DLQHandler = (
 	job:
@@ -29,8 +29,7 @@ export function createEmailWorker(
 	options?: EmailWorkerOptions,
 ): Worker {
 	const config = QUEUE_CONFIGS[QUEUE_NAMES.email];
-	const emailFrom =
-		options?.emailFrom ?? "EventKart <noreply@eventkart.app>";
+	const emailFrom = options?.emailFrom ?? "EventKart <noreply@eventkart.app>";
 	const resendApiKey = options?.resendApiKey;
 
 	const worker = new Worker(

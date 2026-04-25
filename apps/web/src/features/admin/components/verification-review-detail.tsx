@@ -19,6 +19,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@repo/ui/components/ui/card";
+import { VerifiedBadge } from "@repo/ui/components/verified-badge";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
@@ -169,7 +170,10 @@ export function VerificationReviewDetail({
 
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold">{organizer.businessName}</h1>
+					<h1 className="flex items-center gap-2 text-2xl font-bold">
+						{organizer.businessName}
+						{organizer.isVerified && <VerifiedBadge variant="inline" />}
+					</h1>
 					<p className="text-muted-foreground">
 						Verification Review for organizer {organizerId}
 					</p>

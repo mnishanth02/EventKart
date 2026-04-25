@@ -23,9 +23,7 @@ const storagePlugin: FastifyPluginAsync = async (fastify) => {
 		!S3_BUCKET
 	) {
 		fastify.decorate("storage", createDisabledStorageClient());
-		fastify.log.warn(
-			"Object storage not configured — S3 env vars missing",
-		);
+		fastify.log.warn("Object storage not configured — S3 env vars missing");
 		return;
 	}
 

@@ -1,17 +1,17 @@
-import type { FastifyBaseLogger } from "fastify";
 import type { Database } from "@repo/db";
-import type { StorageClient } from "../../lib/storage.js";
-import type { AuditLogger } from "../../lib/audit.js";
-import type { DocumentUploadRequest } from "@repo/shared/schemas";
-import { verificationDocuments, organizers } from "@repo/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
-import { NotFoundError, ValidationError } from "../../lib/errors.js";
-import { MAX_FILE_SIZES } from "../../lib/storage.js";
+import { organizers, verificationDocuments } from "@repo/db/schema";
 import {
 	AUDIT_ACTIONS,
 	AUDIT_RESOURCE_TYPES,
 	REQUIRED_DOCUMENT_COUNT,
 } from "@repo/shared/constants";
+import type { DocumentUploadRequest } from "@repo/shared/schemas";
+import { and, eq, inArray } from "drizzle-orm";
+import type { FastifyBaseLogger } from "fastify";
+import type { AuditLogger } from "../../lib/audit.js";
+import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import type { StorageClient } from "../../lib/storage.js";
+import { MAX_FILE_SIZES } from "../../lib/storage.js";
 import { hasAcceptedAllPolicies } from "./policy-service.js";
 
 export interface DocumentServiceDeps {

@@ -59,7 +59,10 @@ export function createIpAllowlistMiddleware(
 				const [ip, prefixStr] = entry.split("/");
 				const prefix = Number.parseInt(prefixStr ?? "", 10);
 				if (!ip || Number.isNaN(prefix)) {
-					logger?.warn({ entry }, "Skipping invalid CIDR entry in ADMIN_IP_ALLOWLIST");
+					logger?.warn(
+						{ entry },
+						"Skipping invalid CIDR entry in ADMIN_IP_ALLOWLIST",
+					);
 					continue;
 				}
 				blockList.addSubnet(ip, prefix, detectIpType(ip));

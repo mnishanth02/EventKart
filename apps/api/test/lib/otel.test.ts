@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("otel", () => {
 	beforeEach(() => {
@@ -31,7 +31,8 @@ describe("otel", () => {
 		const handle = initTelemetry({
 			OTEL_SERVICE_NAME: "test-service",
 			OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-			OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer token123,X-Custom=value",
+			OTEL_EXPORTER_OTLP_HEADERS:
+				"Authorization=Bearer token123,X-Custom=value",
 		});
 		expect(handle.sdk).not.toBeNull();
 		await handle.sdk!.shutdown();
@@ -74,13 +75,17 @@ describe("otel", () => {
 	}, 15_000);
 
 	it("shutdownTelemetry handles SDK handle", async () => {
-		const { initTelemetry, shutdownTelemetry } = await import("../../src/lib/otel.js");
+		const { initTelemetry, shutdownTelemetry } = await import(
+			"../../src/lib/otel.js"
+		);
 		const handle = initTelemetry({});
 		await expect(shutdownTelemetry(handle)).resolves.toBeUndefined();
 	}, 15_000);
 
 	it("shutdownTelemetry handles MeterProvider handle", async () => {
-		const { initTelemetry, shutdownTelemetry } = await import("../../src/lib/otel.js");
+		const { initTelemetry, shutdownTelemetry } = await import(
+			"../../src/lib/otel.js"
+		);
 		const handle = initTelemetry({
 			SENTRY_DSN: "https://examplePublicKey@o0.ingest.sentry.io/0",
 			OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
