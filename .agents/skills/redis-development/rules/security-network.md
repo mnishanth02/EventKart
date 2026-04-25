@@ -36,6 +36,7 @@ protected-mode no
 ```
 
 **Security checklist:**
+
 - Use TLS for connections
 - Bind to specific interfaces, not `0.0.0.0`
 - Use firewall rules to restrict access
@@ -49,4 +50,3 @@ rename-command CONFIG ""
 ```
 
 Reference: [Redis Security](https://redis.io/docs/latest/operate/oss_and_stack/management/security/)
-

@@ -61,10 +61,7 @@ export async function sendSmsOtp(
 
 		if (!response.ok) {
 			const text = await response.text().catch(() => "Unknown error");
-			log.warn(
-				{ status: response.status, body: text },
-				"MSG91 SMS OTP failed",
-			);
+			log.warn({ status: response.status, body: text }, "MSG91 SMS OTP failed");
 			return {
 				success: false,
 				channel: "sms",
@@ -85,8 +82,7 @@ export async function sendSmsOtp(
 
 		return { success: true, channel: "sms" };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : "Unknown error";
+		const message = error instanceof Error ? error.message : "Unknown error";
 		log.warn({ err: error }, "MSG91 SMS OTP request failed");
 		return { success: false, channel: "sms", error: message };
 	}
@@ -94,7 +90,7 @@ export async function sendSmsOtp(
 
 export async function sendWhatsAppOtp(
 	phone: string,
-	otp: string,
+	_otp: string,
 	config: Msg91Config,
 	log: FastifyBaseLogger,
 ): Promise<OtpDeliveryResult> {
@@ -132,8 +128,7 @@ export async function sendWhatsAppOtp(
 
 		return { success: true, channel: "whatsapp" };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : "Unknown error";
+		const message = error instanceof Error ? error.message : "Unknown error";
 		log.warn({ err: error }, "MSG91 WhatsApp OTP request failed");
 		return { success: false, channel: "whatsapp", error: message };
 	}
@@ -152,7 +147,7 @@ export async function sendOtpWithFallback(
 	}
 
 	log.info(
-		{ phone: phone.slice(0, 6) + "****" },
+		{ phone: `${phone.slice(0, 6)}****` },
 		"SMS OTP failed, trying WhatsApp fallback",
 	);
 	return sendWhatsAppOtp(phone, otp, config, log);

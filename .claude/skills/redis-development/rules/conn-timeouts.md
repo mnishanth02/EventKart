@@ -33,6 +33,7 @@ r = redis.Redis(host='localhost')
 ```
 
 **Considerations:**
+
 - Set `socket_connect_timeout` shorter than `socket_timeout` for quick connection failure detection
 - For latency-sensitive apps, use tighter timeouts with retry logic
 - For batch operations, allow longer timeouts to complete large operations

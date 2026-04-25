@@ -1,17 +1,28 @@
-import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 
 // ── Service mocks ────────────────────────────────────────────────
 const mockRegisterOrganizer = vi.fn();
 const mockGetOrganizerByUserId = vi.fn();
+const mockUpdateOrganizer = vi.fn();
 
 vi.mock("../../../src/modules/organizer/service.js", () => ({
 	registerOrganizer: (...args: unknown[]) => mockRegisterOrganizer(...args),
-	getOrganizerByUserId: (...args: unknown[]) => mockGetOrganizerByUserId(...args),
+	getOrganizerByUserId: (...args: unknown[]) =>
+		mockGetOrganizerByUserId(...args),
+	updateOrganizer: (...args: unknown[]) => mockUpdateOrganizer(...args),
 }));
 
 import type { FastifyInstance } from "fastify";
-import { buildTestApp } from "../../helpers/build-app.js";
 import { generateCsrfToken } from "../../../src/plugins/csrf.js";
+import { buildTestApp } from "../../helpers/build-app.js";
 
 // ── Constants ────────────────────────────────────────────────────
 const REGISTER_URL = "/api/v1/organizers";
@@ -46,6 +57,10 @@ const mockOrganizerProfile = {
 	website: "https://coimbatorerunners.in",
 	verificationStatus: "pending_documents",
 	isVerified: false,
+	razorpayAccountStatus: "not_started",
+	submittedForReviewAt: null,
+	reviewedAt: null,
+	rejectionReason: null,
 	createdAt: "2026-04-24T00:00:00.000Z",
 	updatedAt: "2026-04-24T00:00:00.000Z",
 };
@@ -106,6 +121,7 @@ describe("POST /api/v1/organizers", () => {
 		getSessionRedisMock(app).mockReset();
 		mockRegisterOrganizer.mockReset();
 		mockGetOrganizerByUserId.mockReset();
+		mockUpdateOrganizer.mockReset();
 	});
 
 	// ── Happy path ──────────────────────────────────────────────
@@ -143,7 +159,7 @@ describe("POST /api/v1/organizers", () => {
 			});
 
 			expect(mockRegisterOrganizer).toHaveBeenCalledTimes(1);
-			const [deps, userId, data] = mockRegisterOrganizer.mock.calls[0] as [
+			const [_deps, userId, data] = mockRegisterOrganizer.mock.calls[0] as [
 				unknown,
 				string,
 				unknown,
@@ -340,6 +356,7 @@ describe("GET /api/v1/organizers/me", () => {
 		getSessionRedisMock(app).mockReset();
 		mockRegisterOrganizer.mockReset();
 		mockGetOrganizerByUserId.mockReset();
+		mockUpdateOrganizer.mockReset();
 	});
 
 	// ── Happy path ──────────────────────────────────────────────

@@ -105,30 +105,30 @@ describe("apiClient (browser)", () => {
 
 			const [, init] = mockFetch.mock.calls[0] ?? [];
 			expect(init?.method).toBe("POST");
-			expect(init?.body).toBe(
-				JSON.stringify({ eventId: "e1", count: 2 }),
-			);
+			expect(init?.body).toBe(JSON.stringify({ eventId: "e1", count: 2 }));
 			expect((init?.headers as Record<string, string>)["Content-Type"]).toBe(
 				"application/json",
 			);
 		});
 
-		it.each(["POST", "PUT", "DELETE", "PATCH"])(
-			"attaches CSRF token for %s requests",
-			async (method) => {
-				// biome-ignore lint/suspicious/noDocumentCookie: testing CSRF cookie extraction
-				document.cookie = "__csrf=csrf-val";
-				mockFetch.mockResolvedValueOnce(jsonResponse({ ok: true }));
+		it.each([
+			"POST",
+			"PUT",
+			"DELETE",
+			"PATCH",
+		])("attaches CSRF token for %s requests", async (method) => {
+			// biome-ignore lint/suspicious/noDocumentCookie: testing CSRF cookie extraction
+			document.cookie = "__csrf=csrf-val";
+			mockFetch.mockResolvedValueOnce(jsonResponse({ ok: true }));
 
-				await apiClient("/resource", { method, body: {} });
+			await apiClient("/resource", { method, body: {} });
 
-				const headers = (mockFetch.mock.calls[0] ?? [])[1]?.headers as Record<
-					string,
-					string
-				>;
-				expect(headers["x-csrf-token"]).toBe("csrf-val");
-			},
-		);
+			const headers = (mockFetch.mock.calls[0] ?? [])[1]?.headers as Record<
+				string,
+				string
+			>;
+			expect(headers["x-csrf-token"]).toBe("csrf-val");
+		});
 	});
 
 	describe("CSRF token extraction", () => {
@@ -190,7 +190,10 @@ describe("apiClient (browser)", () => {
 				},
 			};
 			mockFetch.mockResolvedValueOnce(
-				jsonResponse(errorBody, { status: 422, statusText: "Unprocessable Entity" }),
+				jsonResponse(errorBody, {
+					status: 422,
+					statusText: "Unprocessable Entity",
+				}),
 			);
 
 			const err = await apiClient("/users").catch((e: unknown) => e);
@@ -244,7 +247,9 @@ describe("apiClient (browser)", () => {
 
 			await apiClient("/events", { signal: controller.signal });
 
-			expect((mockFetch.mock.calls[0] ?? [])[1]?.signal).toBe(controller.signal);
+			expect((mockFetch.mock.calls[0] ?? [])[1]?.signal).toBe(
+				controller.signal,
+			);
 		});
 	});
 });

@@ -14,6 +14,7 @@ Comprehensive performance optimization guide for Redis, including Redis Query En
 ## When to Apply
 
 Reference these guidelines when:
+
 - Designing Redis data models and key structures
 - Implementing caching, sessions, or real-time features
 - Using Redis Query Engine (FT.CREATE, FT.SEARCH, FT.AGGREGATE)
@@ -23,19 +24,19 @@ Reference these guidelines when:
 
 ## Rule Categories by Priority
 
-| Priority | Category | Impact | Prefix |
-|----------|----------|--------|--------|
-| 1 | Data Structures & Keys | HIGH | `data-` |
-| 2 | Memory & Expiration | HIGH | `ram-` |
-| 3 | Connection & Performance | HIGH | `conn-` |
-| 4 | JSON Documents | MEDIUM | `json-` |
-| 5 | Redis Query Engine | HIGH | `rqe-` |
-| 6 | Vector Search & RedisVL | HIGH | `vector-` |
-| 7 | Semantic Caching | MEDIUM | `semantic-cache-` |
-| 8 | Streams & Pub/Sub | MEDIUM | `stream-` |
-| 9 | Clustering & Replication | MEDIUM | `cluster-` |
-| 10 | Security | HIGH | `security-` |
-| 11 | Observability | MEDIUM | `observe-` |
+| Priority | Category                 | Impact | Prefix            |
+| -------- | ------------------------ | ------ | ----------------- |
+| 1        | Data Structures & Keys   | HIGH   | `data-`           |
+| 2        | Memory & Expiration      | HIGH   | `ram-`            |
+| 3        | Connection & Performance | HIGH   | `conn-`           |
+| 4        | JSON Documents           | MEDIUM | `json-`           |
+| 5        | Redis Query Engine       | HIGH   | `rqe-`            |
+| 6        | Vector Search & RedisVL  | HIGH   | `vector-`         |
+| 7        | Semantic Caching         | MEDIUM | `semantic-cache-` |
+| 8        | Streams & Pub/Sub        | MEDIUM | `stream-`         |
+| 9        | Clustering & Replication | MEDIUM | `cluster-`        |
+| 10       | Security                 | HIGH   | `security-`       |
+| 11       | Observability            | MEDIUM | `observe-`        |
 
 ## Quick Reference
 
@@ -111,6 +112,7 @@ rules/vector-rag-pattern.md
 ```
 
 Each rule file contains:
+
 - Brief explanation of why it matters
 - Correct example(s) with explanation
 - Either an "Incorrect" example (for anti-patterns that cause real harm) or "When to use / When NOT needed" guidance (for optional features)

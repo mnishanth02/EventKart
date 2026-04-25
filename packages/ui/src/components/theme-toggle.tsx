@@ -1,9 +1,9 @@
 "use client";
 
-import * as React from "react";
+import { cn } from "@ui/lib/utils";
 import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { cn } from "@ui/lib/utils";
+import * as React from "react";
 
 function ThemeToggle({ className }: { className?: string }) {
 	const [mounted, setMounted] = React.useState(false);

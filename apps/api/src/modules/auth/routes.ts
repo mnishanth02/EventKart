@@ -1,42 +1,39 @@
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
+import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME } from "@repo/shared/constants";
 import type { FastifyPluginAsync } from "fastify";
+import { ForbiddenError, UnauthorizedError } from "../../lib/errors.js";
+import { buildSessionCookieOptions } from "../../lib/session.js";
+import { requireAuth } from "../../middleware/require-auth.js";
 import {
-	sendOtpForPhone,
-	verifyOtpAndCreateSession,
-	logoutSession,
-} from "./service.js";
+	buildCsrfClearOptions,
+	buildCsrfCookieOptions,
+	generateCsrfToken,
+} from "../../plugins/csrf.js";
 import {
 	sendVerificationEmail,
 	verifyEmailToken,
 } from "./email-verification-service.js";
 import {
-	otpSendBodySchema,
-	otpSendResponseSchema,
-	otpVerifyBodySchema,
-	otpVerifyResponseSchema,
-	otpErrorResponseSchema,
-	logoutResponseSchema,
-	logoutErrorResponseSchema,
-	sessionResponseSchema,
-	sessionErrorResponseSchema,
+	emailConflictResponseSchema,
 	emailVerificationSendBodySchema,
 	emailVerificationSendResponseSchema,
 	emailVerificationVerifyBodySchema,
 	emailVerificationVerifyResponseSchema,
-	emailConflictResponseSchema,
+	logoutErrorResponseSchema,
+	logoutResponseSchema,
+	otpErrorResponseSchema,
+	otpSendBodySchema,
+	otpSendResponseSchema,
+	otpVerifyBodySchema,
+	otpVerifyResponseSchema,
+	sessionErrorResponseSchema,
+	sessionResponseSchema,
 } from "./schemas.js";
 import {
-	SESSION_COOKIE_NAME,
-	CSRF_COOKIE_NAME,
-} from "@repo/shared/constants";
-import { buildSessionCookieOptions } from "../../lib/session.js";
-import {
-	generateCsrfToken,
-	buildCsrfCookieOptions,
-	buildCsrfClearOptions,
-} from "../../plugins/csrf.js";
-import { UnauthorizedError, ForbiddenError } from "../../lib/errors.js";
-import { requireAuth } from "../../middleware/require-auth.js";
+	logoutSession,
+	sendOtpForPhone,
+	verifyOtpAndCreateSession,
+} from "./service.js";
 
 /**
  * Validate Origin header against WEB_ORIGIN for login-CSRF protection.
@@ -121,10 +118,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 					{ origin, expected: fastify.config.WEB_ORIGIN },
 					"OTP verify rejected: invalid Origin header",
 				);
-				throw new ForbiddenError(
-					"Invalid request origin",
-					"INVALID_ORIGIN",
-				);
+				throw new ForbiddenError("Invalid request origin", "INVALID_ORIGIN");
 			}
 
 			const { phone, otp } = request.body;

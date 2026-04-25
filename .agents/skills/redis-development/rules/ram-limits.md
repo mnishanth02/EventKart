@@ -18,12 +18,12 @@ maxmemory 2gb
 maxmemory-policy allkeys-lru
 ```
 
-| Policy | Use Case |
-|--------|----------|
-| `volatile-lru` | Evict keys with TTL, least recently used first |
-| `allkeys-lru` | Evict any key, least recently used first |
-| `volatile-ttl` | Evict keys closest to expiration |
-| `noeviction` | Return errors when memory is full (use for critical data) |
+| Policy         | Use Case                                                  |
+| -------------- | --------------------------------------------------------- |
+| `volatile-lru` | Evict keys with TTL, least recently used first            |
+| `allkeys-lru`  | Evict any key, least recently used first                  |
+| `volatile-ttl` | Evict keys closest to expiration                          |
+| `noeviction`   | Return errors when memory is full (use for critical data) |
 
 **Incorrect:** Running Redis without memory limits.
 
@@ -33,10 +33,10 @@ maxmemory-policy allkeys-lru
 ```
 
 **Memory optimization tips:**
+
 - Use Hashes for small objects (more memory-efficient than separate keys)
 - Use `OBJECT ENCODING key` to check how Redis stores your data
 - Use `MEMORY USAGE key` to check individual key memory consumption
 - Enable compression in your client for large values
 
 Reference: [Redis Memory Optimization](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/)
-

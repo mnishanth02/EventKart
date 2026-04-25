@@ -1,17 +1,18 @@
-import type { FastifyBaseLogger } from "fastify";
 import type { Database } from "@repo/db";
-import type { StorageClient } from "../../lib/storage.js";
-import type { AuditLogger } from "../../lib/audit.js";
-import type { DocumentUploadRequest } from "@repo/shared/schemas";
-import { verificationDocuments, organizers } from "@repo/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
-import { NotFoundError, ValidationError } from "../../lib/errors.js";
-import { MAX_FILE_SIZES } from "../../lib/storage.js";
+import { and, eq, inArray } from "@repo/db";
+import { organizers, verificationDocuments } from "@repo/db/schema";
 import {
 	AUDIT_ACTIONS,
 	AUDIT_RESOURCE_TYPES,
 	REQUIRED_DOCUMENT_COUNT,
 } from "@repo/shared/constants";
+import type { DocumentUploadRequest } from "@repo/shared/schemas";
+import type { FastifyBaseLogger } from "fastify";
+import type { AuditLogger } from "../../lib/audit.js";
+import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import type { StorageClient } from "../../lib/storage.js";
+import { MAX_FILE_SIZES } from "../../lib/storage.js";
+import { hasAcceptedAllPolicies } from "./policy-service.js";
 
 export interface DocumentServiceDeps {
 	db: Database;
@@ -161,30 +162,37 @@ export async function confirmDocumentUpload(
 		);
 	}
 
-	// Mark any previously uploaded doc of the same type as "replaced"
-	await db
-		.update(verificationDocuments)
-		.set({ status: "replaced" })
-		.where(
-			and(
-				eq(verificationDocuments.organizerId, organizerId),
-				eq(verificationDocuments.documentType, doc.documentType),
-				eq(verificationDocuments.status, "uploaded"),
-			),
-		);
+	// Wrap document status changes in a transaction for atomicity
+	// (prevents orphaned "replaced" docs if the "uploaded" update fails)
+	let updated!: typeof verificationDocuments.$inferSelect;
+	await db.transaction(async (tx) => {
+		// Mark any previously uploaded doc of the same type as "replaced"
+		await tx
+			.update(verificationDocuments)
+			.set({ status: "replaced" })
+			.where(
+				and(
+					eq(verificationDocuments.organizerId, organizerId),
+					eq(verificationDocuments.documentType, doc.documentType),
+					eq(verificationDocuments.status, "uploaded"),
+				),
+			);
 
-	const [updated] = await db
-		.update(verificationDocuments)
-		.set({
-			status: "uploaded",
-			fileSize: metadata.contentLength ?? null,
-		})
-		.where(eq(verificationDocuments.id, documentId))
-		.returning();
+		const [result] = await tx
+			.update(verificationDocuments)
+			.set({
+				status: "uploaded",
+				fileSize: metadata.contentLength ?? null,
+			})
+			.where(eq(verificationDocuments.id, documentId))
+			.returning();
 
-	if (!updated) {
-		throw new Error("Failed to update document status");
-	}
+		if (!result) {
+			throw new Error("Failed to update document status");
+		}
+
+		updated = result;
+	});
 
 	await maybeUpdateOrganizerVerificationStatus(db, organizerId, log);
 
@@ -231,7 +239,23 @@ export async function listVerificationDocuments(
 			),
 		);
 
-	return docs.map(toDocumentResponse);
+	// Prefer "uploaded" over "pending" per documentType to avoid
+	// abandoned replacement uploads hiding existing documents
+	const byType = new Map<string, (typeof docs)[number]>();
+	for (const doc of docs) {
+		const existing = byType.get(doc.documentType);
+		if (!existing || doc.status === "uploaded") {
+			byType.set(doc.documentType, doc);
+		}
+	}
+
+	// Include any pending docs that don't conflict with uploaded ones
+	const dedupedIds = new Set([...byType.values()].map((d) => d.id));
+	const result = docs.filter(
+		(d) => dedupedIds.has(d.id) || !byType.has(d.documentType),
+	);
+
+	return result.map(toDocumentResponse);
 }
 
 /**
@@ -297,13 +321,17 @@ export async function deleteVerificationDocument(
 }
 
 /**
- * Update organizer's verificationStatus based on uploaded document count.
- * - All required types uploaded → "pending_review"
- * - Missing types and was "pending_review" → "pending_documents"
- * - Was "rejected" and all docs re-uploaded → "pending_review"
+ * Update organizer's verificationStatus based on uploaded document count
+ * AND policy acceptance.
+ * - All required types uploaded AND all policies accepted → "pending_review"
+ * - Missing docs/policies and was "pending_review" → "pending_documents"
+ * - Was "rejected" and all ready → "pending_review" (re-enters review queue)
  * - Status "approved" is never changed.
+ *
+ * SLA tracking: sets submittedForReviewAt when entering pending_review.
+ * Clears review-cycle metadata on status transitions.
  */
-async function maybeUpdateOrganizerVerificationStatus(
+export async function maybeUpdateOrganizerVerificationStatus(
 	db: Database,
 	organizerId: string,
 	log: FastifyBaseLogger,
@@ -322,7 +350,10 @@ async function maybeUpdateOrganizerVerificationStatus(
 	const allDocsUploaded = uploadedTypes.size >= REQUIRED_DOCUMENT_COUNT;
 
 	const orgs = await db
-		.select({ verificationStatus: organizers.verificationStatus })
+		.select({
+			verificationStatus: organizers.verificationStatus,
+			userId: organizers.userId,
+		})
 		.from(organizers)
 		.where(eq(organizers.id, organizerId))
 		.limit(1);
@@ -334,21 +365,43 @@ async function maybeUpdateOrganizerVerificationStatus(
 
 	if (currentStatus === "approved") return;
 
+	// Check policy acceptance for "ready for review" invariant
+	const policiesAccepted = await hasAcceptedAllPolicies(db, org.userId);
+	const readyForReview = allDocsUploaded && policiesAccepted;
+
 	let newStatus: typeof currentStatus | null = null;
 
 	if (
-		allDocsUploaded &&
+		readyForReview &&
 		(currentStatus === "pending_documents" || currentStatus === "rejected")
 	) {
 		newStatus = "pending_review";
-	} else if (!allDocsUploaded && currentStatus === "pending_review") {
+	} else if (!readyForReview && currentStatus === "pending_review") {
 		newStatus = "pending_documents";
 	}
 
 	if (newStatus && newStatus !== currentStatus) {
+		const updateFields: Record<string, unknown> = {
+			verificationStatus: newStatus,
+		};
+
+		if (newStatus === "pending_review") {
+			// Entering review queue: stamp SLA start time, clear previous review metadata
+			updateFields.submittedForReviewAt = new Date();
+			updateFields.reviewedAt = null;
+			updateFields.reviewedBy = null;
+			updateFields.rejectionReason = null;
+		} else if (newStatus === "pending_documents") {
+			// Leaving review queue: clear SLA and review metadata
+			updateFields.submittedForReviewAt = null;
+			updateFields.reviewedAt = null;
+			updateFields.reviewedBy = null;
+			updateFields.rejectionReason = null;
+		}
+
 		await db
 			.update(organizers)
-			.set({ verificationStatus: newStatus })
+			.set(updateFields)
 			.where(eq(organizers.id, organizerId));
 
 		log.info(

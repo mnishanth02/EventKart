@@ -1,4 +1,12 @@
-import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 
 // Service mock MUST be defined before imports that trigger module loading
 const mockLogoutSession = vi.fn();
@@ -13,8 +21,8 @@ vi.mock("../../../src/modules/auth/service.js", () => ({
 }));
 
 import type { FastifyInstance } from "fastify";
-import { buildTestApp } from "../../helpers/build-app.js";
 import { generateCsrfToken } from "../../../src/plugins/csrf.js";
+import { buildTestApp } from "../../helpers/build-app.js";
 
 // ── Constants ────────────────────────────────────────────────────
 const LOGOUT_URL = "/api/v1/auth/logout";
@@ -142,9 +150,7 @@ describe("POST /api/v1/auth/logout", () => {
 			const csrfCookie = findCookie(setCookieRaw, CSRF_COOKIE_NAME);
 
 			expect(csrfCookie).toBeDefined();
-			expect(csrfCookie).toMatch(
-				/__csrf=;|__csrf=.*Expires=Thu, 01 Jan 1970/i,
-			);
+			expect(csrfCookie).toMatch(/__csrf=;|__csrf=.*Expires=Thu, 01 Jan 1970/i);
 		});
 	});
 
@@ -200,9 +206,7 @@ describe("POST /api/v1/auth/logout", () => {
 
 	describe("CSRF validation", () => {
 		it("returns 403 when CSRF cookie and header are missing", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
 
 			const response = await app.inject({
 				method: "POST",
@@ -222,13 +226,8 @@ describe("POST /api/v1/auth/logout", () => {
 		});
 
 		it("returns 403 when CSRF header is missing but cookie is present", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
-			const csrfToken = generateCsrfToken(
-				TEST_SESSION_ID,
-				TEST_CSRF_SECRET,
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
+			const csrfToken = generateCsrfToken(TEST_SESSION_ID, TEST_CSRF_SECRET);
 
 			const response = await app.inject({
 				method: "POST",
@@ -249,9 +248,7 @@ describe("POST /api/v1/auth/logout", () => {
 		});
 
 		it("returns 403 when CSRF token is tampered/invalid", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
 			const tamperedToken = "tampered-random.tampered-signature";
 
 			const response = await app.inject({
@@ -276,13 +273,8 @@ describe("POST /api/v1/auth/logout", () => {
 		});
 
 		it("returns 403 when CSRF cookie and header mismatch", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
-			const csrfToken = generateCsrfToken(
-				TEST_SESSION_ID,
-				TEST_CSRF_SECRET,
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
+			const csrfToken = generateCsrfToken(TEST_SESSION_ID, TEST_CSRF_SECRET);
 
 			const response = await app.inject({
 				method: "POST",
@@ -304,12 +296,8 @@ describe("POST /api/v1/auth/logout", () => {
 
 	describe("service errors", () => {
 		it("returns 500 when logoutSession throws", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
-			mockLogoutSession.mockRejectedValue(
-				new Error("Redis connection failed"),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
+			mockLogoutSession.mockRejectedValue(new Error("Redis connection failed"));
 
 			const response = await app.inject(buildAuthenticatedRequest());
 
@@ -376,9 +364,7 @@ describe("POST /api/v1/auth/logout", () => {
 				role: "admin",
 				expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
 			};
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(adminSession),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(adminSession));
 			mockLogoutSession.mockResolvedValue(undefined);
 
 			const response = await app.inject(buildAuthenticatedRequest());

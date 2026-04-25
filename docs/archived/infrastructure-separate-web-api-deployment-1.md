@@ -33,35 +33,35 @@ This plan defines the changes required to operate `apps/web` and `apps/api` as s
 
 - GOAL-001: Add a production build pipeline for `apps/api` without changing the local development workflow.
 
-| Task | Description | Completed | Date |
-|------|-------------|-----------|------|
-| TASK-001 | Add `apps/api/tsconfig.build.json` extending `apps/api/tsconfig.json` with `compilerOptions.noEmit=false`, `compilerOptions.outDir="dist"`, `compilerOptions.rootDir="src"`, and `include` limited to `src/**/*.ts` and `src/**/*.d.ts`. |  |  |
-| TASK-002 | Add `build` script to `apps/api/package.json` using `tsc -p tsconfig.build.json`. |  |  |
-| TASK-003 | Add `start:prod` script to `apps/api/package.json` using `node dist/server.js`. Keep `dev` unchanged. |  |  |
-| TASK-004 | Add `apps/api/turbo.json` extending `//` and configure `build.outputs` as `dist/**`. |  |  |
-| TASK-005 | Run `pnpm build` from the repo root and verify that Turbo runs `web#build` and `api#build` with non-empty commands. |  |  |
+| Task     | Description                                                                                                                                                                                                                              | Completed | Date |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+| TASK-001 | Add `apps/api/tsconfig.build.json` extending `apps/api/tsconfig.json` with `compilerOptions.noEmit=false`, `compilerOptions.outDir="dist"`, `compilerOptions.rootDir="src"`, and `include` limited to `src/**/*.ts` and `src/**/*.d.ts`. |           |      |
+| TASK-002 | Add `build` script to `apps/api/package.json` using `tsc -p tsconfig.build.json`.                                                                                                                                                        |           |      |
+| TASK-003 | Add `start:prod` script to `apps/api/package.json` using `node dist/server.js`. Keep `dev` unchanged.                                                                                                                                    |           |      |
+| TASK-004 | Add `apps/api/turbo.json` extending `//` and configure `build.outputs` as `dist/**`.                                                                                                                                                     |           |      |
+| TASK-005 | Run `pnpm build` from the repo root and verify that Turbo runs `web#build` and `api#build` with non-empty commands.                                                                                                                      |           |      |
 
 ### Implementation Phase 2
 
 - GOAL-002: Make the cross-service contract explicit for production deployment.
 
-| Task | Description | Completed | Date |
-|------|-------------|-----------|------|
-| TASK-006 | Add `PUBLIC_API_URL` to `apps/web/.env.example` for browser-side API calls if browser traffic will target a production API hostname distinct from the web origin. |  |  |
-| TASK-007 | Update the frontend API client implementation to select `INTERNAL_API_URL` on the server and `PUBLIC_API_URL` in the browser, falling back to the current local defaults only in development. |  |  |
-| TASK-008 | Verify `apps/api/src/lib/config.ts` accepts the deployed `WEB_ORIGIN` value and that the deployed Fastify CORS config allows credentialed requests from the web hostname. |  |  |
-| TASK-009 | Document the production service URLs, cookie domain, and SSR-to-API request forwarding behavior in `README.md` or a deployment doc under `docs/`. |  |  |
+| Task     | Description                                                                                                                                                                                   | Completed | Date |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+| TASK-006 | Add `PUBLIC_API_URL` to `apps/web/.env.example` for browser-side API calls if browser traffic will target a production API hostname distinct from the web origin.                             |           |      |
+| TASK-007 | Update the frontend API client implementation to select `INTERNAL_API_URL` on the server and `PUBLIC_API_URL` in the browser, falling back to the current local defaults only in development. |           |      |
+| TASK-008 | Verify `apps/api/src/lib/config.ts` accepts the deployed `WEB_ORIGIN` value and that the deployed Fastify CORS config allows credentialed requests from the web hostname.                     |           |      |
+| TASK-009 | Document the production service URLs, cookie domain, and SSR-to-API request forwarding behavior in `README.md` or a deployment doc under `docs/`.                                             |           |      |
 
 ### Implementation Phase 3
 
 - GOAL-003: Prepare deployment workflows for separate services.
 
-| Task | Description | Completed | Date |
-|------|-------------|-----------|------|
-| TASK-010 | Create a deployment target definition for `apps/web` that runs the package `build` command and serves the generated frontend output using the selected platform adapter. |  |  |
-| TASK-011 | Create a deployment target definition for `apps/api` that runs the package `build` command and starts the service with `pnpm --filter api start:prod` or equivalent platform start command. |  |  |
-| TASK-012 | Add CI validation that runs `pnpm build`, `pnpm test`, and `pnpm check-types` before either service is deployed. |  |  |
-| TASK-013 | Reserve a follow-up infrastructure task for a separate worker service when BullMQ queues are introduced beyond the current baseline. |  |  |
+| Task     | Description                                                                                                                                                                                 | Completed | Date |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+| TASK-010 | Create a deployment target definition for `apps/web` that runs the package `build` command and serves the generated frontend output using the selected platform adapter.                    |           |      |
+| TASK-011 | Create a deployment target definition for `apps/api` that runs the package `build` command and starts the service with `pnpm --filter api start:prod` or equivalent platform start command. |           |      |
+| TASK-012 | Add CI validation that runs `pnpm build`, `pnpm test`, and `pnpm check-types` before either service is deployed.                                                                            |           |      |
+| TASK-013 | Reserve a follow-up infrastructure task for a separate worker service when BullMQ queues are introduced beyond the current baseline.                                                        |           |      |
 
 ## 3. Alternatives
 

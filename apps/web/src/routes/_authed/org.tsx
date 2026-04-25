@@ -1,8 +1,8 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { hasMinimumRole } from "@repo/shared/constants/roles";
 import { SidebarInset } from "@repo/ui/components/ui/sidebar";
-import { AuthedSidebar } from "#/components/layout/authed-sidebar";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AuthedHeader } from "#/components/layout/authed-header";
+import { AuthedSidebar } from "#/components/layout/authed-sidebar";
 
 export const Route = createFileRoute("/_authed/org")({
 	beforeLoad: ({ context }) => {

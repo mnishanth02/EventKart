@@ -23,21 +23,17 @@ describe("offsetPaginationSchema", () => {
 	});
 
 	it("rejects page < 1", () => {
-		expect(
-			offsetPaginationSchema.safeParse({ page: 0 }).success,
-		).toBe(false);
+		expect(offsetPaginationSchema.safeParse({ page: 0 }).success).toBe(false);
 	});
 
 	it("rejects limit > 100", () => {
-		expect(
-			offsetPaginationSchema.safeParse({ limit: 101 }).success,
-		).toBe(false);
+		expect(offsetPaginationSchema.safeParse({ limit: 101 }).success).toBe(
+			false,
+		);
 	});
 
 	it("rejects limit < 1", () => {
-		expect(
-			offsetPaginationSchema.safeParse({ limit: 0 }).success,
-		).toBe(false);
+		expect(offsetPaginationSchema.safeParse({ limit: 0 }).success).toBe(false);
 	});
 });
 
@@ -59,9 +55,9 @@ describe("cursorPaginationSchema", () => {
 	});
 
 	it("rejects limit > 100", () => {
-		expect(
-			cursorPaginationSchema.safeParse({ limit: 101 }).success,
-		).toBe(false);
+		expect(cursorPaginationSchema.safeParse({ limit: 101 }).success).toBe(
+			false,
+		);
 	});
 });
 
@@ -79,9 +75,9 @@ describe("offsetPaginationMetaSchema", () => {
 	});
 
 	it("rejects missing required fields", () => {
-		expect(
-			offsetPaginationMetaSchema.safeParse({ page: 1 }).success,
-		).toBe(false);
+		expect(offsetPaginationMetaSchema.safeParse({ page: 1 }).success).toBe(
+			false,
+		);
 	});
 });
 

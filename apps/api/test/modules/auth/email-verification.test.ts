@@ -1,11 +1,11 @@
 import {
-	vi,
-	describe,
-	it,
-	expect,
-	beforeAll,
 	afterAll,
+	beforeAll,
 	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
 } from "vitest";
 
 // Service mocks MUST be defined before imports that trigger module loading
@@ -28,14 +28,11 @@ vi.mock("../../../src/modules/auth/service.js", () => ({
 	logoutSession: (...args: unknown[]) => mockLogoutSession(...args),
 }));
 
-import type { FastifyInstance } from "fastify";
-import { buildTestApp } from "../../helpers/build-app.js";
-import { generateCsrfToken } from "../../../src/plugins/csrf.js";
-import {
-	RateLimitError,
-	ValidationError,
-} from "../../../src/lib/errors.js";
 import { EMAIL_VERIFICATION_TOKEN_TTL_SECONDS } from "@repo/shared/constants";
+import type { FastifyInstance } from "fastify";
+import { RateLimitError, ValidationError } from "../../../src/lib/errors.js";
+import { generateCsrfToken } from "../../../src/plugins/csrf.js";
+import { buildTestApp } from "../../helpers/build-app.js";
 
 // ── Constants ────────────────────────────────────────────────────
 const SEND_URL = "/api/v1/auth/email/send-verification";
@@ -144,8 +141,7 @@ describe("POST /api/v1/auth/email/send-verification", () => {
 			);
 
 			expect(mockSendVerificationEmail).toHaveBeenCalledOnce();
-			const [deps, userId, email] =
-				mockSendVerificationEmail.mock.calls[0]!;
+			const [deps, userId, email] = mockSendVerificationEmail.mock.calls[0]!;
 			expect(deps).toHaveProperty("db");
 			expect(deps).toHaveProperty("redis");
 			expect(deps).toHaveProperty("emailQueue");
@@ -334,8 +330,7 @@ describe("POST /api/v1/auth/email/verify", () => {
 			);
 
 			expect(mockVerifyEmailToken).toHaveBeenCalledOnce();
-			const [deps, token, sessionInfo] =
-				mockVerifyEmailToken.mock.calls[0]!;
+			const [deps, token, sessionInfo] = mockVerifyEmailToken.mock.calls[0]!;
 			expect(deps).toHaveProperty("db");
 			expect(deps).toHaveProperty("sessionRedis");
 			expect(deps).toHaveProperty("log");

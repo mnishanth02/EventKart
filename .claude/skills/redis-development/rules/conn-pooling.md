@@ -14,6 +14,7 @@ Reuse connections via a pool or multiplexing instead of creating new connections
 **Correct:** Use a connection pool.
 
 **Python** (redis-py):
+
 ```python
 import redis
 
@@ -23,6 +24,7 @@ r = redis.Redis(connection_pool=pool)
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.JedisPooled;
 
@@ -46,6 +48,7 @@ connection.sync().set("key", "value");
 **Incorrect:** Creating new connections per request.
 
 **Python** (redis-py):
+
 ```python
 # Bad: New connection every time
 def get_user(user_id):
@@ -54,6 +57,7 @@ def get_user(user_id):
 ```
 
 **Java** (Jedis):
+
 ```java
 // Bad: Creating new client per request
 public String getUser(String userId) {
@@ -64,6 +68,7 @@ public String getUser(String userId) {
 ```
 
 **Pooling vs Multiplexing:**
+
 - **Pooling**: Multiple connections shared across requests (redis-py, Jedis, go-redis)
 - **Multiplexing**: Single connection handles all traffic (NRedisStack, Lettuce)
 - Multiplexing cannot support blocking commands (BLPOP, etc.) as they would stall all callers

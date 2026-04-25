@@ -1,5 +1,5 @@
-import { z } from "zod/v4";
 import { emailSchema, phoneSchema } from "@repo/shared/schemas";
+import { z } from "zod/v4";
 
 export const otpSendBodySchema = z.object({
 	phone: phoneSchema,
@@ -24,7 +24,10 @@ export const otpErrorResponseSchema = z.object({
 
 export const otpVerifyBodySchema = z.object({
 	phone: phoneSchema,
-	otp: z.string().length(6).regex(/^\d{6}$/, "OTP must be 6 digits"),
+	otp: z
+		.string()
+		.length(6)
+		.regex(/^\d{6}$/, "OTP must be 6 digits"),
 });
 
 export const otpVerifyResponseSchema = z.object({

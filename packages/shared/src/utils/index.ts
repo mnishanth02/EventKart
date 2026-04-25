@@ -1,1 +1,1 @@
-export { normalizePhone, isValidIndianPhone } from "./phone.js";
+export { isValidIndianPhone, normalizePhone } from "./phone.js";

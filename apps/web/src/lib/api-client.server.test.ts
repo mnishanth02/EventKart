@@ -19,7 +19,11 @@ vi.mock("#/lib/env/server", () => ({
 
 function createMockResponse(
 	body: unknown,
-	init: { status?: number; statusText?: string; headers?: Record<string, string> } = {},
+	init: {
+		status?: number;
+		statusText?: string;
+		headers?: Record<string, string>;
+	} = {},
 ): Response {
 	const { status = 200, statusText = "OK", headers = {} } = init;
 	const responseHeaders = new Headers(headers);
@@ -75,7 +79,9 @@ describe("serverApiClient (with INTERNAL_API_KEY)", () => {
 	});
 
 	it("sends POST with JSON body and Content-Type header", async () => {
-		mockFetch.mockResolvedValueOnce(createMockResponse({ id: "evt_1" }, { status: 201 }));
+		mockFetch.mockResolvedValueOnce(
+			createMockResponse({ id: "evt_1" }, { status: 201 }),
+		);
 
 		const { serverApiClient } = await import("#/lib/api-client.server");
 		await serverApiClient("/events", {
@@ -142,7 +148,9 @@ describe("serverApiClient (with INTERNAL_API_KEY)", () => {
 		);
 
 		const { serverApiClient } = await import("#/lib/api-client.server");
-		const err = await serverApiClient("/events/evt_missing").catch((e: unknown) => e);
+		const err = await serverApiClient("/events/evt_missing").catch(
+			(e: unknown) => e,
+		);
 
 		expect(err).toBeInstanceOf(ApiClientError);
 		const apiErr = err as InstanceType<typeof ApiClientError>;

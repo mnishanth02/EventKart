@@ -1,5 +1,13 @@
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import { buildTestApp } from "../../helpers/build-app.js";
 
 describe("POST /api/v1/auth/otp/send", () => {

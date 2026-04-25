@@ -1,15 +1,15 @@
 import { metrics } from "@opentelemetry/api";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { FastifyInstrumentation } from "@opentelemetry/instrumentation-fastify";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
+import { PinoInstrumentation } from "@opentelemetry/instrumentation-pino";
 import { resourceFromAttributes } from "@opentelemetry/resources";
-import { NodeSDK } from "@opentelemetry/sdk-node";
 import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
 } from "@opentelemetry/sdk-metrics";
-import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
-import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
-import { FastifyInstrumentation } from "@opentelemetry/instrumentation-fastify";
-import { PinoInstrumentation } from "@opentelemetry/instrumentation-pino";
+import { NodeSDK } from "@opentelemetry/sdk-node";
 
 const DEFAULT_METRICS_EXPORT_INTERVAL_MS = 60_000;
 

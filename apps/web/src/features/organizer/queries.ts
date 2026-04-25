@@ -3,6 +3,7 @@ import {
 	getOrganizerPolicyStatus,
 	getOrganizerProfile,
 	getVerificationDocuments,
+	getVerificationStatus,
 } from "./api";
 
 export const ORGANIZER_QUERY_KEY = ["organizer", "profile"] as const;
@@ -33,6 +34,20 @@ export function verificationDocumentsQueryOptions() {
 	return queryOptions({
 		queryKey: DOCUMENTS_QUERY_KEY,
 		queryFn: () => getVerificationDocuments(),
+		staleTime: 30_000,
+		gcTime: 300_000,
+	});
+}
+
+export const VERIFICATION_STATUS_QUERY_KEY = [
+	"organizer",
+	"verification-status",
+] as const;
+
+export function verificationStatusQueryOptions() {
+	return queryOptions({
+		queryKey: VERIFICATION_STATUS_QUERY_KEY,
+		queryFn: () => getVerificationStatus(),
 		staleTime: 30_000,
 		gcTime: 300_000,
 	});

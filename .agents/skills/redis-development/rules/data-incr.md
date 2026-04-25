@@ -14,6 +14,7 @@ If a string represents an integer value, use the `INCR` command to increment the
 **Correct:** Use INCR/INCRBY for atomic counter updates.
 
 **Python** (redis-py):
+
 ```python
 import redis
 
@@ -30,15 +31,16 @@ new_value = client.incrby("counter", 10)  # Returns 11
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.UnifiedJedis;
 
 try (UnifiedJedis jedis = new UnifiedJedis("redis://localhost:6379")) {
     jedis.set("counter", "0");
-    
+
     // Atomic increment - returns new value
     long newValue = jedis.incr("counter");  // Returns 1
-    
+
     // Increment by specific amount
     newValue = jedis.incrBy("counter", 10);  // Returns 11
 }
@@ -47,6 +49,7 @@ try (UnifiedJedis jedis = new UnifiedJedis("redis://localhost:6379")) {
 **Incorrect:** Read-modify-write pattern creates race conditions.
 
 **Python** (redis-py):
+
 ```python
 import redis
 
@@ -60,12 +63,13 @@ client.set("counter", str(curr_value + 1))  # Not atomic!
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.UnifiedJedis;
 
 try (UnifiedJedis jedis = new UnifiedJedis("redis://localhost:6379")) {
     jedis.set("counter", "0");
-    
+
     // BAD: Race condition between GET and SET
     long currValue = Long.parseLong(jedis.get("counter"));
     jedis.set("counter", Long.toString(currValue + 1));  // Not atomic!
@@ -73,4 +77,3 @@ try (UnifiedJedis jedis = new UnifiedJedis("redis://localhost:6379")) {
 ```
 
 Reference: [INCR command](https://redis.io/docs/latest/commands/incr/)
-

@@ -1,15 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, isNull, sql } from "drizzle-orm";
-import type { FastifyBaseLogger } from "fastify";
-import type { Redis } from "ioredis";
-import type { Queue } from "bullmq";
 import type { Database } from "@repo/db";
+import { and, eq, isNull, sql } from "@repo/db";
 import { emailVerifications, users } from "@repo/db/schema";
 import {
 	EMAIL_VERIFICATION_RATE_LIMIT_SECONDS,
 	EMAIL_VERIFICATION_TOKEN_BYTES,
 	EMAIL_VERIFICATION_TOKEN_TTL_SECONDS,
 } from "@repo/shared/constants";
+import type { Queue } from "bullmq";
+import type { FastifyBaseLogger } from "fastify";
+import type { Redis } from "ioredis";
 import {
 	ConflictError,
 	RateLimitError,
@@ -21,15 +21,8 @@ function hashToken(token: string): string {
 }
 
 /** Check if a PostgreSQL error is a unique constraint violation. */
-function isUniqueViolation(
-	error: unknown,
-	constraintName?: string,
-): boolean {
-	if (
-		typeof error !== "object" ||
-		error === null ||
-		!("code" in error)
-	) {
+function isUniqueViolation(error: unknown, constraintName?: string): boolean {
+	if (typeof error !== "object" || error === null || !("code" in error)) {
 		return false;
 	}
 	const pgError = error as { code: string; constraint_name?: string };
@@ -174,9 +167,7 @@ export async function verifyEmailToken(
 				});
 
 			if (!verification) {
-				throw new ValidationError(
-					"Invalid or expired verification token",
-				);
+				throw new ValidationError("Invalid or expired verification token");
 			}
 
 			// Elevate role to organizer (only if participant)
@@ -187,10 +178,7 @@ export async function verifyEmailToken(
 					role: "organizer",
 				})
 				.where(
-					and(
-						eq(users.id, sessionInfo.userId),
-						eq(users.role, "participant"),
-					),
+					and(eq(users.id, sessionInfo.userId), eq(users.role, "participant")),
 				)
 				.returning({ role: users.role });
 

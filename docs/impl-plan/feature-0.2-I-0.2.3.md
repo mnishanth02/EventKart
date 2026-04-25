@@ -18,17 +18,17 @@ Fastify plugin (`plugins/auth.ts`) that runs on every request, reads the `kiran_
 
 ## Files Created
 
-| File | Purpose |
-|------|---------|
-| `apps/api/src/plugins/auth.ts` | Auth plugin — cookie → Redis → decorates request.session |
-| `apps/api/test/plugins/auth.test.ts` | 15 integration tests |
+| File                                 | Purpose                                                  |
+| ------------------------------------ | -------------------------------------------------------- |
+| `apps/api/src/plugins/auth.ts`       | Auth plugin — cookie → Redis → decorates request.session |
+| `apps/api/test/plugins/auth.test.ts` | 15 integration tests                                     |
 
 ## Files Modified
 
-| File | Changes |
-|------|---------|
+| File                              | Changes                                                             |
+| --------------------------------- | ------------------------------------------------------------------- |
 | `apps/api/src/types/fastify.d.ts` | Added `SessionInfo` interface, `FastifyRequest.session` declaration |
-| `apps/api/src/app.ts` | Registered auth plugin (after cookie + redis, before error handler) |
+| `apps/api/src/app.ts`             | Registered auth plugin (after cookie + redis, before error handler) |
 
 ## Validation
 

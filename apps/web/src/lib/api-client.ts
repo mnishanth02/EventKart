@@ -9,21 +9,18 @@
  * `#/lib/api-client.server` instead.
  */
 
-import {
-	CSRF_COOKIE_NAME,
-	CSRF_HEADER_NAME,
-} from "@repo/shared/constants";
-import { publicEnv } from "#/lib/env/public";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "@repo/shared/constants";
 import {
 	API_VERSION,
 	isMutatingMethod,
 	parseApiResponse,
 } from "#/lib/api-client.shared";
+import { publicEnv } from "#/lib/env/public";
 
 // Re-export shared types so consumers can import from a single location
 export {
-	ApiClientError,
 	API_VERSION,
+	ApiClientError,
 	type ApiErrorBody,
 	type RequestOptions,
 } from "#/lib/api-client.shared";
@@ -61,7 +58,12 @@ function getApiBaseUrl(): string {
  */
 export async function apiClient<T = unknown>(
 	path: string,
-	options: { method?: string; body?: unknown; headers?: Record<string, string>; signal?: AbortSignal } = {},
+	options: {
+		method?: string;
+		body?: unknown;
+		headers?: Record<string, string>;
+		signal?: AbortSignal;
+	} = {},
 ): Promise<T> {
 	const { method = "GET", body, headers = {}, signal } = options;
 	const url = `${getApiBaseUrl()}${API_VERSION}${path}`;

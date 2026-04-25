@@ -1,11 +1,11 @@
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
-import type { Redis } from "ioredis";
 import {
 	OTP_LENGTH,
 	OTP_MAX_ATTEMPTS,
 	OTP_RATE_LIMIT_WINDOW_SECONDS,
 	OTP_TTL_SECONDS,
 } from "@repo/shared/constants";
+import type { Redis } from "ioredis";
 
 export interface StoredOtp {
 	hash: string;
@@ -179,10 +179,7 @@ export function isMaxAttemptsExceeded(attempts: number): boolean {
 }
 
 /** Delete stored OTP (after successful verification or manual invalidation). */
-export async function deleteOtp(
-	redis: Redis,
-	phone: string,
-): Promise<void> {
+export async function deleteOtp(redis: Redis, phone: string): Promise<void> {
 	await redis.del(phone);
 }
 

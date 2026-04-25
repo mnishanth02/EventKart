@@ -4,14 +4,14 @@ import fp from "fastify-plugin";
 import {
 	httpRequestDuration,
 	httpRequestTotal,
-	redisMemoryUsage,
-	redisEvictedKeys,
-	redisConnectedClients,
-	queueDepth,
-	queueOldestJobAge,
 	queueDelayedJobs,
-	queueFailedJobs,
+	queueDepth,
 	queueDlqDepth,
+	queueFailedJobs,
+	queueOldestJobAge,
+	redisConnectedClients,
+	redisEvictedKeys,
+	redisMemoryUsage,
 } from "../lib/metrics.js";
 import { QUEUE_NAMES } from "../lib/queue.js";
 
@@ -80,14 +80,8 @@ const metricsPlugin: FastifyPluginAsync = async (fastify) => {
 		redisPollInFlight = true;
 		try {
 			const info = await fastify.redis.base.info();
-			cachedRedisStats.usedMemoryBytes = parseInfoValue(
-				info,
-				"used_memory",
-			);
-			cachedRedisStats.evictedKeys = parseInfoValue(
-				info,
-				"evicted_keys",
-			);
+			cachedRedisStats.usedMemoryBytes = parseInfoValue(info, "used_memory");
+			cachedRedisStats.evictedKeys = parseInfoValue(info, "evicted_keys");
 			cachedRedisStats.connectedClients = parseInfoValue(
 				info,
 				"connected_clients",
@@ -159,7 +153,10 @@ const metricsPlugin: FastifyPluginAsync = async (fastify) => {
 						failed,
 					});
 				} catch {
-					fastify.log.warn({ queue: name }, "Queue stats poll failed for queue (metrics)");
+					fastify.log.warn(
+						{ queue: name },
+						"Queue stats poll failed for queue (metrics)",
+					);
 				}
 			}
 
@@ -208,10 +205,7 @@ const metricsPlugin: FastifyPluginAsync = async (fastify) => {
 	});
 
 	await pollQueueStats();
-	const queuePollInterval = setInterval(
-		pollQueueStats,
-		QUEUE_POLL_INTERVAL_MS,
-	);
+	const queuePollInterval = setInterval(pollQueueStats, QUEUE_POLL_INTERVAL_MS);
 
 	// Clean up on close
 	fastify.addHook("onClose", async () => {

@@ -22,6 +22,15 @@ vi.mock("../../../src/modules/organizer/policy-service.js", () => ({
 vi.mock("../../../src/modules/organizer/service.js", () => ({
 	registerOrganizer: vi.fn(),
 	getOrganizerByUserId: vi.fn(),
+	updateOrganizer: vi.fn(),
+}));
+
+vi.mock("../../../src/modules/organizer/document-service.js", () => ({
+	requestDocumentUpload: vi.fn(),
+	confirmDocumentUpload: vi.fn(),
+	listVerificationDocuments: vi.fn(),
+	deleteVerificationDocument: vi.fn(),
+	maybeUpdateOrganizerVerificationStatus: vi.fn(),
 }));
 
 import type { FastifyInstance } from "fastify";

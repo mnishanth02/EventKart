@@ -11,10 +11,10 @@ alwaysApply: true
 
 Select the right algorithm based on your accuracy requirements and dataset size.
 
-| Algorithm | Speed | Accuracy | Memory | Best For |
-|-----------|-------|----------|--------|----------|
-| HNSW | Fast (approximate) | ~95%+ recall tunable | Higher | Large datasets (>10k vectors) |
-| FLAT | Slower (exact) | 100% (exact) | Lower | Small datasets, accuracy-critical |
+| Algorithm | Speed              | Accuracy             | Memory | Best For                          |
+| --------- | ------------------ | -------------------- | ------ | --------------------------------- |
+| HNSW      | Fast (approximate) | ~95%+ recall tunable | Higher | Large datasets (>10k vectors)     |
+| FLAT      | Slower (exact)     | 100% (exact)         | Lower  | Small datasets, accuracy-critical |
 
 **Correct:** Use HNSW for large-scale production workloads.
 
@@ -53,6 +53,7 @@ schema = IndexSchema.from_dict({
 ```
 
 **Tuning HNSW accuracy vs speed:**
+
 - `M`: Connections per node (16-64). Higher = better recall, more memory
 - `EF_CONSTRUCTION`: Build-time parameter (100-500). Higher = better graph quality
 - `EF_RUNTIME`: Query-time parameter. Higher = better recall, slower queries

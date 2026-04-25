@@ -96,6 +96,14 @@ function normalizeConfigData(data: Record<string, unknown>) {
 		delete normalizedData.OTEL_METRICS_EXPORT_INTERVAL_MS;
 	}
 
+	if (normalizedData.RAZORPAY_KEY_ID === "") {
+		delete normalizedData.RAZORPAY_KEY_ID;
+	}
+
+	if (normalizedData.RAZORPAY_KEY_SECRET === "") {
+		delete normalizedData.RAZORPAY_KEY_SECRET;
+	}
+
 	return normalizedData;
 }
 
@@ -145,10 +153,9 @@ export const appConfigSchema = Type.Object({
 	S3_FORCE_PATH_STYLE: Type.Optional(Type.Boolean({ default: true })),
 	MSG91_AUTH_KEY: Type.Optional(Type.String({ minLength: 1 })),
 	MSG91_OTP_TEMPLATE_ID: Type.Optional(Type.String({ minLength: 1 })),
-	OTP_DELIVERY_MODE: Type.Union(
-		[Type.Literal("msg91"), Type.Literal("log")],
-		{ default: "log" },
-	),
+	OTP_DELIVERY_MODE: Type.Union([Type.Literal("msg91"), Type.Literal("log")], {
+		default: "log",
+	}),
 	COOKIE_DOMAIN: Type.Optional(Type.String({ minLength: 1 })),
 	OTP_HMAC_SECRET: Type.String({ default: "eventkart-otp-hash-v1" }),
 	CSRF_SECRET: Type.String({ default: "eventkart-csrf-secret-v1" }),
@@ -161,11 +168,15 @@ export const appConfigSchema = Type.Object({
 	SENTRY_DSN: Type.Optional(Type.String({ minLength: 1 })),
 	SENTRY_ENVIRONMENT: Type.Optional(Type.String({ minLength: 1 })),
 	SENTRY_RELEASE: Type.Optional(Type.String({ minLength: 1 })),
-	SENTRY_TRACES_SAMPLE_RATE: Type.Optional(Type.Number({ minimum: 0, maximum: 1 })),
+	SENTRY_TRACES_SAMPLE_RATE: Type.Optional(
+		Type.Number({ minimum: 0, maximum: 1 }),
+	),
 	LOG_PRETTY: Type.Optional(Type.Boolean({ default: false })),
 	OTEL_METRICS_EXPORT_INTERVAL_MS: Type.Optional(
 		Type.Integer({ default: 60000, minimum: 1000, maximum: 300000 }),
 	),
+	RAZORPAY_KEY_ID: Type.Optional(Type.String({ minLength: 1 })),
+	RAZORPAY_KEY_SECRET: Type.Optional(Type.String({ minLength: 1 })),
 });
 
 export type AppConfig = Static<typeof appConfigSchema>;

@@ -115,10 +115,7 @@ function truncateStatement(statement: string): string {
 	return `${normalized.slice(0, 200)}...`;
 }
 
-export function analyzeMigrationSQL(
-	sql: string,
-	filename: string,
-): Finding[] {
+export function analyzeMigrationSQL(sql: string, filename: string): Finding[] {
 	// Initial migration (0000_*) bootstraps a fresh, empty DB — no rows to lock,
 	// no concurrent access. All checks are exempt.
 	if (INITIAL_MIGRATION_RE.test(filename)) return [];
@@ -187,9 +184,7 @@ function main(): void {
 	console.log(JSON.stringify(report, null, 2));
 
 	if (allFindings.length === 0) {
-		console.error(
-			`✅ ${files.length} migration(s) checked — no issues found`,
-		);
+		console.error(`✅ ${files.length} migration(s) checked — no issues found`);
 	} else {
 		console.error("\n🔍 Migration lock-risk report:");
 		for (const f of allFindings) {

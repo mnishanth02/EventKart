@@ -1,13 +1,13 @@
-import {
-	type vi,
-	describe,
-	it,
-	expect,
-	beforeAll,
-	afterAll,
-	beforeEach,
-} from "vitest";
 import type { FastifyInstance } from "fastify";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type vi,
+} from "vitest";
 import { buildApp } from "../../src/app.js";
 
 const SESSION_COOKIE_NAME = "kiran_session";
@@ -89,9 +89,7 @@ describe("auth plugin", () => {
 
 	describe("valid cookie + valid session in Redis", () => {
 		it("populates request.session with userId, role, sessionId", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
 
 			const res = await app.inject({
 				method: "GET",
@@ -110,9 +108,7 @@ describe("auth plugin", () => {
 		});
 
 		it("does not clear the cookie", async () => {
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(validSession),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(validSession));
 
 			const res = await app.inject({
 				method: "GET",
@@ -153,9 +149,7 @@ describe("auth plugin", () => {
 			expect(setCookie).toBeDefined();
 			expect(setCookie).toContain(`${SESSION_COOKIE_NAME}=`);
 			// Cleared cookie has an Expires in the past or empty value
-			expect(setCookie).toMatch(
-				/kiran_session=;|Expires=Thu, 01 Jan 1970/,
-			);
+			expect(setCookie).toMatch(/kiran_session=;|Expires=Thu, 01 Jan 1970/);
 		});
 	});
 
@@ -194,9 +188,7 @@ describe("auth plugin", () => {
 
 			const setCookie = res.headers["set-cookie"] as string;
 			expect(setCookie).toBeDefined();
-			expect(setCookie).toMatch(
-				/kiran_session=;|Expires=Thu, 01 Jan 1970/,
-			);
+			expect(setCookie).toMatch(/kiran_session=;|Expires=Thu, 01 Jan 1970/);
 		});
 
 		it("deletes the expired session key from Redis", async () => {
@@ -210,9 +202,7 @@ describe("auth plugin", () => {
 				cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
 			});
 
-			expect(getSessionRedisDelMock(app)).toHaveBeenCalledWith(
-				TEST_SESSION_ID,
-			);
+			expect(getSessionRedisDelMock(app)).toHaveBeenCalledWith(TEST_SESSION_ID);
 		});
 	});
 
@@ -235,16 +225,12 @@ describe("auth plugin", () => {
 
 			const setCookie = res.headers["set-cookie"] as string;
 			expect(setCookie).toBeDefined();
-			expect(setCookie).toMatch(
-				/kiran_session=;|Expires=Thu, 01 Jan 1970/,
-			);
+			expect(setCookie).toMatch(/kiran_session=;|Expires=Thu, 01 Jan 1970/);
 		});
 
 		it("treats empty expiresAt as expired", async () => {
 			const emptySession = { ...validSession, expiresAt: "" };
-			getSessionRedisMock(app).mockResolvedValue(
-				JSON.stringify(emptySession),
-			);
+			getSessionRedisMock(app).mockResolvedValue(JSON.stringify(emptySession));
 
 			const res = await app.inject({
 				method: "GET",
@@ -261,9 +247,7 @@ describe("auth plugin", () => {
 
 	describe("Redis error (transient failure)", () => {
 		it("sets request.session to null", async () => {
-			getSessionRedisMock(app).mockRejectedValue(
-				new Error("ECONNREFUSED"),
-			);
+			getSessionRedisMock(app).mockRejectedValue(new Error("ECONNREFUSED"));
 
 			const res = await app.inject({
 				method: "GET",
@@ -275,9 +259,7 @@ describe("auth plugin", () => {
 		});
 
 		it("does NOT clear the cookie (preserves session for retry)", async () => {
-			getSessionRedisMock(app).mockRejectedValue(
-				new Error("ECONNREFUSED"),
-			);
+			getSessionRedisMock(app).mockRejectedValue(new Error("ECONNREFUSED"));
 
 			const res = await app.inject({
 				method: "GET",
@@ -330,9 +312,7 @@ describe("auth plugin", () => {
 
 			const setCookie = res.headers["set-cookie"] as string;
 			expect(setCookie).toBeDefined();
-			expect(setCookie).toMatch(
-				/kiran_session=;|Expires=Thu, 01 Jan 1970/,
-			);
+			expect(setCookie).toMatch(/kiran_session=;|Expires=Thu, 01 Jan 1970/);
 		});
 	});
 });

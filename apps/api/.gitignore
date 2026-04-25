@@ -37,7 +37,8 @@ jspm_packages
 .node_repl_history
 
 # 0x
-profile-*
+profile-*.0x
+*.0x
 
 # mac files
 .DS_Store
@@ -53,6 +54,6 @@ profile-*
 *code-workspace
 
 # clinic
-profile*
-*clinic*
+.clinic/
+*.clinic-*
 *flamegraph*

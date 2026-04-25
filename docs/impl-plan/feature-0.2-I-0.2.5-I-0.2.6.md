@@ -12,6 +12,7 @@
 **Depends on:** I-0.2.4 (RBAC) ✅
 
 **Implementation:**
+
 - Factory middleware `createIpAllowlistMiddleware(config, logger?)` using `node:net` `BlockList` for IPv4/IPv6/CIDR matching
 - Parses `ADMIN_IP_ALLOWLIST` env var once at creation (comma-separated IPs/CIDRs)
 - When unset, returns a no-op pass-through (dev bypass) with warning log
@@ -34,6 +35,7 @@
 **Depends on:** I-0.2.4 (RBAC) ✅
 
 **Design Decisions:**
+
 - Email delivery: Resend API (prod) + console log (dev, when `RESEND_API_KEY` unset)
 - Admin approval: deferred to Module 1.1 — email verification alone elevates role
 - Frontend: backend only — frontend deferred
@@ -50,6 +52,7 @@
 | POST | `/api/v1/auth/email/verify` | `requireAuth` | default |
 
 **Database:**
+
 - `email_verifications` table: `id`, `user_id` (FK), `email`, `token_hash` (SHA-256, unique), `expires_at`, `verified_at`, `created_at`
 
 **Files:**

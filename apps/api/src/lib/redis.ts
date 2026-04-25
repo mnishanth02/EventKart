@@ -65,9 +65,7 @@ export function createBullMQConnection(url: string): Redis {
 	return createRedisClient(url);
 }
 
-export async function closeRedisClients(
-	clients: RedisClients,
-): Promise<void> {
+export async function closeRedisClients(clients: RedisClients): Promise<void> {
 	await Promise.allSettled([
 		clients.base.quit(),
 		clients.session.quit(),

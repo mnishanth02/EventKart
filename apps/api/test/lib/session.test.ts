@@ -1,11 +1,11 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import type { Redis } from "ioredis";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	generateSessionId,
-	createRedisSession,
-	getRedisSession,
-	deleteRedisSession,
 	buildSessionCookieOptions,
+	createRedisSession,
+	deleteRedisSession,
+	generateSessionId,
+	getRedisSession,
 	type SessionData,
 } from "../../src/lib/session.js";
 

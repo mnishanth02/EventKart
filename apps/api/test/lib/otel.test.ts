@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("otel", () => {
 	beforeEach(() => {
@@ -13,7 +13,7 @@ describe("otel", () => {
 		expect(handle).toBeDefined();
 		expect(handle.sdk).not.toBeNull();
 		expect(handle.meterProvider).toBeNull();
-		await handle.sdk!.shutdown();
+		await handle.sdk?.shutdown();
 	}, 15_000);
 
 	it("initTelemetry configures metrics reader when OTLP endpoint is set", async () => {
@@ -23,7 +23,7 @@ describe("otel", () => {
 			OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
 		});
 		expect(handle.sdk).not.toBeNull();
-		await handle.sdk!.shutdown();
+		await handle.sdk?.shutdown();
 	}, 15_000);
 
 	it("initTelemetry parses OTEL headers correctly", async () => {
@@ -31,17 +31,18 @@ describe("otel", () => {
 		const handle = initTelemetry({
 			OTEL_SERVICE_NAME: "test-service",
 			OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-			OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer token123,X-Custom=value",
+			OTEL_EXPORTER_OTLP_HEADERS:
+				"Authorization=Bearer token123,X-Custom=value",
 		});
 		expect(handle.sdk).not.toBeNull();
-		await handle.sdk!.shutdown();
+		await handle.sdk?.shutdown();
 	}, 15_000);
 
 	it("initTelemetry uses default service name when not provided", async () => {
 		const { initTelemetry } = await import("../../src/lib/otel.js");
 		const handle = initTelemetry({});
 		expect(handle.sdk).not.toBeNull();
-		await handle.sdk!.shutdown();
+		await handle.sdk?.shutdown();
 	}, 15_000);
 
 	it("initTelemetry returns null SDK when SENTRY_DSN is set", async () => {
@@ -60,7 +61,7 @@ describe("otel", () => {
 		});
 		expect(handle.sdk).toBeNull();
 		expect(handle.meterProvider).not.toBeNull();
-		await handle.meterProvider!.shutdown();
+		await handle.meterProvider?.shutdown();
 	}, 15_000);
 
 	it("initTelemetry respects custom metrics export interval", async () => {
@@ -70,17 +71,21 @@ describe("otel", () => {
 			OTEL_METRICS_EXPORT_INTERVAL_MS: 10_000,
 		});
 		expect(handle.sdk).not.toBeNull();
-		await handle.sdk!.shutdown();
+		await handle.sdk?.shutdown();
 	}, 15_000);
 
 	it("shutdownTelemetry handles SDK handle", async () => {
-		const { initTelemetry, shutdownTelemetry } = await import("../../src/lib/otel.js");
+		const { initTelemetry, shutdownTelemetry } = await import(
+			"../../src/lib/otel.js"
+		);
 		const handle = initTelemetry({});
 		await expect(shutdownTelemetry(handle)).resolves.toBeUndefined();
 	}, 15_000);
 
 	it("shutdownTelemetry handles MeterProvider handle", async () => {
-		const { initTelemetry, shutdownTelemetry } = await import("../../src/lib/otel.js");
+		const { initTelemetry, shutdownTelemetry } = await import(
+			"../../src/lib/otel.js"
+		);
 		const handle = initTelemetry({
 			SENTRY_DSN: "https://examplePublicKey@o0.ingest.sentry.io/0",
 			OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",

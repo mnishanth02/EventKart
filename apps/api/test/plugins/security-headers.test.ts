@@ -39,9 +39,7 @@ describe("Security Headers Plugin", () => {
 		const response = await app.inject({ method: "GET", url: "/health" });
 
 		expect(response.headers["strict-transport-security"]).toBeDefined();
-		expect(response.headers["strict-transport-security"]).toContain(
-			"max-age=",
-		);
+		expect(response.headers["strict-transport-security"]).toContain("max-age=");
 	});
 
 	it("includes X-DNS-Prefetch-Control", async () => {

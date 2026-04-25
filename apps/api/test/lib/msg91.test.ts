@@ -1,10 +1,10 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FastifyBaseLogger } from "fastify";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	type Msg91Config,
+	sendOtpWithFallback,
 	sendSmsOtp,
 	sendWhatsAppOtp,
-	sendOtpWithFallback,
-	type Msg91Config,
 } from "../../src/lib/msg91.js";
 
 const mockLog = {
@@ -59,20 +59,13 @@ describe("MSG91 Client", () => {
 				okJsonResponse({ type: "success", request_id: "abc" }),
 			);
 
-			const result = await sendSmsOtp(
-				"+919876543210",
-				"1234",
-				config,
-				mockLog,
-			);
+			const result = await sendSmsOtp("+919876543210", "1234", config, mockLog);
 
 			expect(result).toEqual({ success: true, channel: "sms" });
 		});
 
 		it("sends to the correct URL", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ type: "success" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ type: "success" }));
 
 			await sendSmsOtp("+919876543210", "1234", config, mockLog);
 
@@ -82,16 +75,11 @@ describe("MSG91 Client", () => {
 		});
 
 		it("sends correct headers", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ type: "success" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ type: "success" }));
 
 			await sendSmsOtp("+919876543210", "1234", config, mockLog);
 
-			const [, options] = mockFetch.mock.calls[0] as [
-				string,
-				RequestInit,
-			];
+			const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
 			expect(options.method).toBe("POST");
 			expect(options.headers).toEqual(
 				expect.objectContaining({
@@ -102,20 +90,12 @@ describe("MSG91 Client", () => {
 		});
 
 		it("includes templateId in body when provided", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ type: "success" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ type: "success" }));
 
 			await sendSmsOtp("+919876543210", "5678", config, mockLog);
 
-			const [, options] = mockFetch.mock.calls[0] as [
-				string,
-				RequestInit,
-			];
-			const body = JSON.parse(options.body as string) as Record<
-				string,
-				string
-			>;
+			const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+			const body = JSON.parse(options.body as string) as Record<string, string>;
 			expect(body).toEqual({
 				mobile: "+919876543210",
 				otp: "5678",
@@ -125,28 +105,15 @@ describe("MSG91 Client", () => {
 		});
 
 		it("omits templateId from body when not in config", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ type: "success" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ type: "success" }));
 
 			const configNoTemplate: Msg91Config = {
 				authKey: "test-auth-key-123",
 			};
-			await sendSmsOtp(
-				"+919876543210",
-				"1234",
-				configNoTemplate,
-				mockLog,
-			);
+			await sendSmsOtp("+919876543210", "1234", configNoTemplate, mockLog);
 
-			const [, options] = mockFetch.mock.calls[0] as [
-				string,
-				RequestInit,
-			];
-			const body = JSON.parse(options.body as string) as Record<
-				string,
-				string
-			>;
+			const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+			const body = JSON.parse(options.body as string) as Record<string, string>;
 			expect(body).not.toHaveProperty("template_id");
 			expect(body).toEqual({
 				mobile: "+919876543210",
@@ -160,12 +127,7 @@ describe("MSG91 Client", () => {
 				errorResponse(500, "Internal Server Error"),
 			);
 
-			const result = await sendSmsOtp(
-				"+919876543210",
-				"1234",
-				config,
-				mockLog,
-			);
+			const result = await sendSmsOtp("+919876543210", "1234", config, mockLog);
 
 			expect(result).toEqual({
 				success: false,
@@ -183,12 +145,7 @@ describe("MSG91 Client", () => {
 				okJsonResponse({ type: "error", message: "invalid" }),
 			);
 
-			const result = await sendSmsOtp(
-				"+919876543210",
-				"1234",
-				config,
-				mockLog,
-			);
+			const result = await sendSmsOtp("+919876543210", "1234", config, mockLog);
 
 			expect(result).toEqual({
 				success: false,
@@ -202,16 +159,9 @@ describe("MSG91 Client", () => {
 		});
 
 		it("returns 'Unknown MSG91 error' when error type has no message", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ type: "error" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ type: "error" }));
 
-			const result = await sendSmsOtp(
-				"+919876543210",
-				"1234",
-				config,
-				mockLog,
-			);
+			const result = await sendSmsOtp("+919876543210", "1234", config, mockLog);
 
 			expect(result).toEqual({
 				success: false,
@@ -221,16 +171,9 @@ describe("MSG91 Client", () => {
 		});
 
 		it("returns failure on network error", async () => {
-			mockFetch.mockRejectedValueOnce(
-				new Error("Failed to fetch"),
-			);
+			mockFetch.mockRejectedValueOnce(new Error("Failed to fetch"));
 
-			const result = await sendSmsOtp(
-				"+919876543210",
-				"1234",
-				config,
-				mockLog,
-			);
+			const result = await sendSmsOtp("+919876543210", "1234", config, mockLog);
 
 			expect(result).toEqual({
 				success: false,
@@ -246,12 +189,7 @@ describe("MSG91 Client", () => {
 		it("returns 'Unknown error' for non-Error thrown values", async () => {
 			mockFetch.mockRejectedValueOnce("string error");
 
-			const result = await sendSmsOtp(
-				"+919876543210",
-				"1234",
-				config,
-				mockLog,
-			);
+			const result = await sendSmsOtp("+919876543210", "1234", config, mockLog);
 
 			expect(result).toEqual({
 				success: false,
@@ -263,9 +201,7 @@ describe("MSG91 Client", () => {
 
 	describe("sendWhatsAppOtp", () => {
 		it("returns success when API responds OK", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ status: "sent" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ status: "sent" }));
 
 			const result = await sendWhatsAppOtp(
 				"+919876543210",
@@ -278,9 +214,7 @@ describe("MSG91 Client", () => {
 		});
 
 		it("sends to the correct WhatsApp URL", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ status: "sent" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ status: "sent" }));
 
 			await sendWhatsAppOtp("+919876543210", "1234", config, mockLog);
 
@@ -289,20 +223,12 @@ describe("MSG91 Client", () => {
 		});
 
 		it("sends correct body with templateId", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ status: "sent" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ status: "sent" }));
 
 			await sendWhatsAppOtp("+919876543210", "1234", config, mockLog);
 
-			const [, options] = mockFetch.mock.calls[0] as [
-				string,
-				RequestInit,
-			];
-			const body = JSON.parse(options.body as string) as Record<
-				string,
-				string
-			>;
+			const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+			const body = JSON.parse(options.body as string) as Record<string, string>;
 			expect(body).toEqual({
 				integrated_number: "+919876543210",
 				content_template_id: "test-template-456",
@@ -310,35 +236,20 @@ describe("MSG91 Client", () => {
 		});
 
 		it("uses empty string for content_template_id when templateId is missing", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ status: "sent" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ status: "sent" }));
 
 			const configNoTemplate: Msg91Config = {
 				authKey: "test-auth-key-123",
 			};
-			await sendWhatsAppOtp(
-				"+919876543210",
-				"1234",
-				configNoTemplate,
-				mockLog,
-			);
+			await sendWhatsAppOtp("+919876543210", "1234", configNoTemplate, mockLog);
 
-			const [, options] = mockFetch.mock.calls[0] as [
-				string,
-				RequestInit,
-			];
-			const body = JSON.parse(options.body as string) as Record<
-				string,
-				string
-			>;
+			const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+			const body = JSON.parse(options.body as string) as Record<string, string>;
 			expect(body.content_template_id).toBe("");
 		});
 
 		it("returns failure with HTTP error details on non-OK response", async () => {
-			mockFetch.mockResolvedValueOnce(
-				errorResponse(400, "Bad Request"),
-			);
+			mockFetch.mockResolvedValueOnce(errorResponse(400, "Bad Request"));
 
 			const result = await sendWhatsAppOtp(
 				"+919876543210",
@@ -359,9 +270,7 @@ describe("MSG91 Client", () => {
 		});
 
 		it("returns failure on network error", async () => {
-			mockFetch.mockRejectedValueOnce(
-				new Error("Network unavailable"),
-			);
+			mockFetch.mockRejectedValueOnce(new Error("Network unavailable"));
 
 			const result = await sendWhatsAppOtp(
 				"+919876543210",
@@ -401,9 +310,7 @@ describe("MSG91 Client", () => {
 
 	describe("sendOtpWithFallback", () => {
 		it("returns SMS result when SMS succeeds", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ type: "success" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ type: "success" }));
 
 			const result = await sendOtpWithFallback(
 				"+919876543210",
@@ -417,16 +324,9 @@ describe("MSG91 Client", () => {
 		});
 
 		it("does not call WhatsApp when SMS succeeds", async () => {
-			mockFetch.mockResolvedValueOnce(
-				okJsonResponse({ type: "success" }),
-			);
+			mockFetch.mockResolvedValueOnce(okJsonResponse({ type: "success" }));
 
-			await sendOtpWithFallback(
-				"+919876543210",
-				"1234",
-				config,
-				mockLog,
-			);
+			await sendOtpWithFallback("+919876543210", "1234", config, mockLog);
 
 			expect(mockFetch).toHaveBeenCalledOnce();
 			const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
@@ -435,12 +335,8 @@ describe("MSG91 Client", () => {
 
 		it("falls back to WhatsApp when SMS fails and returns WhatsApp result", async () => {
 			mockFetch
-				.mockResolvedValueOnce(
-					errorResponse(500, "SMS gateway down"),
-				)
-				.mockResolvedValueOnce(
-					okJsonResponse({ status: "sent" }),
-				);
+				.mockResolvedValueOnce(errorResponse(500, "SMS gateway down"))
+				.mockResolvedValueOnce(okJsonResponse({ status: "sent" }));
 
 			const result = await sendOtpWithFallback(
 				"+919876543210",
@@ -455,19 +351,10 @@ describe("MSG91 Client", () => {
 
 		it("logs fallback attempt with masked phone", async () => {
 			mockFetch
-				.mockResolvedValueOnce(
-					errorResponse(500, "SMS gateway down"),
-				)
-				.mockResolvedValueOnce(
-					okJsonResponse({ status: "sent" }),
-				);
+				.mockResolvedValueOnce(errorResponse(500, "SMS gateway down"))
+				.mockResolvedValueOnce(okJsonResponse({ status: "sent" }));
 
-			await sendOtpWithFallback(
-				"+919876543210",
-				"1234",
-				config,
-				mockLog,
-			);
+			await sendOtpWithFallback("+919876543210", "1234", config, mockLog);
 
 			expect(mockLog.info).toHaveBeenCalledWith(
 				{ phone: "+91987****" },
@@ -477,12 +364,8 @@ describe("MSG91 Client", () => {
 
 		it("returns WhatsApp failure when both SMS and WhatsApp fail", async () => {
 			mockFetch
-				.mockResolvedValueOnce(
-					errorResponse(500, "SMS error"),
-				)
-				.mockResolvedValueOnce(
-					errorResponse(503, "WhatsApp error"),
-				);
+				.mockResolvedValueOnce(errorResponse(500, "SMS error"))
+				.mockResolvedValueOnce(errorResponse(503, "WhatsApp error"));
 
 			const result = await sendOtpWithFallback(
 				"+919876543210",
@@ -502,9 +385,7 @@ describe("MSG91 Client", () => {
 		it("falls back to WhatsApp when SMS throws a network error", async () => {
 			mockFetch
 				.mockRejectedValueOnce(new Error("DNS resolution failed"))
-				.mockResolvedValueOnce(
-					okJsonResponse({ status: "sent" }),
-				);
+				.mockResolvedValueOnce(okJsonResponse({ status: "sent" }));
 
 			const result = await sendOtpWithFallback(
 				"+919876543210",

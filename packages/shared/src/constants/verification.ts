@@ -59,3 +59,40 @@ export const documentStatusSchema = z.enum(DOCUMENT_STATUSES);
 
 /** Total number of required document types for complete submission. */
 export const REQUIRED_DOCUMENT_COUNT = VERIFICATION_DOCUMENT_TYPES.length;
+
+/** Target SLA for admin review after complete submission (business days). */
+export const VERIFICATION_SLA_BUSINESS_DAYS = 2;
+
+/**
+ * Verification steps in order. Used by the frontend progress stepper.
+ * Each step has an id, label, and description.
+ */
+export const VERIFICATION_STEPS = [
+	{
+		id: "registration",
+		label: "Registration",
+		description: "Create your organizer profile",
+	},
+	{
+		id: "policies",
+		label: "Policies",
+		description: "Accept platform terms and refund policy",
+	},
+	{
+		id: "documents",
+		label: "Documents",
+		description: "Upload verification documents (KYC)",
+	},
+	{
+		id: "review",
+		label: "Under Review",
+		description: "Admin review of your submission",
+	},
+	{
+		id: "approved",
+		label: "Approved",
+		description: "Your organizer account is verified",
+	},
+] as const;
+
+export type VerificationStepId = (typeof VERIFICATION_STEPS)[number]["id"];

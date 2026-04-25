@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createLoggerOptions } from "../../src/lib/logger.js";
 
 describe("createLoggerOptions", () => {
@@ -45,7 +45,8 @@ describe("createLoggerOptions", () => {
 
 	it("includes custom serializers for req and res", () => {
 		const options = createLoggerOptions(baseConfig);
-		const serializers = (options as Record<string, unknown>).serializers as Record<string, unknown>;
+		const serializers = (options as Record<string, unknown>)
+			.serializers as Record<string, unknown>;
 		expect(serializers).toBeDefined();
 		expect(typeof serializers.req).toBe("function");
 		expect(typeof serializers.res).toBe("function");
@@ -53,7 +54,11 @@ describe("createLoggerOptions", () => {
 
 	it("req serializer whitelists safe fields only", () => {
 		const options = createLoggerOptions(baseConfig);
-		const serializers = (options as Record<string, unknown>).serializers as Record<string, ((...args: unknown[]) => unknown) | undefined>;
+		const serializers = (options as Record<string, unknown>)
+			.serializers as Record<
+			string,
+			((...args: unknown[]) => unknown) | undefined
+		>;
 		const mockReq = {
 			method: "GET",
 			url: "/api/v1/test",
@@ -80,7 +85,11 @@ describe("createLoggerOptions", () => {
 
 	it("res serializer returns only statusCode", () => {
 		const options = createLoggerOptions(baseConfig);
-		const serializers = (options as Record<string, unknown>).serializers as Record<string, ((...args: unknown[]) => unknown) | undefined>;
+		const serializers = (options as Record<string, unknown>)
+			.serializers as Record<
+			string,
+			((...args: unknown[]) => unknown) | undefined
+		>;
 		const mockRes = {
 			statusCode: 200,
 			headers: { "set-cookie": "session=abc" },
@@ -94,7 +103,11 @@ describe("createLoggerOptions", () => {
 
 	it("uses string level labels instead of numbers", () => {
 		const options = createLoggerOptions(baseConfig);
-		const formatters = (options as Record<string, unknown>).formatters as Record<string, ((...args: unknown[]) => unknown) | undefined>;
+		const formatters = (options as Record<string, unknown>)
+			.formatters as Record<
+			string,
+			((...args: unknown[]) => unknown) | undefined
+		>;
 		const levelFormatter = formatters.level;
 		expect(levelFormatter).toBeDefined();
 		expect(levelFormatter?.("info")).toEqual({ level: "info" });
@@ -103,7 +116,8 @@ describe("createLoggerOptions", () => {
 
 	it("includes ISO timestamp formatter", () => {
 		const options = createLoggerOptions(baseConfig);
-		const timestamp = (options as Record<string, unknown>).timestamp as () => string;
+		const timestamp = (options as Record<string, unknown>)
+			.timestamp as () => string;
 		expect(typeof timestamp).toBe("function");
 		const result = timestamp();
 		expect(result).toMatch(/^,"time":"\d{4}-\d{2}-\d{2}T/);
@@ -111,7 +125,10 @@ describe("createLoggerOptions", () => {
 
 	it("includes service name in base", () => {
 		const options = createLoggerOptions(baseConfig);
-		const base = (options as Record<string, unknown>).base as Record<string, unknown>;
+		const base = (options as Record<string, unknown>).base as Record<
+			string,
+			unknown
+		>;
 		expect(base).toEqual({ service: "test-service" });
 	});
 

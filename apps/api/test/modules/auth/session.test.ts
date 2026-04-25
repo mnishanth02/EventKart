@@ -1,4 +1,12 @@
-import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 
 // Service mocks MUST be defined before imports that trigger module loading
 const mockLogoutSession = vi.fn();

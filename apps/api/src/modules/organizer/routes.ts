@@ -1,4 +1,5 @@
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
+import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from "@repo/shared/constants";
 import type { FastifyPluginAsync } from "fastify";
 import { createAuditLogger } from "../../lib/audit.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
@@ -8,6 +9,7 @@ import {
 	confirmDocumentUpload,
 	deleteVerificationDocument,
 	listVerificationDocuments,
+	maybeUpdateOrganizerVerificationStatus,
 	requestDocumentUpload,
 } from "./document-service.js";
 import { acceptPolicies, getPolicyStatus } from "./policy-service.js";
@@ -23,13 +25,21 @@ import {
 	documentUploadResponseSchema,
 	getOrganizerResponseSchema,
 	getPoliciesResponseSchema,
+	getVerificationStatusResponseSchema,
 	organizerConflictResponseSchema,
 	organizerErrorResponseSchema,
 	organizerNotFoundResponseSchema,
 	registerOrganizerBodySchema,
 	registerOrganizerResponseSchema,
+	updateOrganizerBodySchema,
+	updateOrganizerResponseSchema,
 } from "./schemas.js";
-import { getOrganizerByUserId, registerOrganizer } from "./service.js";
+import {
+	getOrganizerByUserId,
+	registerOrganizer,
+	updateOrganizer,
+} from "./service.js";
+import { getVerificationStatus } from "./verification-status-service.js";
 
 const organizerRoutes: FastifyPluginAsync = async (app) => {
 	const typedApp = app.withTypeProvider<ZodTypeProvider>();
@@ -98,6 +108,94 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			return { success: true as const, data: profile };
 		},
 	);
+
+	/**
+	 * GET /api/v1/organizers/verification-status — Get comprehensive verification progress.
+	 *
+	 * Returns aggregated status including document progress, policy status,
+	 * SLA tracking, and review information.
+	 */
+	typedApp.get(
+		"/verification-status",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				response: {
+					200: getVerificationStatusResponseSchema,
+					401: organizerErrorResponseSchema,
+					403: organizerErrorResponseSchema,
+					404: organizerNotFoundResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const profile = await getOrganizerByUserId(
+				app.db,
+				request.session!.userId,
+			);
+
+			if (!profile) {
+				throw new NotFoundError("Organizer profile not found");
+			}
+
+			const status = await getVerificationStatus(
+				app.db,
+				request.session!.userId,
+				profile.id,
+			);
+
+			return { success: true as const, data: status };
+		},
+	);
+
+	/**
+	 * PUT /api/v1/organizers/me — Update the authenticated user's organizer profile.
+	 */
+	typedApp.put(
+		"/me",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				body: updateOrganizerBodySchema,
+				response: {
+					200: updateOrganizerResponseSchema,
+					400: organizerErrorResponseSchema,
+					401: organizerErrorResponseSchema,
+					403: organizerErrorResponseSchema,
+					404: organizerNotFoundResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			if (!Object.values(request.body).some((v) => v !== undefined)) {
+				throw new ValidationError(
+					"At least one field must be provided for update",
+				);
+			}
+
+			const profile = await updateOrganizer(
+				{ db: app.db, log: request.log },
+				request.session!.userId,
+				request.body,
+			);
+
+			if (!profile) {
+				throw new NotFoundError("Organizer profile not found");
+			}
+
+			const auditLogger = createAuditLogger(app.db, request.log);
+			await auditLogger.log({
+				action: AUDIT_ACTIONS.ORGANIZER_PROFILE_UPDATE,
+				actorId: request.session!.userId,
+				resourceType: AUDIT_RESOURCE_TYPES.ORGANIZER,
+				resourceId: profile.id,
+				ipAddress: request.ip,
+				metadata: { updatedFields: Object.keys(request.body) },
+			});
+
+			return { success: true as const, data: profile };
+		},
+	);
 	/**
 	 * POST /api/v1/organizers/policies — Accept one or more organizer policies.
 	 */
@@ -122,6 +220,20 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 				request.body.policies,
 				request.ip,
 			);
+
+			// Re-evaluate verification status after policy acceptance
+			// (handles the case where docs were uploaded first, then policies accepted)
+			const organizer = await getOrganizerByUserId(
+				app.db,
+				request.session!.userId,
+			);
+			if (organizer) {
+				await maybeUpdateOrganizerVerificationStatus(
+					app.db,
+					organizer.id,
+					request.log,
+				);
+			}
 
 			return { success: true as const, data: status };
 		},

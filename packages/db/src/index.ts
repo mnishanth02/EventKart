@@ -1,3 +1,7 @@
-export { createDatabase, createMigrationClient, pingDatabase } from "./client.js";
+export { and, eq, inArray, isNull, sql } from "drizzle-orm";
 export type { Database } from "./client.js";
-export { sql } from "drizzle-orm";
+export {
+	createDatabase,
+	createMigrationClient,
+	pingDatabase,
+} from "./client.js";

@@ -36,6 +36,7 @@ FT.AGGREGATE idx:products "*" LOAD *
 ```
 
 **Performance tips:**
+
 - Add `SORTABLE` to fields used in `SORTBY`
 - Use `TAG SORTABLE UNF` for best performance on tag fields
 - Use `NOSTEM` if you don't need stemming
@@ -46,4 +47,3 @@ FT.PROFILE idx:products SEARCH QUERY "@category:{electronics}"
 ```
 
 Reference: [Redis Search Query Syntax](https://redis.io/docs/latest/develop/interact/search-and-query/query/)
-

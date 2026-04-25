@@ -2,10 +2,12 @@ import {
 	documentUploadRequestSchema,
 	organizerProfileSchema,
 	organizerRegistrationSchema,
+	organizerUpdateBaseSchema,
 	policyAcceptanceRequestSchema,
 	policyStatusResponseSchema,
 	presignedUploadUrlSchema,
 	verificationDocumentSchema,
+	verificationStatusResponseSchema,
 } from "@repo/shared/schemas";
 import { z } from "zod/v4";
 
@@ -13,9 +15,16 @@ import { z } from "zod/v4";
 
 export const registerOrganizerBodySchema = organizerRegistrationSchema;
 
+export const updateOrganizerBodySchema = organizerUpdateBaseSchema;
+
 // ── Response schemas ────────────────────────────────────────────────
 
 export const registerOrganizerResponseSchema = z.object({
+	success: z.literal(true),
+	data: organizerProfileSchema,
+});
+
+export const updateOrganizerResponseSchema = z.object({
 	success: z.literal(true),
 	data: organizerProfileSchema,
 });
@@ -94,4 +103,11 @@ export const documentDeleteParamsSchema = z.object({
 export const documentDeleteResponseSchema = z.object({
 	success: z.literal(true),
 	data: z.object({ deleted: z.literal(true) }),
+});
+
+// ── Verification status schemas ─────────────────────────────────────
+
+export const getVerificationStatusResponseSchema = z.object({
+	success: z.literal(true),
+	data: verificationStatusResponseSchema,
 });

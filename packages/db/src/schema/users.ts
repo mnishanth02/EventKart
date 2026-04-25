@@ -1,3 +1,4 @@
+import { USER_ROLES } from "@repo/shared/constants";
 import { sql } from "drizzle-orm";
 import {
 	index,
@@ -8,7 +9,6 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import { USER_ROLES } from "@repo/shared/constants";
 
 export const userRoleEnum = pgEnum("user_role", USER_ROLES);
 

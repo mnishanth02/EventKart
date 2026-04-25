@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, describe, it, expect } from "vitest";
 import type { FastifyInstance } from "fastify";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildTestApp } from "../helpers/build-app.js";
 
 describe("request correlation", () => {

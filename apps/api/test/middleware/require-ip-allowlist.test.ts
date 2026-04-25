@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { FastifyInstance } from "fastify";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../../src/app.js";
 import { createIpAllowlistMiddleware } from "../../src/middleware/require-ip-allowlist.js";
 
@@ -22,11 +22,9 @@ function buildTestApp(adminIpAllowlist?: string): FastifyInstance {
 
 	app.after(() => {
 		const middleware = createIpAllowlistMiddleware(app.config);
-		app.get(
-			"/test/admin-ip",
-			{ onRequest: [middleware] },
-			async () => ({ ok: true }),
-		);
+		app.get("/test/admin-ip", { onRequest: [middleware] }, async () => ({
+			ok: true,
+		}));
 	});
 
 	return app;

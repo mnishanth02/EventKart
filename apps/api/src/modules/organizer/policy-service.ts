@@ -1,4 +1,5 @@
 import type { Database } from "@repo/db";
+import { and, eq, inArray, isNull } from "@repo/db";
 import { consentRecords } from "@repo/db/schema";
 import {
 	CURRENT_POLICY_VERSIONS,
@@ -6,7 +7,6 @@ import {
 	REQUIRED_ORGANIZER_POLICIES,
 } from "@repo/shared/constants";
 import type { PolicyStatusResponse } from "@repo/shared/schemas";
-import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { FastifyBaseLogger } from "fastify";
 
 export interface PolicyServiceDeps {
@@ -119,10 +119,7 @@ export async function getPolicyStatus(
 		.where(
 			and(
 				eq(consentRecords.participantId, userId),
-				inArray(
-					consentRecords.consentType,
-					REQUIRED_ORGANIZER_POLICIES as unknown as string[],
-				),
+				inArray(consentRecords.consentType, [...REQUIRED_ORGANIZER_POLICIES]),
 				isNull(consentRecords.withdrawnAt),
 			),
 		);

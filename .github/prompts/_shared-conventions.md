@@ -14,23 +14,24 @@
 
 ## Non-Negotiable Rules
 
-| Rule | Details |
-|---|---|
-| pnpm only | Never npm or yarn |
-| Biome | Lint + format for TS/JS (tabs, double quotes). Prettier only for Markdown. Never ESLint/Prettier for code |
-| Vitest | Never Jest |
-| Tailwind v4 | CSS-first — no `tailwind.config.js` |
-| Zod v4 | All validation, shared via `packages/shared` |
-| TypeScript strict | `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` |
-| React Compiler | Avoid manual `useMemo`/`useCallback` |
-| Server-side enforcement | Security/access control at API layer, never UI-only |
-| Env access | `fastify.config.*` (API) or `publicEnv`/`serverEnv` (web) — never raw `import.meta.env` |
-| HTTP only between apps | `apps/web` and `apps/api` never import from each other |
-| Shared UI in `packages/ui` | Never duplicate components in apps |
+| Rule                       | Details                                                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| pnpm only                  | Never npm or yarn                                                                                         |
+| Biome                      | Lint + format for TS/JS (tabs, double quotes). Prettier only for Markdown. Never ESLint/Prettier for code |
+| Vitest                     | Never Jest                                                                                                |
+| Tailwind v4                | CSS-first — no `tailwind.config.js`                                                                       |
+| Zod v4                     | All validation, shared via `packages/shared`                                                              |
+| TypeScript strict          | `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`                          |
+| React Compiler             | Avoid manual `useMemo`/`useCallback`                                                                      |
+| Server-side enforcement    | Security/access control at API layer, never UI-only                                                       |
+| Env access                 | `fastify.config.*` (API) or `publicEnv`/`serverEnv` (web) — never raw `import.meta.env`                   |
+| HTTP only between apps     | `apps/web` and `apps/api` never import from each other                                                    |
+| Shared UI in `packages/ui` | Never duplicate components in apps                                                                        |
 
 ## Project Structure Conventions
 
 **Backend modules** — `apps/api/src/modules/<domain>/`:
+
 ```
 routes.ts       # Route definitions with Zod schemas + preHandlers
 service.ts      # Business logic (testable without HTTP)
@@ -39,6 +40,7 @@ types.ts        # Module-specific types
 ```
 
 **Frontend features** — `apps/web/src/features/<domain>/`:
+
 ```
 api.ts          # createServerFn wrappers
 queries.ts      # queryOptions() factories
@@ -62,14 +64,14 @@ pnpm build | lint | test | check-types
 
 ## Reference Docs (Read Before Coding)
 
-| File | Purpose |
-|---|---|
-| `docs/v1-implementation-plan.md` | Feature specs, IDs, dependency chains |
-| `docs/requirements.md` | Product requirements (F-IDs) |
-| `docs/architecture.md` | System architecture decisions |
-| `.github/copilot-instructions.md` | Repo-wide rules (always read) |
-| `.github/instructions/fastify-backend.instructions.md` | API patterns, auth, rate limiting |
-| `.github/instructions/tanstack-start.instructions.md` | Frontend patterns, SSR modes, data fetching |
+| File                                                   | Purpose                                     |
+| ------------------------------------------------------ | ------------------------------------------- |
+| `docs/v1-implementation-plan.md`                       | Feature specs, IDs, dependency chains       |
+| `docs/requirements.md`                                 | Product requirements (F-IDs)                |
+| `docs/architecture.md`                                 | System architecture decisions               |
+| `.github/copilot-instructions.md`                      | Repo-wide rules (always read)               |
+| `.github/instructions/fastify-backend.instructions.md` | API patterns, auth, rate limiting           |
+| `.github/instructions/tanstack-start.instructions.md`  | Frontend patterns, SSR modes, data fetching |
 
 ## Fetching Library Documentation
 
@@ -86,18 +88,18 @@ If fetched docs contradict a local skill or instruction file, prefer the latest 
 
 Read applicable skill files from `.agents/skills/<skill>/SKILL.md` based on the feature domain:
 
-| Feature Domain | Skill(s) |
-|---|---|
-| API route/plugin | `fastify-best-practices` |
-| Database schema/migration | `drizzle` |
-| Frontend route/component | `tanstack-start-best-practices`, `tanstack-router-best-practices` |
-| Forms | `tanstack-form` |
-| Data fetching/caching | TanStack Query (global skills) |
-| Zod schemas | `zod` |
-| UI components | `tailwind-v4-shadcn` |
-| Redis usage | `redis-development` |
-| Auth, user input, payments | `owasp-security` (always load for these) |
-| Tests | Vitest (global skills) |
+| Feature Domain             | Skill(s)                                                          |
+| -------------------------- | ----------------------------------------------------------------- |
+| API route/plugin           | `fastify-best-practices`                                          |
+| Database schema/migration  | `drizzle`                                                         |
+| Frontend route/component   | `tanstack-start-best-practices`, `tanstack-router-best-practices` |
+| Forms                      | `tanstack-form`                                                   |
+| Data fetching/caching      | TanStack Query (global skills)                                    |
+| Zod schemas                | `zod`                                                             |
+| UI components              | `tailwind-v4-shadcn`                                              |
+| Redis usage                | `redis-development`                                               |
+| Auth, user input, payments | `owasp-security` (always load for these)                          |
+| Tests                      | Vitest (global skills)                                            |
 
 If a skill file doesn't exist at the expected path, skip it and rely on Context7 docs + instruction files instead.
 

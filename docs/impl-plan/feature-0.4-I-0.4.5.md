@@ -26,12 +26,14 @@ Per architecture §4.3, track these from day one:
 ## Implementation
 
 ### Packages Added
+
 - `@opentelemetry/api` — Direct dependency for meter/instrument creation
 - `@opentelemetry/sdk-metrics` — MeterProvider, PeriodicExportingMetricReader
 - `@opentelemetry/exporter-metrics-otlp-http` — OTLP HTTP metrics exporter
 - `@opentelemetry/resources` — Shared Resource with service.name
 
 ### Configuration
+
 - `OTEL_METRICS_EXPORT_INTERVAL_MS` — Optional, default 60000ms (1-300000)
 - Reuses existing `OTEL_EXPORTER_OTLP_ENDPOINT` for metrics export
 
@@ -59,29 +61,31 @@ Per architecture §4.3, track these from day one:
 
 ### Task Table
 
-| # | Task | Status | Completed |
-|---|------|--------|-----------|
-| 1 | Install OTEL metrics packages | ✅ | 2026-04-23 |
-| 2 | Add OTEL_METRICS_EXPORT_INTERVAL_MS to config | ✅ | 2026-04-23 |
-| 3 | Update otel.ts with MeterProvider + metric reader | ✅ | 2026-04-23 |
-| 4 | Create lib/metrics.ts instrument registry | ✅ | 2026-04-23 |
-| 5 | Create plugins/metrics.ts (HTTP + Redis metrics) | ✅ | 2026-04-23 |
-| 6 | Register metrics plugin in app.ts | ✅ | 2026-04-23 |
-| 7 | Wire OTP + funnel metrics in auth service | ✅ | 2026-04-23 |
-| 8 | Update test setup with OTEL API mock | ✅ | 2026-04-23 |
-| 9 | Update otel.test.ts + sentry.test.ts for new API | ✅ | 2026-04-23 |
-| 10 | Write metrics lib + plugin tests | ✅ | 2026-04-23 |
-| 11 | Validate: check-types + lint + test (400 tests passing) | ✅ | 2026-04-23 |
+| #   | Task                                                    | Status | Completed  |
+| --- | ------------------------------------------------------- | ------ | ---------- |
+| 1   | Install OTEL metrics packages                           | ✅     | 2026-04-23 |
+| 2   | Add OTEL_METRICS_EXPORT_INTERVAL_MS to config           | ✅     | 2026-04-23 |
+| 3   | Update otel.ts with MeterProvider + metric reader       | ✅     | 2026-04-23 |
+| 4   | Create lib/metrics.ts instrument registry               | ✅     | 2026-04-23 |
+| 5   | Create plugins/metrics.ts (HTTP + Redis metrics)        | ✅     | 2026-04-23 |
+| 6   | Register metrics plugin in app.ts                       | ✅     | 2026-04-23 |
+| 7   | Wire OTP + funnel metrics in auth service               | ✅     | 2026-04-23 |
+| 8   | Update test setup with OTEL API mock                    | ✅     | 2026-04-23 |
+| 9   | Update otel.test.ts + sentry.test.ts for new API        | ✅     | 2026-04-23 |
+| 10  | Write metrics lib + plugin tests                        | ✅     | 2026-04-23 |
+| 11  | Validate: check-types + lint + test (400 tests passing) | ✅     | 2026-04-23 |
 
 ### Files Summary
 
 **New files:**
+
 - `apps/api/src/lib/metrics.ts` [new] — Central metric instrument registry
 - `apps/api/src/plugins/metrics.ts` [new] — HTTP + Redis metrics Fastify plugin
 - `apps/api/test/lib/metrics.test.ts` [new] — 11 tests for instrument registry
 - `apps/api/test/plugins/metrics.test.ts` [new] — 4 tests for metrics plugin
 
 **Modified files:**
+
 - `apps/api/src/lib/otel.ts` [modify] — MeterProvider, PeriodicExportingMetricReader, shared Resource
 - `apps/api/src/lib/config.ts` [modify] — OTEL_METRICS_EXPORT_INTERVAL_MS config var
 - `apps/api/src/server.ts` [modify] — TelemetryHandle return type

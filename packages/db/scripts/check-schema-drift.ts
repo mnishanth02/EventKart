@@ -11,7 +11,8 @@ const pkgRoot = path.resolve(__dirname, "..");
 // Set a dummy DATABASE_URL so drizzle.config.ts doesn't throw.
 const env = {
 	...process.env,
-	DATABASE_URL: process.env.DATABASE_URL ?? "postgres://drift-check@localhost/dummy",
+	DATABASE_URL:
+		process.env.DATABASE_URL ?? "postgres://drift-check@localhost/dummy",
 };
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "drizzle-drift-"));
@@ -19,16 +20,15 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "drizzle-drift-"));
 try {
 	console.log("🔍 Checking for schema drift…");
 
-	execSync(
-		`npx drizzle-kit generate --out "${tmpDir}"`,
-		{ cwd: pkgRoot, env, stdio: "pipe" },
-	);
+	execSync(`npx drizzle-kit generate --out "${tmpDir}"`, {
+		cwd: pkgRoot,
+		env,
+		stdio: "pipe",
+	});
 
 	// drizzle-kit writes a `meta` folder + SQL files. If any .sql file was generated,
 	// there are schema changes that haven't been captured in a migration.
-	const generated = fs
-		.readdirSync(tmpDir)
-		.filter((f) => f.endsWith(".sql"));
+	const generated = fs.readdirSync(tmpDir).filter((f) => f.endsWith(".sql"));
 
 	if (generated.length > 0) {
 		console.error(
@@ -46,7 +46,10 @@ try {
 	const message = error instanceof Error ? error.message : String(error);
 
 	// "nothing to migrate" is the happy path
-	if (message.includes("nothing to migrate") || message.includes("No schema changes")) {
+	if (
+		message.includes("nothing to migrate") ||
+		message.includes("No schema changes")
+	) {
 		console.log("✅ No schema drift — all changes have migration files.");
 	} else {
 		console.error("❌ Schema drift check failed:", message);

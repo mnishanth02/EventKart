@@ -1,41 +1,55 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1776841473042,
-      "tag": "0000_dark_adam_warlock",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1777016315936,
-      "tag": "0001_motionless_thor",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777017671542,
-      "tag": "0002_sharp_steve_rogers",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1777019793448,
-      "tag": "0003_lazy_wild_child",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1777020014606,
-      "tag": "0004_cool_thunderbird",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1776841473042,
+			"tag": "0000_dark_adam_warlock",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1777016315936,
+			"tag": "0001_motionless_thor",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1777017671542,
+			"tag": "0002_sharp_steve_rogers",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1777019793448,
+			"tag": "0003_lazy_wild_child",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1777020014606,
+			"tag": "0004_cool_thunderbird",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1777042209596,
+			"tag": "0005_empty_bishop",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1777091223997,
+			"tag": "0006_brief_slapstick",
+			"breakpoints": true
+		}
+	]
 }

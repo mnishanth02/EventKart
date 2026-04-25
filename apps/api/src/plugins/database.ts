@@ -1,7 +1,6 @@
+import { createDatabase } from "@repo/db";
 import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
-
-import { createDatabase, type Database } from "@repo/db";
 
 const databasePlugin: FastifyPluginAsync = async (fastify) => {
 	const db = createDatabase(fastify.config.DATABASE_URL);

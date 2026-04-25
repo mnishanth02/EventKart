@@ -40,9 +40,11 @@ vi.mock("ioredis", () => {
 		del = vi.fn().mockResolvedValue(1);
 		ttl = vi.fn().mockResolvedValue(-2);
 		eval = vi.fn().mockResolvedValue(null);
-		info = vi.fn().mockResolvedValue(
-			"used_memory:1024000\r\nevicted_keys:0\r\nconnected_clients:5\r\n",
-		);
+		info = vi
+			.fn()
+			.mockResolvedValue(
+				"used_memory:1024000\r\nevicted_keys:0\r\nconnected_clients:5\r\n",
+			);
 		pipeline = vi.fn().mockReturnValue({
 			set: vi.fn().mockReturnThis(),
 			exec: vi.fn().mockResolvedValue([]),
@@ -107,15 +109,13 @@ vi.mock("bullmq", () => {
 		opts: Record<string, unknown>;
 		add = vi.fn().mockResolvedValue({ id: "mock-job-id", name: "mock-job" });
 		close = vi.fn().mockResolvedValue(undefined);
-		getJobCounts = vi
-			.fn()
-			.mockResolvedValue({
-				waiting: 0,
-				active: 0,
-				completed: 0,
-				failed: 0,
-				delayed: 0,
-			});
+		getJobCounts = vi.fn().mockResolvedValue({
+			waiting: 0,
+			active: 0,
+			completed: 0,
+			failed: 0,
+			delayed: 0,
+		});
 		getJobs = vi.fn().mockResolvedValue([]);
 
 		constructor(name: string, opts?: Record<string, unknown>) {

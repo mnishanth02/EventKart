@@ -46,4 +46,3 @@ FT._LIST
 ```
 
 Reference: [Redis Search Index Management](https://redis.io/docs/latest/develop/interact/search-and-query/administration/)
-

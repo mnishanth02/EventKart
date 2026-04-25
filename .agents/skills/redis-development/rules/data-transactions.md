@@ -14,6 +14,7 @@ Use the `MULTI`/`EXEC` commands to create a transaction when you need to execute
 **Correct:** Use transactions when multiple related keys must be updated together.
 
 **Python** (redis-py):
+
 ```python
 import redis
 
@@ -28,6 +29,7 @@ pipe.execute()  # All commands execute as one atomic unit
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.UnifiedJedis;
 import redis.clients.jedis.Transaction;
@@ -46,6 +48,7 @@ try (UnifiedJedis jedis = new UnifiedJedis("redis://localhost:6379")) {
 **Incorrect:** Executing related commands individually when atomicity is required.
 
 **Python** (redis-py):
+
 ```python
 import redis
 
@@ -59,11 +62,13 @@ client.set("person:1:serial", "AB1234")
 ```
 
 **When to use transactions:**
+
 - Multiple keys must be updated as a single atomic unit
 - Other clients reading partial state would cause bugs
 - Implementing patterns like "transfer balance between accounts"
 
 **When transactions are NOT needed:**
+
 - Independent operations that don't need to be atomic
 - Single-command operations (already atomic)
 - When using pipelining purely for performance (use `pipeline(transaction=False)`)
@@ -71,4 +76,3 @@ client.set("person:1:serial", "AB1234")
 **Note:** Transactions add overhead. Only use them when atomicity is actually required.
 
 Reference: [Transactions](https://redis.io/docs/latest/develop/interact/transactions/)
-

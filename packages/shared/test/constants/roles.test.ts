@@ -51,8 +51,7 @@ describe("hasMinimumRole", () => {
 		for (const userRole of roles) {
 			for (const minRole of roles) {
 				const result = hasMinimumRole(userRole, minRole);
-				const expected =
-					ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[minRole];
+				const expected = ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[minRole];
 				expect(result).toBe(expected);
 			}
 		}

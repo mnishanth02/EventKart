@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { OtpLoginDialog } from "./components";
 import { AUTH_QUERY_KEY, sessionQueryOptions } from "./queries";
 import type { AuthState } from "./types";
@@ -81,14 +81,16 @@ export function useRequireAuth() {
 
 		// If session query is still loading, wait for it before deciding
 		if (isLoading) {
-			void queryClient.ensureQueryData(sessionQueryOptions()).then((session) => {
-				if (session) {
-					callback();
-				} else {
-					pendingCallbackRef.current = callback;
-					setDialogOpen(true);
-				}
-			});
+			void queryClient
+				.ensureQueryData(sessionQueryOptions())
+				.then((session) => {
+					if (session) {
+						callback();
+					} else {
+						pendingCallbackRef.current = callback;
+						setDialogOpen(true);
+					}
+				});
 			return;
 		}
 

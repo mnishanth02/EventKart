@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import { phoneInputSchema, phoneSchema } from "../../src/schemas/phone";
 
 describe("phoneInputSchema", () => {
-	it.each(["6000000000", "7000000000", "8000000000", "9000000000"])(
-		"accepts 10-digit number starting with %s",
-		(num) => {
-			expect(phoneInputSchema.safeParse(num).success).toBe(true);
-		},
-	);
+	it.each([
+		"6000000000",
+		"7000000000",
+		"8000000000",
+		"9000000000",
+	])("accepts 10-digit number starting with %s", (num) => {
+		expect(phoneInputSchema.safeParse(num).success).toBe(true);
+	});
 
 	it("accepts with +91 prefix", () => {
 		expect(phoneInputSchema.safeParse("+919876543210").success).toBe(true);

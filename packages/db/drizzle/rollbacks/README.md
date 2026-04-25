@@ -4,8 +4,8 @@ Every migration in `drizzle/` **must** have a companion rollback SQL file in thi
 
 ## Convention
 
-| Migration file | Rollback file |
-| --- | --- |
+| Migration file               | Rollback file                                   |
+| ---------------------------- | ----------------------------------------------- |
 | `drizzle/0001_cool_name.sql` | `drizzle/rollbacks/0001_cool_name.rollback.sql` |
 
 - **Naming:** Replace `.sql` with `.rollback.sql`, keeping the same base name.

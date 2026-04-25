@@ -1,6 +1,6 @@
+import { cn } from "@repo/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { CompassIcon, SearchIcon } from "lucide-react";
-import { cn } from "@repo/ui/lib/utils";
 
 function MobileBottomNav() {
 	return (

@@ -13,12 +13,12 @@ This file covers **repo-wide** rules only.
 
 ## Package Boundaries
 
-| Package | Purpose | Import as |
-|---|---|---|
-| `apps/web` | TanStack Start frontend (SSR + CSR) | — |
-| `apps/api` | Fastify v5 REST API | — |
-| `packages/ui` | Shared shadcn/ui components, hooks, utils | `@repo/ui/components/*`, `@repo/ui/lib/*`, `@repo/ui/hooks/*` |
-| `packages/typescript-config` | Shared tsconfig presets | `@repo/typescript-config` |
+| Package                      | Purpose                                   | Import as                                                     |
+| ---------------------------- | ----------------------------------------- | ------------------------------------------------------------- |
+| `apps/web`                   | TanStack Start frontend (SSR + CSR)       | —                                                             |
+| `apps/api`                   | Fastify v5 REST API                       | —                                                             |
+| `packages/ui`                | Shared shadcn/ui components, hooks, utils | `@repo/ui/components/*`, `@repo/ui/lib/*`, `@repo/ui/hooks/*` |
+| `packages/typescript-config` | Shared tsconfig presets                   | `@repo/typescript-config`                                     |
 
 - Never import directly between `apps/web` and `apps/api` — they communicate via HTTP only.
 - Shared UI goes in `packages/ui`. Don't duplicate shared components inside an app.
@@ -71,10 +71,10 @@ After making changes, run the relevant checks for affected workspace(s): `test`,
 
 Env files are package-local — never centralize them at the repo root.
 
-| Package | Example file | Local file |
-|---|---|---|
+| Package    | Example file   | Local file   |
+| ---------- | -------------- | ------------ |
 | `apps/web` | `.env.example` | `.env.local` |
-| `apps/api` | `.env.example` | `.env` |
+| `apps/api` | `.env.example` | `.env`       |
 
 In `apps/web`, access env through `publicEnv` (client-safe `VITE_*` values) or `serverEnv` (server-only) — never read `import.meta.env` directly. In `apps/api`, config is validated in `src/lib/config.ts` and decorated onto the Fastify instance via the config plugin — access it as `fastify.config.*`.
 

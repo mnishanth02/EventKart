@@ -1,4 +1,12 @@
-import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 
 // Mock the auth service module to control verifyOtpAndCreateSession
 const mockVerifyOtpAndCreateSession = vi.fn();
@@ -11,12 +19,12 @@ vi.mock("../../../src/modules/auth/service.js", () => ({
 }));
 
 import type { FastifyInstance } from "fastify";
-import { buildTestApp } from "../../helpers/build-app.js";
 import {
 	OtpExpiredError,
 	OtpInvalidError,
 	OtpMaxAttemptsError,
 } from "../../../src/lib/errors.js";
+import { buildTestApp } from "../../helpers/build-app.js";
 
 const VERIFY_URL = "/api/v1/auth/otp/verify";
 const VALID_HEADERS = { origin: "http://localhost:3000" };
@@ -26,7 +34,7 @@ function parseCookies(setCookieHeader: string): Record<string, string> {
 	const parts = setCookieHeader.split(";").map((s) => s.trim());
 	for (const part of parts) {
 		const [key, ...rest] = part.split("=");
-		attrs[key!.toLowerCase()] = rest.join("=");
+		attrs[key?.toLowerCase()] = rest.join("=");
 	}
 	return attrs;
 }
@@ -108,10 +116,10 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			expect(sessionCookie).toBeDefined();
 
 			const cookie = parseCookies(sessionCookie!);
-			expect(cookie["kiran_session"]).toBe("test-session-id");
+			expect(cookie.kiran_session).toBe("test-session-id");
 			expect(cookie).toHaveProperty("httponly");
-			expect(cookie["samesite"]).toBe("Lax");
-			expect(cookie["path"]).toBe("/");
+			expect(cookie.samesite).toBe("Lax");
+			expect(cookie.path).toBe("/");
 		});
 
 		it("passes phone and otp to the service function", async () => {
@@ -130,8 +138,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			});
 
 			expect(mockVerifyOtpAndCreateSession).toHaveBeenCalledOnce();
-			const [_deps, phone, otp] =
-				mockVerifyOtpAndCreateSession.mock.calls[0]!;
+			const [_deps, phone, otp] = mockVerifyOtpAndCreateSession.mock.calls[0]!;
 			expect(phone).toBe("+919876543210");
 			expect(otp).toBe("654321");
 		});
@@ -270,9 +277,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 
 	describe("OTP invalid", () => {
 		it("returns 400 with OTP_INVALID code and attemptsRemaining", async () => {
-			mockVerifyOtpAndCreateSession.mockRejectedValue(
-				new OtpInvalidError(3),
-			);
+			mockVerifyOtpAndCreateSession.mockRejectedValue(new OtpInvalidError(3));
 
 			const response = await app.inject({
 				method: "POST",
@@ -294,9 +299,7 @@ describe("POST /api/v1/auth/otp/verify", () => {
 		});
 
 		it("returns correct remaining attempts when only 1 left", async () => {
-			mockVerifyOtpAndCreateSession.mockRejectedValue(
-				new OtpInvalidError(1),
-			);
+			mockVerifyOtpAndCreateSession.mockRejectedValue(new OtpInvalidError(1));
 
 			const response = await app.inject({
 				method: "POST",

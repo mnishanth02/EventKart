@@ -1,9 +1,10 @@
+import type { Database } from "@repo/db";
+import { and, eq, isNull } from "@repo/db";
+import { sessions, users } from "@repo/db/schema";
+import { OTP_TTL_SECONDS, SESSION_TTL_SECONDS } from "@repo/shared/constants";
 import type { FastifyBaseLogger } from "fastify";
 import type { Redis } from "ioredis";
 import type { AppConfig } from "../../lib/config.js";
-import type { Database } from "@repo/db";
-import { users, sessions } from "@repo/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
 import {
 	OtpDeliveryError,
 	OtpExpiredError,
@@ -11,6 +12,11 @@ import {
 	OtpMaxAttemptsError,
 	OtpRateLimitError,
 } from "../../lib/errors.js";
+import {
+	funnelStepTotal,
+	otpSendTotal,
+	otpVerifyTotal,
+} from "../../lib/metrics.js";
 import type { Msg91Config, OtpDeliveryResult } from "../../lib/msg91.js";
 import { sendOtpWithFallback } from "../../lib/msg91.js";
 import {
@@ -23,17 +29,11 @@ import {
 	verifyAndConsumeOtp,
 } from "../../lib/otp.js";
 import {
-	generateSessionId,
 	createRedisSession,
 	deleteRedisSession,
+	generateSessionId,
 	type SessionData,
 } from "../../lib/session.js";
-import { OTP_TTL_SECONDS, SESSION_TTL_SECONDS } from "@repo/shared/constants";
-import {
-	otpSendTotal,
-	otpVerifyTotal,
-	funnelStepTotal,
-} from "../../lib/metrics.js";
 
 export interface OtpSendDeps {
 	redis: Redis;
@@ -114,7 +114,7 @@ export async function sendOtpForPhone(
 	} else {
 		// Dev/log mode — log OTP for local development
 		log.info(
-			{ phone: phone.slice(0, 6) + "****", otp },
+			{ phone: `${phone.slice(0, 6)}****`, otp },
 			"OTP generated (log mode)",
 		);
 	}
@@ -194,7 +194,7 @@ export async function verifyOtpAndCreateSession(
 		isNewUser = true;
 		userId = insertResult[0]!.id;
 		role = insertResult[0]!.role;
-		log.info({ userId, phone: phone.slice(0, 6) + "****" }, "New user created");
+		log.info({ userId, phone: `${phone.slice(0, 6)}****` }, "New user created");
 	} else {
 		// Existing user — fetch their current data
 		const existingUser = await db
@@ -206,7 +206,10 @@ export async function verifyOtpAndCreateSession(
 		if (!existingUser[0]) {
 			// This shouldn't happen: conflict means user exists, but SELECT found nothing.
 			// Could be a concurrent soft-delete. Treat as error.
-			log.error({ phone: phone.slice(0, 6) + "****" }, "User conflict but not found on SELECT");
+			log.error(
+				{ phone: `${phone.slice(0, 6)}****` },
+				"User conflict but not found on SELECT",
+			);
 			throw new Error("User lookup failed after conflict");
 		}
 
@@ -244,10 +247,7 @@ export async function verifyOtpAndCreateSession(
 		throw dbError;
 	}
 
-	log.info(
-		{ userId, sessionId, isNewUser },
-		"Session created",
-	);
+	log.info({ userId, sessionId, isNewUser }, "Session created");
 
 	otpVerifyTotal.add(1, { status: "success" });
 	funnelStepTotal.add(1, { step: "otp_verified" });

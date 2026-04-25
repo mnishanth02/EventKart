@@ -21,9 +21,11 @@ result = redis.get('key')
 ```
 
 ---
+
 ### Choose ONE of the following patterns:
 
 #### Pattern A: "Incorrect" (when alternative causes real harm)
+
 Use when the alternative causes race conditions, security issues, crashes, or significant performance problems.
 
 **Incorrect:** Description of the problematic approach.
@@ -35,13 +37,16 @@ result = redis.get('key')
 ```
 
 #### Pattern B: "When to use" (for feature introductions)
+
 Use when not using the feature is a valid choice for many use cases.
 
 **When to use:**
+
 - Scenario where this approach is beneficial
 - Another scenario where it helps
 
 **When NOT needed:**
+
 - Scenario where the simpler approach is fine
 - Another scenario where this adds unnecessary complexity
 

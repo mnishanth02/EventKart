@@ -1,20 +1,29 @@
 import type {
+	DocumentUploadRequest,
 	OrganizerProfile,
+	OrganizerUpdateInput,
 	PolicyStatusResponse,
 	PresignedUploadUrl,
 	VerificationDocument,
-	DocumentUploadRequest,
+	VerificationStatusResponse,
 } from "@repo/shared/schemas";
 
 export type {
+	DocumentUploadRequest,
 	OrganizerProfile,
+	OrganizerUpdateInput,
 	PolicyStatusResponse,
 	PresignedUploadUrl,
 	VerificationDocument,
-	DocumentUploadRequest,
+	VerificationStatusResponse,
 };
 
 export type OrganizerProfileResponse = {
+	success: true;
+	data: OrganizerProfile;
+};
+
+export type OrganizerUpdateResponse = {
 	success: true;
 	data: OrganizerProfile;
 };
@@ -42,4 +51,9 @@ export type VerificationDocumentsListResponse = {
 export type DocumentDeleteResponse = {
 	success: true;
 	data: { deleted: true };
+};
+
+export type VerificationStatusApiResponse = {
+	success: true;
+	data: VerificationStatusResponse;
 };

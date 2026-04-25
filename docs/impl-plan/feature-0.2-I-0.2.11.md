@@ -15,12 +15,14 @@ HMAC-signed double-submit cookie pattern for anti-CSRF protection on state-chang
 ## Implementation
 
 ### Plugin (`plugins/csrf.ts`)
+
 - `onRequest` hook validates state-changing methods (POST, PUT, DELETE, PATCH)
 - Skips: safe methods (GET, HEAD, OPTIONS), unauthenticated, opt-out routes
 - Validates: HMAC signature integrity + double-submit (header === cookie)
 - Exports: `generateCsrfToken()`, `buildCsrfCookieOptions()`, `buildCsrfClearOptions()`
 
 ### Integration Points
+
 - **OTP verify route**: Sets `__csrf` cookie after session creation
 - **Logout route**: Clears `__csrf` cookie
 - **CORS plugin**: Added `X-CSRF-Token` to `allowedHeaders`
@@ -28,33 +30,37 @@ HMAC-signed double-submit cookie pattern for anti-CSRF protection on state-chang
 - **OTP verify route**: Origin header validation for login-CSRF protection
 
 ### Config (`lib/config.ts`)
+
 - `CSRF_SECRET` — HMAC signing key (defaults to dev value)
 
 ### Constants (`@repo/shared/constants/csrf.ts`)
+
 - `CSRF_COOKIE_NAME = "__csrf"`
 - `CSRF_HEADER_NAME = "x-csrf-token"`
 
 ### Error Classes (`lib/errors.ts`)
+
 - `ForbiddenError` (403, "FORBIDDEN")
 - `CsrfError` (403, "CSRF_VALIDATION_FAILED")
 
 ## Tasks
 
-| # | Task | Status |
-|---|------|--------|
-| 1 | Add CSRF constants to shared package | ✅ |
-| 2 | Add CSRF_SECRET to config | ✅ |
-| 3 | Add ForbiddenError + CsrfError classes | ✅ |
-| 4 | Create CSRF plugin | ✅ |
-| 5 | Update CORS allowedHeaders | ✅ |
-| 6 | Set CSRF cookie on OTP verify | ✅ |
-| 7 | Add Origin validation on OTP verify | ✅ |
-| 8 | Register plugin in app.ts | ✅ |
-| 9 | Integration tests (25 tests) | ✅ |
+| #   | Task                                   | Status |
+| --- | -------------------------------------- | ------ |
+| 1   | Add CSRF constants to shared package   | ✅     |
+| 2   | Add CSRF_SECRET to config              | ✅     |
+| 3   | Add ForbiddenError + CsrfError classes | ✅     |
+| 4   | Create CSRF plugin                     | ✅     |
+| 5   | Update CORS allowedHeaders             | ✅     |
+| 6   | Set CSRF cookie on OTP verify          | ✅     |
+| 7   | Add Origin validation on OTP verify    | ✅     |
+| 8   | Register plugin in app.ts              | ✅     |
+| 9   | Integration tests (25 tests)           | ✅     |
 
 ## Test Coverage
 
 25 tests in `test/plugins/csrf.test.ts`:
+
 - Safe methods bypass (GET, HEAD, OPTIONS)
 - Unauthenticated bypass
 - Valid token passes (POST, PUT, DELETE, PATCH)

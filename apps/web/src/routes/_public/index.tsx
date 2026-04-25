@@ -1,9 +1,9 @@
-import { useEffect } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { z } from "zod/v4";
-import { toast } from "sonner";
 import { Badge } from "@repo/ui/components/ui/badge";
 import { Separator } from "@repo/ui/components/ui/separator";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { toast } from "sonner";
+import { z } from "zod/v4";
 
 const searchSchema = z.object({
 	reason: z.enum(["auth-required", "forbidden"]).optional().catch(undefined),
@@ -39,7 +39,8 @@ function Home() {
 					Find your next race
 				</h1>
 				<p className="mx-auto max-w-lg text-base text-muted-foreground md:text-lg">
-					Discover running events, register in seconds, and show up ready to run.
+					Discover running events, register in seconds, and show up ready to
+					run.
 				</p>
 			</section>
 
