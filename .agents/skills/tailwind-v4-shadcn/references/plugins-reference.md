@@ -20,8 +20,7 @@ Tailwind v4 supports official plugins using the `@plugin` directive in CSS (not 
 **Installation:**
 
 ```bash
-bun add -d @tailwindcss/typography
-# or: npm install -D @tailwindcss/typography
+pnpm add -D @tailwindcss/typography
 ```
 
 **Configuration (v4 syntax):**
@@ -55,8 +54,7 @@ bun add -d @tailwindcss/typography
 **Installation:**
 
 ```bash
-bun add -d @tailwindcss/forms
-# or: npm install -D @tailwindcss/forms
+pnpm add -D @tailwindcss/forms
 ```
 
 **Configuration (v4 syntax):**

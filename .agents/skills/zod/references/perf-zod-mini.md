@@ -22,7 +22,7 @@ For frontend applications where bundle size is critical, use `@zod/mini` instead
 import { z } from "zod";
 
 // Zod Mini: ~1.9kb gzipped (when tree-shaken)
-import * as z from "@zod/mini";
+import * as zm from "@zod/mini";
 ```
 
 **Standard Zod (method chaining):**
@@ -43,16 +43,16 @@ const result = userSchema.safeParse(data);
 **Zod Mini (functional API):**
 
 ```typescript
-import * as z from "@zod/mini";
+import * as zm from "@zod/mini";
 
 // Functions are imported individually - tree-shakeable
-const userSchema = z.object({
-  name: z.pipe(z.string(), z.minLength(1), z.maxLength(100)),
-  email: z.pipe(z.string(), z.email()),
-  age: z.pipe(z.number(), z.int(), z.positive()),
+const userSchema = zm.object({
+  name: zm.pipe(zm.string(), zm.minLength(1), zm.maxLength(100)),
+  email: zm.pipe(zm.string(), zm.email()),
+  age: zm.pipe(zm.number(), zm.int(), zm.positive()),
 });
 
-const result = z.safeParse(userSchema, data);
+const result = zm.safeParse(userSchema, data);
 ```
 
 **API differences:**

@@ -10,7 +10,7 @@ Register your router instance with TypeScript's module declaration to enable typ
 
 ```tsx
 // router.tsx - Missing type registration
-import { createRouter, createRootRoute } from "@tanstack/react-router";
+import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
 export const router = createRouter({ routeTree });

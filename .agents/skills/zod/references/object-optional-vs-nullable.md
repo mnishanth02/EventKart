@@ -48,7 +48,7 @@ const userSchema = z.object({
   // Type: Date | null
 });
 
-// Field can be omitted
+// nickname can be omitted
 userSchema.parse({ name: "John", deletedAt: null }); // Valid
 
 // Field must be present (even if null)
