@@ -9,6 +9,7 @@ import {
 	confirmDocumentUpload,
 	deleteVerificationDocument,
 	listVerificationDocuments,
+	maybeUpdateOrganizerVerificationStatus,
 	requestDocumentUpload,
 } from "./document-service.js";
 import { acceptPolicies, getPolicyStatus } from "./policy-service.js";
@@ -219,6 +220,20 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 				request.body.policies,
 				request.ip,
 			);
+
+			// Re-evaluate verification status after policy acceptance
+			// (handles the case where docs were uploaded first, then policies accepted)
+			const organizer = await getOrganizerByUserId(
+				app.db,
+				request.session!.userId,
+			);
+			if (organizer) {
+				await maybeUpdateOrganizerVerificationStatus(
+					app.db,
+					organizer.id,
+					request.log,
+				);
+			}
 
 			return { success: true as const, data: status };
 		},

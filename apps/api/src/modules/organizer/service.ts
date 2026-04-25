@@ -37,6 +37,8 @@ export interface OrganizerRow {
 	submittedForReviewAt: Date | null;
 	reviewedAt: Date | null;
 	rejectionReason: string | null;
+	razorpayAccountStatus: string;
+	razorpayAccountId: string | null;
 	createdAt: Date;
 	updatedAt: Date;
 }

@@ -162,30 +162,37 @@ export async function confirmDocumentUpload(
 		);
 	}
 
-	// Mark any previously uploaded doc of the same type as "replaced"
-	await db
-		.update(verificationDocuments)
-		.set({ status: "replaced" })
-		.where(
-			and(
-				eq(verificationDocuments.organizerId, organizerId),
-				eq(verificationDocuments.documentType, doc.documentType),
-				eq(verificationDocuments.status, "uploaded"),
-			),
-		);
+	// Wrap document status changes in a transaction for atomicity
+	// (prevents orphaned "replaced" docs if the "uploaded" update fails)
+	let updated!: typeof verificationDocuments.$inferSelect;
+	await db.transaction(async (tx) => {
+		// Mark any previously uploaded doc of the same type as "replaced"
+		await tx
+			.update(verificationDocuments)
+			.set({ status: "replaced" })
+			.where(
+				and(
+					eq(verificationDocuments.organizerId, organizerId),
+					eq(verificationDocuments.documentType, doc.documentType),
+					eq(verificationDocuments.status, "uploaded"),
+				),
+			);
 
-	const [updated] = await db
-		.update(verificationDocuments)
-		.set({
-			status: "uploaded",
-			fileSize: metadata.contentLength ?? null,
-		})
-		.where(eq(verificationDocuments.id, documentId))
-		.returning();
+		const [result] = await tx
+			.update(verificationDocuments)
+			.set({
+				status: "uploaded",
+				fileSize: metadata.contentLength ?? null,
+			})
+			.where(eq(verificationDocuments.id, documentId))
+			.returning();
 
-	if (!updated) {
-		throw new Error("Failed to update document status");
-	}
+		if (!result) {
+			throw new Error("Failed to update document status");
+		}
+
+		updated = result;
+	});
 
 	await maybeUpdateOrganizerVerificationStatus(db, organizerId, log);
 
@@ -232,7 +239,23 @@ export async function listVerificationDocuments(
 			),
 		);
 
-	return docs.map(toDocumentResponse);
+	// Prefer "uploaded" over "pending" per documentType to avoid
+	// abandoned replacement uploads hiding existing documents
+	const byType = new Map<string, (typeof docs)[number]>();
+	for (const doc of docs) {
+		const existing = byType.get(doc.documentType);
+		if (!existing || doc.status === "uploaded") {
+			byType.set(doc.documentType, doc);
+		}
+	}
+
+	// Include any pending docs that don't conflict with uploaded ones
+	const dedupedIds = new Set([...byType.values()].map((d) => d.id));
+	const result = docs.filter(
+		(d) => dedupedIds.has(d.id) || !byType.has(d.documentType),
+	);
+
+	return result.map(toDocumentResponse);
 }
 
 /**
@@ -308,7 +331,7 @@ export async function deleteVerificationDocument(
  * SLA tracking: sets submittedForReviewAt when entering pending_review.
  * Clears review-cycle metadata on status transitions.
  */
-async function maybeUpdateOrganizerVerificationStatus(
+export async function maybeUpdateOrganizerVerificationStatus(
 	db: Database,
 	organizerId: string,
 	log: FastifyBaseLogger,

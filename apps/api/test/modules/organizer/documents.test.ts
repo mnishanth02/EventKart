@@ -25,6 +25,7 @@ vi.mock("../../../src/modules/organizer/document-service.js", () => ({
 		mockListVerificationDocuments(...args),
 	deleteVerificationDocument: (...args: unknown[]) =>
 		mockDeleteVerificationDocument(...args),
+	maybeUpdateOrganizerVerificationStatus: vi.fn(),
 }));
 
 vi.mock("../../../src/modules/organizer/service.js", () => ({

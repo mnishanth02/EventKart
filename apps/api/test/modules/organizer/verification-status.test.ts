@@ -33,6 +33,7 @@ vi.mock("../../../src/modules/organizer/document-service.js", () => ({
 	confirmDocumentUpload: vi.fn(),
 	listVerificationDocuments: vi.fn(),
 	deleteVerificationDocument: vi.fn(),
+	maybeUpdateOrganizerVerificationStatus: vi.fn(),
 }));
 
 vi.mock("../../../src/modules/organizer/policy-service.js", () => ({

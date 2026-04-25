@@ -434,6 +434,17 @@ export async function retryRazorpayAccount(
 		{ jobId: `razorpay-${organizerId}-${Date.now()}` },
 	);
 
+	// Audit log the retry action
+	await db.insert(auditLog).values({
+		actorId: adminUserId,
+		actorRole: "admin",
+		action: AUDIT_ACTIONS.RAZORPAY_ACCOUNT_RETRY,
+		resourceType: AUDIT_RESOURCE_TYPES.ORGANIZER,
+		resourceId: organizerId,
+		metadata: { previousStatus: org.razorpayAccountStatus },
+		ipAddress,
+	});
+
 	log.info(
 		{ organizerId, adminUserId },
 		"Razorpay account retry job enqueued by admin",

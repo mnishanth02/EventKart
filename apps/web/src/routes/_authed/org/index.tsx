@@ -150,6 +150,24 @@ function OrganizerDashboard() {
 		);
 	}
 
+	if (profileQuery.isError) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<Card className="max-w-md text-center">
+					<CardHeader>
+						<CardTitle>Something Went Wrong</CardTitle>
+						<CardDescription>
+							We couldn&apos;t load your organizer profile. Please try again.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Button onClick={() => profileQuery.refetch()}>Retry</Button>
+					</CardContent>
+				</Card>
+			</div>
+		);
+	}
+
 	if (!profileQuery.data) {
 		return (
 			<div className="flex items-center justify-center py-12">
@@ -173,12 +191,31 @@ function OrganizerDashboard() {
 
 	if (
 		policyQuery.isLoading ||
+		policyQuery.isError ||
 		(policyQuery.data != null && !policyQuery.data.allRequiredAccepted)
 	) {
 		if (policyQuery.isLoading) {
 			return (
 				<div className="flex items-center justify-center py-12">
 					<p className="text-muted-foreground">Checking policy status...</p>
+				</div>
+			);
+		}
+
+		if (policyQuery.isError) {
+			return (
+				<div className="flex items-center justify-center py-12">
+					<Card className="max-w-md text-center">
+						<CardHeader>
+							<CardTitle>Something Went Wrong</CardTitle>
+							<CardDescription>
+								We couldn&apos;t check your policy status. Please try again.
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<Button onClick={() => policyQuery.refetch()}>Retry</Button>
+						</CardContent>
+					</Card>
 				</div>
 			);
 		}

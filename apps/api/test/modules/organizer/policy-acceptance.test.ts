@@ -25,6 +25,14 @@ vi.mock("../../../src/modules/organizer/service.js", () => ({
 	updateOrganizer: vi.fn(),
 }));
 
+vi.mock("../../../src/modules/organizer/document-service.js", () => ({
+	requestDocumentUpload: vi.fn(),
+	confirmDocumentUpload: vi.fn(),
+	listVerificationDocuments: vi.fn(),
+	deleteVerificationDocument: vi.fn(),
+	maybeUpdateOrganizerVerificationStatus: vi.fn(),
+}));
+
 import type { FastifyInstance } from "fastify";
 import { generateCsrfToken } from "../../../src/plugins/csrf.js";
 import { buildTestApp } from "../../helpers/build-app.js";
