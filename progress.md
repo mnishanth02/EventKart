@@ -45,6 +45,7 @@
 | 33 | I-1.1.4 — Verification Status Tracking | — | ✅ Complete | 2026-07-25 | 2026-07-25 |
 | 34 | I-1.1.5 — Admin Verification Review UI (Frontend) | — | ✅ Complete | 2026-07-25 | 2026-07-25 |
 | 35 | I-1.1.5 — Admin Verification Review API (Backend) | — | ✅ Complete | 2026-07-25 | 2026-07-25 |
+| 36 | I-1.1.6 + I-1.1.7 — DB & Shared Schema Foundation (Verification Badge + Razorpay) | — | ✅ Complete | 2026-07-25 | 2026-07-25 |
 
 ## Completed Implementation Plans
 

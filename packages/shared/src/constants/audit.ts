@@ -23,6 +23,11 @@ export const AUDIT_ACTIONS = {
 	ORGANIZER_DOCUMENT_DELETE: "organizer.document_delete",
 	ORGANIZER_DOCUMENT_VIEW: "organizer.document_view",
 	ORGANIZER_PROFILE_UPDATE: "organizer.profile_update",
+	// Razorpay
+	RAZORPAY_ACCOUNT_CREATE: "razorpay.account_create",
+	RAZORPAY_ACCOUNT_CREATE_FAILED: "razorpay.account_create_failed",
+	RAZORPAY_ACCOUNT_STATUS_CHANGE: "razorpay.account_status_change",
+	RAZORPAY_ACCOUNT_RETRY: "razorpay.account_retry",
 	// Event
 	EVENT_CREATE: "event.create",
 	EVENT_UPDATE: "event.update",

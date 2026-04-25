@@ -105,3 +105,15 @@ export const adminReviewActionResponseSchema = z.object({
 export type AdminReviewActionResponse = z.infer<
 	typeof adminReviewActionResponseSchema
 >;
+
+// ── Admin retry Razorpay response ─────────────────────────────────
+
+export const adminRetryRazorpayResponseSchema = z.object({
+	organizerId: z.string().uuid(),
+	razorpayAccountStatus: z.string(),
+	message: z.string(),
+});
+
+export type AdminRetryRazorpayResponse = z.infer<
+	typeof adminRetryRazorpayResponseSchema
+>;

@@ -110,6 +110,7 @@ export const organizerProfileSchema = z.object({
 	website: z.string().nullable(),
 	verificationStatus: z.string(),
 	isVerified: z.boolean(),
+	razorpayAccountStatus: z.string(),
 	submittedForReviewAt: z.string().nullable(),
 	reviewedAt: z.string().nullable(),
 	rejectionReason: z.string().nullable(),
@@ -203,6 +204,11 @@ export const verificationStatusResponseSchema = z.object({
 			submittedAt: z.string().nullable(),
 			expectedBy: z.string().nullable(),
 		}),
+	}),
+	publishingEligibility: z.object({
+		canPublishFreeEvents: z.boolean(),
+		canPublishPaidEvents: z.boolean(),
+		reasons: z.array(z.string()),
 	}),
 });
 

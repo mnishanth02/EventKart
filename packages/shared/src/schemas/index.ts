@@ -1,6 +1,7 @@
 export type {
 	AdminApproveBody,
 	AdminRejectBody,
+	AdminRetryRazorpayResponse,
 	AdminReviewActionResponse,
 	AdminVerificationDetail,
 	AdminVerificationListItem,
@@ -10,6 +11,7 @@ export type {
 export {
 	adminApproveBodySchema,
 	adminRejectBodySchema,
+	adminRetryRazorpayResponseSchema,
 	adminReviewActionResponseSchema,
 	adminVerificationDetailSchema,
 	adminVerificationListItemSchema,

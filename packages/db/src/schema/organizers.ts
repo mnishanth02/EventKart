@@ -1,4 +1,7 @@
-import { sql } from "drizzle-orm";
+import {
+	RAZORPAY_ACCOUNT_STATUSES,
+	VERIFICATION_STATUSES,
+} from "@repo/shared/constants";
 import {
 	boolean,
 	index,
@@ -11,11 +14,15 @@ import {
 	varchar,
 } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
-import { VERIFICATION_STATUSES } from "@repo/shared/constants";
 
 export const verificationStatusEnum = pgEnum(
 	"verification_status",
 	VERIFICATION_STATUSES,
+);
+
+export const razorpayAccountStatusEnum = pgEnum(
+	"razorpay_account_status",
+	RAZORPAY_ACCOUNT_STATUSES,
 );
 
 export const organizers = pgTable(
@@ -44,6 +51,18 @@ export const organizers = pgTable(
 			onDelete: "set null",
 		}),
 		rejectionReason: text("rejection_reason"),
+		razorpayAccountId: varchar("razorpay_account_id", { length: 255 }),
+		razorpayAccountStatus: razorpayAccountStatusEnum("razorpay_account_status")
+			.notNull()
+			.default("not_started"),
+		razorpayLinkedAt: timestamp("razorpay_linked_at", {
+			withTimezone: true,
+		}),
+		razorpayRawStatus: varchar("razorpay_raw_status", { length: 100 }),
+		razorpayLastError: text("razorpay_last_error"),
+		razorpayLastSyncedAt: timestamp("razorpay_last_synced_at", {
+			withTimezone: true,
+		}),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
@@ -54,6 +73,9 @@ export const organizers = pgTable(
 	},
 	(table) => [
 		uniqueIndex("organizers_user_id_unique").on(table.userId),
+		uniqueIndex("organizers_razorpay_account_id_unique").on(
+			table.razorpayAccountId,
+		),
 		index("organizers_verification_status_idx").on(table.verificationStatus),
 		index("organizers_city_idx").on(table.city),
 	],
