@@ -53,7 +53,10 @@ function DashboardSkeleton() {
 	);
 }
 
-export function PageSkeleton({ variant = "default", className }: PageSkeletonProps) {
+export function PageSkeleton({
+	variant = "default",
+	className,
+}: PageSkeletonProps) {
 	return (
 		<div aria-hidden="true" className={cn("p-4 md:p-6", className)}>
 			{variant === "default" && <DefaultSkeleton />}

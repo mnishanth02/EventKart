@@ -11,16 +11,17 @@ alwaysApply: true
 
 Some Redis commands are slow because they scan large datasets. Use incremental alternatives to avoid blocking the server.
 
-| Avoid | Use Instead |
-|-------|-------------|
-| `KEYS *` | `SCAN` with cursor |
-| `SMEMBERS` on large sets | `SSCAN` |
-| `HGETALL` on large hashes | `HSCAN` |
+| Avoid                        | Use Instead                  |
+| ---------------------------- | ---------------------------- |
+| `KEYS *`                     | `SCAN` with cursor           |
+| `SMEMBERS` on large sets     | `SSCAN`                      |
+| `HGETALL` on large hashes    | `HSCAN`                      |
 | `LRANGE 0 -1` on large lists | Paginate with `LRANGE 0 100` |
 
 **Correct:** Use SCAN for iteration.
 
 **Python** (redis-py):
+
 ```python
 # Good: Non-blocking iteration
 cursor = 0
@@ -33,6 +34,7 @@ while True:
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.ScanIteration;
 import redis.clients.jedis.UnifiedJedis;
@@ -54,12 +56,14 @@ try (UnifiedJedis jedis = new UnifiedJedis("redis://localhost:6379")) {
 **Incorrect:** Using KEYS in production.
 
 **Python** (redis-py):
+
 ```python
 # Bad: Scans all keys, slow on large datasets
 keys = redis.keys("user:*")
 ```
 
 **Java** (Jedis):
+
 ```java
 // Bad: Scans all keys, blocks the server
 Set<String> result = jedis.keys("*");

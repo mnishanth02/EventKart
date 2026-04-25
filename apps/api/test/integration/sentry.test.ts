@@ -332,8 +332,8 @@ describe("PII scrubbing", () => {
 		const exception = result.exception as {
 			values: Array<{ value: string }>;
 		};
-		expect(exception.values[0]!.value).not.toContain("9876543210");
-		expect(exception.values[0]!.value).toContain("[REDACTED_PHONE]");
+		expect(exception.values[0]?.value).not.toContain("9876543210");
+		expect(exception.values[0]?.value).toContain("[REDACTED_PHONE]");
 	});
 
 	it("does NOT redact bare numeric IDs (avoids false positives)", () => {
@@ -367,8 +367,8 @@ describe("PII scrubbing", () => {
 		const exception = result.exception as {
 			values: Array<{ value: string }>;
 		};
-		expect(exception.values[0]!.value).not.toContain("test@example.org");
-		expect(exception.values[0]!.value).toContain("[REDACTED_EMAIL]");
+		expect(exception.values[0]?.value).not.toContain("test@example.org");
+		expect(exception.values[0]?.value).toContain("[REDACTED_EMAIL]");
 	});
 
 	it("redacts sensitive header values (cookie, authorization, x-internal-key)", () => {
@@ -445,10 +445,10 @@ describe("PII scrubbing", () => {
 			breadcrumbs: Array<{ message?: string; data?: Record<string, unknown> }>;
 		};
 
-		expect(result.breadcrumbs[0]!.message).not.toContain("9876543210");
-		expect(result.breadcrumbs[0]!.message).toContain("[REDACTED_PHONE]");
-		expect(result.breadcrumbs[1]!.message).not.toContain("user@example.com");
-		expect(result.breadcrumbs[1]!.message).toContain("[REDACTED_EMAIL]");
+		expect(result.breadcrumbs[0]?.message).not.toContain("9876543210");
+		expect(result.breadcrumbs[0]?.message).toContain("[REDACTED_PHONE]");
+		expect(result.breadcrumbs[1]?.message).not.toContain("user@example.com");
+		expect(result.breadcrumbs[1]?.message).toContain("[REDACTED_EMAIL]");
 	});
 
 	it("redacts India-specific sensitive keys (aadhaar, pan)", () => {
@@ -500,7 +500,7 @@ describe("OTEL conditional", () => {
 		});
 
 		expect(handle.sdk).not.toBeNull();
-		expect(typeof handle.sdk!.shutdown).toBe("function");
+		expect(typeof handle.sdk?.shutdown).toBe("function");
 		await shutdownTelemetry(handle);
 	}, 15_000);
 });

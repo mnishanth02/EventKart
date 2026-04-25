@@ -40,35 +40,35 @@ Production Deploy (migrate → deploy → health check)
 
 ## Workflows Created
 
-| File | Trigger | Purpose |
-|------|---------|---------|
-| `.github/workflows/ci.yml` | PR to main, push to main | Lint, type-check, test, build |
-| `.github/workflows/deploy-staging.yml` | CI passes on main, manual dispatch | Auto-deploy to Railway staging |
-| `.github/workflows/deploy-production.yml` | Manual dispatch, release tags | Deploy to Railway production |
+| File                                      | Trigger                            | Purpose                        |
+| ----------------------------------------- | ---------------------------------- | ------------------------------ |
+| `.github/workflows/ci.yml`                | PR to main, push to main           | Lint, type-check, test, build  |
+| `.github/workflows/deploy-staging.yml`    | CI passes on main, manual dispatch | Auto-deploy to Railway staging |
+| `.github/workflows/deploy-production.yml` | Manual dispatch, release tags      | Deploy to Railway production   |
 
 ---
 
 ## Required GitHub Secrets & Variables
 
-| Secret/Variable | Environment | Purpose |
-|----------------|-------------|---------|
-| `RAILWAY_TOKEN` | staging, production | Railway API authentication |
-| `RAILWAY_PROJECT_ID` | staging, production | Railway project identifier |
-| `MIGRATION_DATABASE_URL` | staging, production | Direct PostgreSQL URL for migrations (bypasses PgBouncer) |
-| `STAGING_API_URL` (variable) | staging | API URL for health checks |
-| `STAGING_WEB_URL` (variable) | staging | Web URL for health checks |
-| `PRODUCTION_API_URL` (variable) | production | API URL for health checks |
-| `PRODUCTION_WEB_URL` (variable) | production | Web URL for health checks |
+| Secret/Variable                 | Environment         | Purpose                                                   |
+| ------------------------------- | ------------------- | --------------------------------------------------------- |
+| `RAILWAY_TOKEN`                 | staging, production | Railway API authentication                                |
+| `RAILWAY_PROJECT_ID`            | staging, production | Railway project identifier                                |
+| `MIGRATION_DATABASE_URL`        | staging, production | Direct PostgreSQL URL for migrations (bypasses PgBouncer) |
+| `STAGING_API_URL` (variable)    | staging             | API URL for health checks                                 |
+| `STAGING_WEB_URL` (variable)    | staging             | Web URL for health checks                                 |
+| `PRODUCTION_API_URL` (variable) | production          | API URL for health checks                                 |
+| `PRODUCTION_WEB_URL` (variable) | production          | Web URL for health checks                                 |
 
 ---
 
 ## Railway Services
 
-| Service | Type | Start command | Notes |
-|---------|------|---------------|-------|
-| api | Web | `node dist/server.js` | Fastify API, auto-scaled |
-| web | Web | `node .output/server/index.mjs` | TanStack Start SSR |
-| worker | Worker | `node dist/workers/index.js` | BullMQ processors |
+| Service | Type   | Start command                   | Notes                    |
+| ------- | ------ | ------------------------------- | ------------------------ |
+| api     | Web    | `node dist/server.js`           | Fastify API, auto-scaled |
+| web     | Web    | `node .output/server/index.mjs` | TanStack Start SSR       |
+| worker  | Worker | `node dist/workers/index.js`    | BullMQ processors        |
 
 ---
 
@@ -84,9 +84,9 @@ Production Deploy (migrate → deploy → health check)
 
 ## Task Completion
 
-| Task | Description | Status | Completed |
-|------|-------------|--------|-----------|
-| CI workflow | `.github/workflows/ci.yml` | ✅ | 2026-04-22 |
-| Staging deploy | `.github/workflows/deploy-staging.yml` | ✅ | 2026-04-22 |
-| Production deploy | `.github/workflows/deploy-production.yml` | ✅ | 2026-04-22 |
-| Documentation | Implementation plan + progress tracking | ✅ | 2026-04-22 |
+| Task              | Description                               | Status | Completed  |
+| ----------------- | ----------------------------------------- | ------ | ---------- |
+| CI workflow       | `.github/workflows/ci.yml`                | ✅     | 2026-04-22 |
+| Staging deploy    | `.github/workflows/deploy-staging.yml`    | ✅     | 2026-04-22 |
+| Production deploy | `.github/workflows/deploy-production.yml` | ✅     | 2026-04-22 |
+| Documentation     | Implementation plan + progress tracking   | ✅     | 2026-04-22 |

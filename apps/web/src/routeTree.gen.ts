@@ -20,12 +20,12 @@ import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
 import { Route as AuthedOrgIndexRouteImport } from './routes/_authed/org/index'
 import { Route as AuthedMyIndexRouteImport } from './routes/_authed/my/index'
 import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
-import { Route as AuthedAdminVerificationsIndexRouteImport } from './routes/_authed/admin/verifications/index'
-import { Route as AuthedAdminVerificationsOrganizerIdRouteImport } from './routes/_authed/admin/verifications/$organizerId'
 import { Route as AuthedOrgVerificationRouteImport } from './routes/_authed/org/verification'
 import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/register'
 import { Route as AuthedOrgProfileRouteImport } from './routes/_authed/org/profile'
 import { Route as AuthedOrgPoliciesRouteImport } from './routes/_authed/org/policies'
+import { Route as AuthedAdminVerificationsIndexRouteImport } from './routes/_authed/admin/verifications/index'
+import { Route as AuthedAdminVerificationsOrganizerIdRouteImport } from './routes/_authed/admin/verifications/$organizerId'
 
 const ReadyRoute = ReadyRouteImport.update({
   id: '/ready',
@@ -80,16 +80,6 @@ const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedAdminRoute,
 } as any)
-const AuthedAdminVerificationsIndexRoute = AuthedAdminVerificationsIndexRouteImport.update({
-  id: '/verifications/',
-  path: '/verifications/',
-  getParentRoute: () => AuthedAdminRoute,
-} as any)
-const AuthedAdminVerificationsOrganizerIdRoute = AuthedAdminVerificationsOrganizerIdRouteImport.update({
-  id: '/verifications/$organizerId',
-  path: '/verifications/$organizerId',
-  getParentRoute: () => AuthedAdminRoute,
-} as any)
 const AuthedOrgVerificationRoute = AuthedOrgVerificationRouteImport.update({
   id: '/verification',
   path: '/verification',
@@ -110,6 +100,18 @@ const AuthedOrgPoliciesRoute = AuthedOrgPoliciesRouteImport.update({
   path: '/policies',
   getParentRoute: () => AuthedOrgRoute,
 } as any)
+const AuthedAdminVerificationsIndexRoute =
+  AuthedAdminVerificationsIndexRouteImport.update({
+    id: '/verifications/',
+    path: '/verifications/',
+    getParentRoute: () => AuthedAdminRoute,
+  } as any)
+const AuthedAdminVerificationsOrganizerIdRoute =
+  AuthedAdminVerificationsOrganizerIdRouteImport.update({
+    id: '/verifications/$organizerId',
+    path: '/verifications/$organizerId',
+    getParentRoute: () => AuthedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
@@ -123,10 +125,10 @@ export interface FileRoutesByFullPath {
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
   '/admin/': typeof AuthedAdminIndexRoute
-  '/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
-  '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
   '/my/': typeof AuthedMyIndexRoute
   '/org/': typeof AuthedOrgIndexRoute
+  '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
+  '/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
@@ -137,10 +139,10 @@ export interface FileRoutesByTo {
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
   '/admin': typeof AuthedAdminIndexRoute
-  '/admin/verifications': typeof AuthedAdminVerificationsIndexRoute
-  '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
   '/my': typeof AuthedMyIndexRoute
   '/org': typeof AuthedOrgIndexRoute
+  '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
+  '/admin/verifications': typeof AuthedAdminVerificationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -157,10 +159,10 @@ export interface FileRoutesById {
   '/_authed/org/register': typeof AuthedOrgRegisterRoute
   '/_authed/org/verification': typeof AuthedOrgVerificationRoute
   '/_authed/admin/': typeof AuthedAdminIndexRoute
-  '/_authed/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
-  '/_authed/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
   '/_authed/my/': typeof AuthedMyIndexRoute
   '/_authed/org/': typeof AuthedOrgIndexRoute
+  '/_authed/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
+  '/_authed/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -176,10 +178,10 @@ export interface FileRouteTypes {
     | '/org/register'
     | '/org/verification'
     | '/admin/'
-    | '/admin/verifications/'
-    | '/admin/verifications/$organizerId'
     | '/my/'
     | '/org/'
+    | '/admin/verifications/$organizerId'
+    | '/admin/verifications/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -190,10 +192,10 @@ export interface FileRouteTypes {
     | '/org/register'
     | '/org/verification'
     | '/admin'
-    | '/admin/verifications'
-    | '/admin/verifications/$organizerId'
     | '/my'
     | '/org'
+    | '/admin/verifications/$organizerId'
+    | '/admin/verifications'
   id:
     | '__root__'
     | '/_authed'
@@ -209,10 +211,10 @@ export interface FileRouteTypes {
     | '/_authed/org/register'
     | '/_authed/org/verification'
     | '/_authed/admin/'
-    | '/_authed/admin/verifications/'
-    | '/_authed/admin/verifications/$organizerId'
     | '/_authed/my/'
     | '/_authed/org/'
+    | '/_authed/admin/verifications/$organizerId'
+    | '/_authed/admin/verifications/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -301,20 +303,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAdminIndexRouteImport
       parentRoute: typeof AuthedAdminRoute
     }
-    '/_authed/admin/verifications/': {
-      id: '/_authed/admin/verifications/'
-      path: '/verifications/'
-      fullPath: '/admin/verifications/'
-      preLoaderRoute: typeof AuthedAdminVerificationsIndexRouteImport
-      parentRoute: typeof AuthedAdminRoute
-    }
-    '/_authed/admin/verifications/$organizerId': {
-      id: '/_authed/admin/verifications/$organizerId'
-      path: '/verifications/$organizerId'
-      fullPath: '/admin/verifications/$organizerId'
-      preLoaderRoute: typeof AuthedAdminVerificationsOrganizerIdRouteImport
-      parentRoute: typeof AuthedAdminRoute
-    }
     '/_authed/org/verification': {
       id: '/_authed/org/verification'
       path: '/verification'
@@ -343,19 +331,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedOrgPoliciesRouteImport
       parentRoute: typeof AuthedOrgRoute
     }
+    '/_authed/admin/verifications/': {
+      id: '/_authed/admin/verifications/'
+      path: '/verifications'
+      fullPath: '/admin/verifications/'
+      preLoaderRoute: typeof AuthedAdminVerificationsIndexRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/admin/verifications/$organizerId': {
+      id: '/_authed/admin/verifications/$organizerId'
+      path: '/verifications/$organizerId'
+      fullPath: '/admin/verifications/$organizerId'
+      preLoaderRoute: typeof AuthedAdminVerificationsOrganizerIdRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
   }
 }
 
 interface AuthedAdminRouteChildren {
   AuthedAdminIndexRoute: typeof AuthedAdminIndexRoute
-  AuthedAdminVerificationsIndexRoute: typeof AuthedAdminVerificationsIndexRoute
   AuthedAdminVerificationsOrganizerIdRoute: typeof AuthedAdminVerificationsOrganizerIdRoute
+  AuthedAdminVerificationsIndexRoute: typeof AuthedAdminVerificationsIndexRoute
 }
 
 const AuthedAdminRouteChildren: AuthedAdminRouteChildren = {
   AuthedAdminIndexRoute: AuthedAdminIndexRoute,
+  AuthedAdminVerificationsOrganizerIdRoute:
+    AuthedAdminVerificationsOrganizerIdRoute,
   AuthedAdminVerificationsIndexRoute: AuthedAdminVerificationsIndexRoute,
-  AuthedAdminVerificationsOrganizerIdRoute: AuthedAdminVerificationsOrganizerIdRoute,
 }
 
 const AuthedAdminRouteWithChildren = AuthedAdminRoute._addFileChildren(
@@ -429,3 +432,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

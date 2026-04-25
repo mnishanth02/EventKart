@@ -75,11 +75,11 @@ Use meaningful names. Names carry intent for LLMs.
 
 ## Impact Levels
 
-| Level | Improvement | Examples |
-|-------|-------------|----------|
-| **HIGH** | 5-100x | Missing indexes, connection issues, blocking commands |
-| **MEDIUM** | 2-5x | Suboptimal data structures, missing TTL |
-| **LOW** | Incremental | Advanced patterns, edge cases |
+| Level      | Improvement | Examples                                              |
+| ---------- | ----------- | ----------------------------------------------------- |
+| **HIGH**   | 5-100x      | Missing indexes, connection issues, blocking commands |
+| **MEDIUM** | 2-5x        | Suboptimal data structures, missing TTL               |
+| **LOW**    | Incremental | Advanced patterns, edge cases                         |
 
 ---
 

@@ -1,7 +1,7 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { SidebarInset } from "@repo/ui/components/ui/sidebar";
-import { AuthedSidebar } from "#/components/layout/authed-sidebar";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { AuthedHeader } from "#/components/layout/authed-header";
+import { AuthedSidebar } from "#/components/layout/authed-sidebar";
 
 export const Route = createFileRoute("/_authed/my")({
 	component: ParticipantLayout,

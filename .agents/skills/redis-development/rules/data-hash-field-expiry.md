@@ -14,6 +14,7 @@ Use hash field expiration (Redis 7.4+) to delete individual fields automatically
 **Correct:** Use HEXPIRE to set per-field TTL on hash fields.
 
 **Python** (redis-py):
+
 ```python
 import redis
 
@@ -30,6 +31,7 @@ client.hexpire("sensor:sensor1", 60, "air_quality", "battery_level")
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.UnifiedJedis;
 import java.util.Map;
@@ -41,22 +43,23 @@ try (UnifiedJedis jedis = new UnifiedJedis("redis://localhost:6379")) {
     hashFields.put("battery_level", "89");
 
     jedis.hset("sensor:sensor1", hashFields);
-    
+
     // Set 60-second TTL on specific fields (Redis 7.4+)
     jedis.hexpire("sensor:sensor1", 60, "air_quality", "battery_level");
 }
 ```
 
 **When to use:**
+
 - Sensor data or metrics that become stale after a period
 - Session attributes where different fields have different lifetimes
 - Cached values within a hash that should auto-expire independently
 - Temporary flags or tokens stored alongside persistent data
 
 **When NOT needed:**
+
 - Persistent user profiles or configuration
 - Data where the entire hash should expire together (use `EXPIRE` on the key instead)
 - Fields managed by application logic with explicit deletion
 
 Reference: [HEXPIRE command](https://redis.io/docs/latest/commands/hexpire/)
-

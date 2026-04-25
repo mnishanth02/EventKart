@@ -2,7 +2,6 @@
 
 A structured repository for creating and maintaining Redis development guidelines optimized for agents and LLMs.
 
-
 ## Structure
 
 - `rules/` - Individual rule files (one per rule)
@@ -15,24 +14,24 @@ A structured repository for creating and maintaining Redis development guideline
 - `SKILL.md` - Skill definition and entry point
 - `README.md` - This file
 
-
 ## Getting Started
 
 1. Install dependencies from the repo root:
+
    ```bash
    npm install
    ```
 
-3. Validate rule files:
+2. Validate rule files:
+
    ```bash
    npm run validate
    ```
 
-4. Build AGENTS.md from rules:
+3. Build AGENTS.md from rules:
    ```bash
    npm run build
    ```
-
 
 ## Creating a New Rule
 
@@ -52,7 +51,6 @@ A structured repository for creating and maintaining Redis development guideline
 3. Fill in the frontmatter and content
 4. Ensure you have clear examples with explanations
 5. Run `npm run build` (in the build package) to regenerate AGENTS.md
-
 
 ## Rule File Structure
 
@@ -96,13 +94,11 @@ Reference: [Link](https://example.com/)
 - Section is automatically inferred from filename prefix
 - Rules are sorted alphabetically by title within each section
 
-
 ## Impact Levels
 
 - `HIGH` - Significant performance improvements or critical security practices
 - `MEDIUM` - Moderate performance improvements or recommended patterns
 - `LOW` - Incremental improvements
-
 
 ## Scripts
 
@@ -111,7 +107,6 @@ Reference: [Link](https://example.com/)
 - `npm run build` - Compile rules into AGENTS.md
 - `npm run validate` - Validate all rule files
 - `npm run dev` - Build and validate (if configured)
-
 
 ## Contributing
 

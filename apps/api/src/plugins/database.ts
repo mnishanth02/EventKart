@@ -1,4 +1,4 @@
-import { createDatabase, type Database } from "@repo/db";
+import { createDatabase } from "@repo/db";
 import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 

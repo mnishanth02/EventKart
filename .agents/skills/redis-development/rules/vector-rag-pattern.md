@@ -41,6 +41,7 @@ response = llm.generate(f"Context: {context}\n\nQuestion: {user_question}")
 ```
 
 **Best practices:**
+
 - Normalize vectors if using COSINE distance
 - Batch inserts using `index.load()` with lists
 - Set appropriate M and EF_CONSTRUCTION for HNSW based on dataset size
@@ -48,4 +49,3 @@ response = llm.generate(f"Context: {context}\n\nQuestion: {user_question}")
 - Consider chunking long documents for better retrieval
 
 Reference: [Redis RAG Quickstart](https://redis.io/docs/latest/develop/get-started/rag/)
-

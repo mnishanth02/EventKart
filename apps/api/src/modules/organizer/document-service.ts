@@ -1,4 +1,5 @@
 import type { Database } from "@repo/db";
+import { and, eq, inArray } from "@repo/db";
 import { organizers, verificationDocuments } from "@repo/db/schema";
 import {
 	AUDIT_ACTIONS,
@@ -6,7 +7,6 @@ import {
 	REQUIRED_DOCUMENT_COUNT,
 } from "@repo/shared/constants";
 import type { DocumentUploadRequest } from "@repo/shared/schemas";
-import { and, eq, inArray } from "drizzle-orm";
 import type { FastifyBaseLogger } from "fastify";
 import type { AuditLogger } from "../../lib/audit.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";

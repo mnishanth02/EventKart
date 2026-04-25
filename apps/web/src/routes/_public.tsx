@@ -1,7 +1,7 @@
-import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { PublicHeader } from "#/components/layout/public-header";
-import { PublicFooter } from "#/components/layout/public-footer";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { MobileBottomNav } from "#/components/layout/mobile-bottom-nav";
+import { PublicFooter } from "#/components/layout/public-footer";
+import { PublicHeader } from "#/components/layout/public-header";
 
 export const Route = createFileRoute("/_public")({
 	component: PublicLayout,

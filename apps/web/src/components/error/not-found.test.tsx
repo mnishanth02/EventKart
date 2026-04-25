@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import type React from "react";
-import { render, screen, cleanup } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NotFoundPage } from "./not-found";
 
 type MockProps = React.PropsWithChildren<Record<string, unknown>>;
@@ -21,7 +21,9 @@ vi.mock("@repo/ui/components/ui/button", () => ({
 }));
 
 vi.mock("lucide-react", () => ({
-	SearchX: (props: Record<string, unknown>) => <span data-testid="search-icon" {...props} />,
+	SearchX: (props: Record<string, unknown>) => (
+		<span data-testid="search-icon" {...props} />
+	),
 }));
 
 describe("NotFoundPage", () => {
@@ -37,16 +39,14 @@ describe("NotFoundPage", () => {
 	it("renders 'Page not found' heading", () => {
 		render(<NotFoundPage />);
 		const headings = screen.getAllByRole("heading", { level: 2 });
-		const heading = headings.find(
-			(h) => h.textContent === "Page not found"
-		);
+		const heading = headings.find((h) => h.textContent === "Page not found");
 		expect(heading).toBeDefined();
 	});
 
 	it("renders description text", () => {
 		render(<NotFoundPage />);
 		const paragraphs = screen.getAllByText(
-			"The page you're looking for doesn't exist or has been moved."
+			"The page you're looking for doesn't exist or has been moved.",
 		);
 		expect(paragraphs.length).toBeGreaterThan(0);
 	});

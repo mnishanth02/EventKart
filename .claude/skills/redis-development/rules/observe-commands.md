@@ -50,4 +50,3 @@ for query in slow_queries:
 ```
 
 Reference: [Redis Monitoring](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/)
-

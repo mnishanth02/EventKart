@@ -1,12 +1,12 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import type React from "react";
-import { render, screen, cleanup } from "@testing-library/react";
-import { RouteLoading } from "./route-loading";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { CardSkeleton } from "./card-skeleton";
+import { FormSkeleton } from "./form-skeleton";
 import { FullPageSpinner } from "./full-page-spinner";
 import { PageSkeleton } from "./page-skeleton";
-import { CardSkeleton } from "./card-skeleton";
+import { RouteLoading } from "./route-loading";
 import { TableSkeleton } from "./table-skeleton";
-import { FormSkeleton } from "./form-skeleton";
 
 vi.mock("@repo/ui/components/ui/skeleton", () => ({
 	Skeleton: (props: React.ComponentProps<"div">) => (

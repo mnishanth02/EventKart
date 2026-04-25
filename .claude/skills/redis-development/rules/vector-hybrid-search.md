@@ -41,9 +41,9 @@ filtered = [r for r in results if r["category"] == "technology"]
 ```
 
 **Tips:**
+
 - Use TAG fields for category filters
 - Use NUMERIC fields for date/price ranges
 - Filters are applied before vector search, reducing computation
 
 Reference: [Redis Hybrid Queries](https://redis.io/docs/latest/develop/interact/search-and-query/query/combined/)
-

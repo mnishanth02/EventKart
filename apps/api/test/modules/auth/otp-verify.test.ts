@@ -34,7 +34,7 @@ function parseCookies(setCookieHeader: string): Record<string, string> {
 	const parts = setCookieHeader.split(";").map((s) => s.trim());
 	for (const part of parts) {
 		const [key, ...rest] = part.split("=");
-		attrs[key!.toLowerCase()] = rest.join("=");
+		attrs[key?.toLowerCase()] = rest.join("=");
 	}
 	return attrs;
 }
@@ -116,10 +116,10 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			expect(sessionCookie).toBeDefined();
 
 			const cookie = parseCookies(sessionCookie!);
-			expect(cookie["kiran_session"]).toBe("test-session-id");
+			expect(cookie.kiran_session).toBe("test-session-id");
 			expect(cookie).toHaveProperty("httponly");
-			expect(cookie["samesite"]).toBe("Lax");
-			expect(cookie["path"]).toBe("/");
+			expect(cookie.samesite).toBe("Lax");
+			expect(cookie.path).toBe("/");
 		});
 
 		it("passes phone and otp to the service function", async () => {

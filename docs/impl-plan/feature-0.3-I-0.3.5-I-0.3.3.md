@@ -37,6 +37,7 @@
 Top-of-page indeterminate progress bar shown during route transitions. Uses `@repo/ui` Progress component with an animated indeterminate state.
 
 **Key details:**
+
 - Renders a thin fixed-top progress bar (h-0.5) with animated fill using CSS keyframes
 - `aria-label="Loading page"` for screen readers
 - Does NOT block the current page — sits above content
@@ -48,6 +49,7 @@ Top-of-page indeterminate progress bar shown during route transitions. Uses `@re
 Centered, full-viewport spinner for initial auth verification and layout transitions.
 
 **Key details:**
+
 - Uses `@repo/ui` Spinner component (Loader2Icon) at `size-8`
 - Centered vertically and horizontally with flexbox
 - Optional `label` prop (renders visually hidden text below spinner)
@@ -60,6 +62,7 @@ Centered, full-viewport spinner for initial auth verification and layout transit
 Configurable skeleton for page-level content loading.
 
 **Key details:**
+
 - Props: `{ variant: "default" | "detail" | "dashboard"; className?: string }`
 - `default`: Title bar + 3 content blocks
 - `detail`: Wide header image + title + 2-column body
@@ -74,6 +77,7 @@ Configurable skeleton for page-level content loading.
 Skeleton card for grid layouts (event cards, etc).
 
 **Key details:**
+
 - Props: `{ count?: number; className?: string }`
 - Defaults to `count=3`
 - Renders `count` cards in a responsive grid (1col → 2col → 3col)
@@ -87,6 +91,7 @@ Skeleton card for grid layouts (event cards, etc).
 Skeleton for data table views.
 
 **Key details:**
+
 - Props: `{ rows?: number; columns?: number; className?: string }`
 - Defaults: `rows=5`, `columns=4`
 - Renders header row (wider skeletons) + body rows
@@ -100,6 +105,7 @@ Skeleton for data table views.
 Skeleton for form layouts.
 
 **Key details:**
+
 - Props: `{ fields?: number; className?: string }`
 - Defaults: `fields=4`
 - Renders N label+input pairs in a vertical stack + a button skeleton at bottom
@@ -125,6 +131,7 @@ Re-exports all loading components.
 **File:** `apps/web/src/components/loading/loading.test.tsx`
 
 Tests for all loading components:
+
 - RouteLoading: renders progress bar with correct aria-label
 - FullPageSpinner: renders spinner, renders custom label text
 - PageSkeleton: renders correct variant structure (default, detail, dashboard)
@@ -190,15 +197,18 @@ routes/
 ### Navigation Items
 
 **Participant (`/my/*`):**
+
 - My Bookings (`/my/bookings`) — placeholder
 - My Profile (`/my/profile`) — placeholder
 
 **Organizer (`/org/*`):**
+
 - Dashboard (`/org`) — placeholder
 - My Events (`/org/events`) — placeholder
 - Profile (`/org/profile`) — placeholder
 
 **Admin (`/admin/*`):**
+
 - Dashboard (`/admin`) — placeholder
 - Verifications (`/admin/verifications`) — placeholder
 - Event Reviews (`/admin/event-reviews`) — placeholder
@@ -212,6 +222,7 @@ routes/
 Pathless layout route that protects all child routes behind authentication.
 
 **Key details:**
+
 - `beforeLoad`: calls `getCurrentUser()` directly (fresh auth, not cached query). If `null`, throws `redirect({ to: "/", search: { reason: "auth-required" } })`. Passes `{ user }` to child routes via route context.
 - `component`: renders `SidebarProvider` wrapper + `Outlet`
 - `pendingComponent`: renders `FullPageSpinner` (from I-0.3.5) while auth check runs
@@ -224,6 +235,7 @@ Pathless layout route that protects all child routes behind authentication.
 Shared sidebar component for all authed areas. Renders different nav items based on the active role area.
 
 **Key details:**
+
 - Props: `{ area: "my" | "org" | "admin"; user: AuthSession }`
 - Uses `@repo/ui` Sidebar components (SidebarProvider, Sidebar, SidebarContent, SidebarGroup, etc.)
 - Logo/brand at top linking to `/`
@@ -239,6 +251,7 @@ Shared sidebar component for all authed areas. Renders different nav items based
 Slim top header for authed pages — sidebar toggle + breadcrumb area + theme toggle.
 
 **Key details:**
+
 - Uses `SidebarTrigger` for mobile menu toggle
 - Shows current area name as breadcrumb
 - Theme toggle on the right
@@ -251,6 +264,7 @@ Slim top header for authed pages — sidebar toggle + breadcrumb area + theme to
 Layout route for `/my/*` — any authenticated user (participant+).
 
 **Key details:**
+
 - `beforeLoad`: session already verified by parent `_authed.tsx`. Reads `context.user` from parent. Additional check: `hasMinimumRole(context.user.role, "participant")` — always true for any authed user, but explicit.
 - `component`: renders `AuthedSidebar` (area="my") + `AuthedHeader` + `Outlet` in a flex layout
 - `ssr: 'data-only'`
@@ -268,6 +282,7 @@ Placeholder page for `/my` — "My Dashboard" with coming soon content.
 Layout route for `/org/*` — requires organizer+ role.
 
 **Key details:**
+
 - `beforeLoad`: reads `context.user` from parent. Checks `hasMinimumRole(context.user.role, "organizer")`. If insufficient, throws `redirect({ to: "/", search: { reason: "forbidden" } })`.
 - `component`: renders `AuthedSidebar` (area="org") + `AuthedHeader` + `Outlet`
 - `ssr: 'data-only'`
@@ -285,6 +300,7 @@ Placeholder page for `/org` — "Organizer Dashboard" with coming soon content.
 Layout route for `/admin/*` — requires admin role.
 
 **Key details:**
+
 - `beforeLoad`: reads `context.user` from parent. Checks `hasMinimumRole(context.user.role, "admin")`. If insufficient, throws `redirect({ to: "/", search: { reason: "forbidden" } })`.
 - `component`: renders `AuthedSidebar` (area="admin") + `AuthedHeader` + `Outlet`
 - `ssr: 'data-only'`
@@ -302,6 +318,7 @@ Placeholder page for `/admin` — "Admin Dashboard" with coming soon content.
 Handle typed `reason` search param to show toast on redirect from protected routes.
 
 **Key details:**
+
 - Add `validateSearch` with Zod: `z.object({ reason: z.enum(["auth-required", "forbidden"]).optional() })`
 - In component, read `reason` from `Route.useSearch()`
 - If `reason === "auth-required"`: show toast "Please sign in to access that page"
@@ -325,6 +342,7 @@ Handle typed `reason` search param to show toast on redirect from protected rout
 **File:** `apps/web/src/routes/_authed/authed-routing.test.tsx`
 
 Tests for route guard logic:
+
 - Authenticated user can access `/my`
 - Unauthenticated user is redirected from `/my`
 - Participant cannot access `/org` (role insufficient)
@@ -335,6 +353,7 @@ Tests for route guard logic:
 **File:** `apps/web/src/components/layout/authed-sidebar.test.tsx`
 
 Tests for sidebar:
+
 - Renders correct nav items for each area
 - Renders user info in footer
 - Logout button present
@@ -346,6 +365,7 @@ Tests for sidebar:
 I-0.3.5 and I-0.3.3 can be implemented in parallel EXCEPT that `_authed.tsx` depends on `FullPageSpinner` from I-0.3.5.
 
 **Recommended order:**
+
 1. Tasks 1–7 (I-0.3.5 loading components) — no dependencies
 2. Task 8 (wire router pending) — depends on Task 1
 3. Task 9 (loading tests) — depends on Tasks 1–7
@@ -356,28 +376,28 @@ I-0.3.5 and I-0.3.3 can be implemented in parallel EXCEPT that `_authed.tsx` dep
 
 ## Files Summary
 
-| File | Action | Workspace | Feature |
-|------|--------|-----------|---------|
-| `apps/web/src/components/loading/route-loading.tsx` | new | web | I-0.3.5 |
-| `apps/web/src/components/loading/full-page-spinner.tsx` | new | web | I-0.3.5 |
-| `apps/web/src/components/loading/page-skeleton.tsx` | new | web | I-0.3.5 |
-| `apps/web/src/components/loading/card-skeleton.tsx` | new | web | I-0.3.5 |
-| `apps/web/src/components/loading/table-skeleton.tsx` | new | web | I-0.3.5 |
-| `apps/web/src/components/loading/form-skeleton.tsx` | new | web | I-0.3.5 |
-| `apps/web/src/components/loading/index.ts` | new | web | I-0.3.5 |
-| `apps/web/src/router.tsx` | modify | web | I-0.3.5 |
-| `apps/web/src/components/loading/loading.test.tsx` | new | web | I-0.3.5 |
-| `apps/web/src/routes/_authed.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/components/layout/authed-sidebar.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/components/layout/authed-header.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/routes/_authed/my.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/routes/_authed/my/index.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/routes/_authed/org.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/routes/_authed/org/index.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/routes/_authed/admin.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/routes/_authed/admin/index.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/routes/_public/index.tsx` | modify | web | I-0.3.3 |
-| `apps/web/src/lib/auth/server-fns.ts` | modify | web | I-0.3.3 |
-| `apps/web/src/features/auth/types.ts` | modify | web | I-0.3.3 |
-| `apps/web/src/routes/_authed/authed-routing.test.tsx` | new | web | I-0.3.3 |
-| `apps/web/src/components/layout/authed-sidebar.test.tsx` | new | web | I-0.3.3 |
+| File                                                     | Action | Workspace | Feature |
+| -------------------------------------------------------- | ------ | --------- | ------- |
+| `apps/web/src/components/loading/route-loading.tsx`      | new    | web       | I-0.3.5 |
+| `apps/web/src/components/loading/full-page-spinner.tsx`  | new    | web       | I-0.3.5 |
+| `apps/web/src/components/loading/page-skeleton.tsx`      | new    | web       | I-0.3.5 |
+| `apps/web/src/components/loading/card-skeleton.tsx`      | new    | web       | I-0.3.5 |
+| `apps/web/src/components/loading/table-skeleton.tsx`     | new    | web       | I-0.3.5 |
+| `apps/web/src/components/loading/form-skeleton.tsx`      | new    | web       | I-0.3.5 |
+| `apps/web/src/components/loading/index.ts`               | new    | web       | I-0.3.5 |
+| `apps/web/src/router.tsx`                                | modify | web       | I-0.3.5 |
+| `apps/web/src/components/loading/loading.test.tsx`       | new    | web       | I-0.3.5 |
+| `apps/web/src/routes/_authed.tsx`                        | new    | web       | I-0.3.3 |
+| `apps/web/src/components/layout/authed-sidebar.tsx`      | new    | web       | I-0.3.3 |
+| `apps/web/src/components/layout/authed-header.tsx`       | new    | web       | I-0.3.3 |
+| `apps/web/src/routes/_authed/my.tsx`                     | new    | web       | I-0.3.3 |
+| `apps/web/src/routes/_authed/my/index.tsx`               | new    | web       | I-0.3.3 |
+| `apps/web/src/routes/_authed/org.tsx`                    | new    | web       | I-0.3.3 |
+| `apps/web/src/routes/_authed/org/index.tsx`              | new    | web       | I-0.3.3 |
+| `apps/web/src/routes/_authed/admin.tsx`                  | new    | web       | I-0.3.3 |
+| `apps/web/src/routes/_authed/admin/index.tsx`            | new    | web       | I-0.3.3 |
+| `apps/web/src/routes/_public/index.tsx`                  | modify | web       | I-0.3.3 |
+| `apps/web/src/lib/auth/server-fns.ts`                    | modify | web       | I-0.3.3 |
+| `apps/web/src/features/auth/types.ts`                    | modify | web       | I-0.3.3 |
+| `apps/web/src/routes/_authed/authed-routing.test.tsx`    | new    | web       | I-0.3.3 |
+| `apps/web/src/components/layout/authed-sidebar.test.tsx` | new    | web       | I-0.3.3 |

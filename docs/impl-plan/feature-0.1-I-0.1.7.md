@@ -9,14 +9,15 @@ Automated CI pipeline that validates database migrations on every PR touching `p
 
 ## Prerequisites
 
-| ID | Feature | Status |
-|---|---|---|
+| ID      | Feature                        | Status      |
+| ------- | ------------------------------ | ----------- |
 | I-0.1.2 | Database package (packages/db) | ✅ Complete |
-| I-0.1.3 | Core database tables | ✅ Complete |
+| I-0.1.3 | Core database tables           | ✅ Complete |
 
 ## Scope
 
 **In scope:**
+
 - Programmatic migration runner (applies migrations via `drizzle-orm/migrator`)
 - Schema drift detection (compares generated SQL against committed migrations)
 - Lock-risk SQL linter (flags dangerous DDL patterns like `ALTER TABLE ... ADD COLUMN ... NOT NULL` without defaults)
@@ -25,6 +26,7 @@ Automated CI pipeline that validates database migrations on every PR touching `p
 - Package.json script wiring for all new commands
 
 **Out of scope:**
+
 - Production deployment pipelines (handled by deployment infrastructure)
 - Automated rollback execution (rollbacks are manual, files are just validated to exist)
 - PgBouncer testing in CI (uses direct connection; PgBouncer is production-only)
@@ -43,22 +45,23 @@ Automated CI pipeline that validates database migrations on every PR touching `p
 
 ## Tasks
 
-| # | Task | File(s) | Complexity | Status |
-|---|------|---------|------------|--------|
-| 1 | Programmatic migration runner | `packages/db/scripts/migrate.ts` | S | |
-| 2 | Schema drift checker | `packages/db/scripts/check-schema-drift.ts` | M | |
-| 3 | Lock-risk SQL linter | `packages/db/scripts/check-lock-risk.ts` | M | |
-| 4 | Rollback file validator | `packages/db/scripts/validate-rollbacks.ts` | S | |
-| 5 | Rollback convention docs | `packages/db/drizzle/rollbacks/README.md` | S | |
-| 6 | Lock-risk checker tests | `packages/db/test/scripts/check-lock-risk.test.ts` | M | |
-| 7 | GitHub Actions CI workflow | `.github/workflows/migration-ci.yml` | M | |
-| 8 | Package.json script updates | `packages/db/package.json` | S | |
+| #   | Task                          | File(s)                                            | Complexity | Status |
+| --- | ----------------------------- | -------------------------------------------------- | ---------- | ------ |
+| 1   | Programmatic migration runner | `packages/db/scripts/migrate.ts`                   | S          |        |
+| 2   | Schema drift checker          | `packages/db/scripts/check-schema-drift.ts`        | M          |        |
+| 3   | Lock-risk SQL linter          | `packages/db/scripts/check-lock-risk.ts`           | M          |        |
+| 4   | Rollback file validator       | `packages/db/scripts/validate-rollbacks.ts`        | S          |        |
+| 5   | Rollback convention docs      | `packages/db/drizzle/rollbacks/README.md`          | S          |        |
+| 6   | Lock-risk checker tests       | `packages/db/test/scripts/check-lock-risk.test.ts` | M          |        |
+| 7   | GitHub Actions CI workflow    | `.github/workflows/migration-ci.yml`               | M          |        |
+| 8   | Package.json script updates   | `packages/db/package.json`                         | S          |        |
 
 ## CI Workflow Summary
 
 **Trigger:** `pull_request` on `main` (paths: `packages/db/**`) + `workflow_dispatch`
 
 **Steps:**
+
 1. Checkout → Setup pnpm 10 → Setup Node.js 22 → Install deps
 2. `db:check:drift` — Verify no uncommitted schema changes
 3. `db:migrate:run` — Apply all migrations to fresh PostgreSQL 17
@@ -76,7 +79,7 @@ Automated CI pipeline that validates database migrations on every PR touching `p
   "db:migrate:run": "tsx scripts/migrate.ts",
   "db:check:drift": "tsx scripts/check-schema-drift.ts",
   "db:check:lock-risk": "tsx scripts/check-lock-risk.ts",
-  "db:check:rollbacks": "tsx scripts/validate-rollbacks.ts"
+  "db:check:rollbacks": "tsx scripts/validate-rollbacks.ts",
 }
 ```
 

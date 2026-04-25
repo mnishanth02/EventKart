@@ -32,10 +32,10 @@ requirepass shared-password
 ```
 
 **ACL categories:**
+
 - `@read` - Read commands
 - `@write` - Write commands
 - `@dangerous` - Commands like FLUSHALL, DEBUG
 - `@admin` - Administrative commands
 
 Reference: [Redis ACL](https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/)
-

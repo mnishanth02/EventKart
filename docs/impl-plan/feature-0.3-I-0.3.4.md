@@ -37,6 +37,7 @@
 Generic route-level error boundary fallback. Implements TanStack Router's `ErrorComponentProps` interface.
 
 **Key details:**
+
 - Props: `{ error: Error; reset: () => void }` (from `ErrorComponentProps`)
 - Renders: error icon, heading ("Something went wrong"), user-friendly message, "Try Again" button
 - Dev mode: shows `error.message` and stack trace in a collapsible `<pre>` block (checks `import.meta.env.DEV`)
@@ -51,6 +52,7 @@ Generic route-level error boundary fallback. Implements TanStack Router's `Error
 Styled 404 page for both router-level and route-level `notFoundComponent`.
 
 **Key details:**
+
 - Renders: large "404" text, heading ("Page not found"), description, "Go Home" button
 - Uses `Link` from `@tanstack/react-router` to navigate to `/`
 - Also renders `useRouter().state.location.pathname` to show what path was not found
@@ -64,6 +66,7 @@ Styled 404 page for both router-level and route-level `notFoundComponent`.
 Inline alert for displaying API errors in forms and page sections.
 
 **Key details:**
+
 - Props: `{ error: ApiClientError | Error | null; onDismiss?: () => void; className?: string }`
 - Returns `null` when `error` is null (convenient for conditional rendering)
 - For `ApiClientError`: maps common status codes to user-friendly messages:
@@ -106,6 +109,7 @@ Re-exports all error components for convenient imports.
 **File:** `apps/web/src/components/error/error-fallback.test.tsx`
 
 Tests:
+
 - Renders heading and "Try Again" button
 - Calls `reset()` when "Try Again" is clicked
 - Shows error message in dev mode (`import.meta.env.DEV = true`)
@@ -116,6 +120,7 @@ Tests:
 **File:** `apps/web/src/components/error/not-found.test.tsx`
 
 Tests:
+
 - Renders 404 heading and "Go Home" link
 - Link points to `/`
 
@@ -124,6 +129,7 @@ Tests:
 **File:** `apps/web/src/components/error/api-error-alert.test.tsx`
 
 Tests:
+
 - Returns null when error is null
 - Renders user-friendly message for each status code (401, 403, 404, 409, 429, 500)
 - Renders generic Error message
@@ -132,17 +138,17 @@ Tests:
 
 ## Files Summary
 
-| File | Action | Workspace |
-|------|--------|-----------|
-| `apps/web/src/components/error/error-fallback.tsx` | new | web |
-| `apps/web/src/components/error/not-found.tsx` | new | web |
-| `apps/web/src/components/error/api-error-alert.tsx` | new | web |
-| `apps/web/src/components/error/index.ts` | new | web |
-| `apps/web/src/router.tsx` | modify | web |
-| `apps/web/src/routes/__root.tsx` | modify | web |
-| `apps/web/src/components/error/error-fallback.test.tsx` | new | web |
-| `apps/web/src/components/error/not-found.test.tsx` | new | web |
-| `apps/web/src/components/error/api-error-alert.test.tsx` | new | web |
+| File                                                     | Action | Workspace |
+| -------------------------------------------------------- | ------ | --------- |
+| `apps/web/src/components/error/error-fallback.tsx`       | new    | web       |
+| `apps/web/src/components/error/not-found.tsx`            | new    | web       |
+| `apps/web/src/components/error/api-error-alert.tsx`      | new    | web       |
+| `apps/web/src/components/error/index.ts`                 | new    | web       |
+| `apps/web/src/router.tsx`                                | modify | web       |
+| `apps/web/src/routes/__root.tsx`                         | modify | web       |
+| `apps/web/src/components/error/error-fallback.test.tsx`  | new    | web       |
+| `apps/web/src/components/error/not-found.test.tsx`       | new    | web       |
+| `apps/web/src/components/error/api-error-alert.test.tsx` | new    | web       |
 
 ## Design Decisions
 

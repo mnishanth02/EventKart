@@ -1,6 +1,6 @@
-import { SidebarTrigger } from "@repo/ui/components/ui/sidebar";
-import { Separator } from "@repo/ui/components/ui/separator";
 import { ThemeToggle } from "@repo/ui/components/theme-toggle";
+import { Separator } from "@repo/ui/components/ui/separator";
+import { SidebarTrigger } from "@repo/ui/components/ui/sidebar";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -31,5 +31,5 @@ function AuthedHeader({ area }: AuthedHeaderProps) {
 	);
 }
 
-export { AuthedHeader };
 export type { AuthedHeaderProps };
+export { AuthedHeader };

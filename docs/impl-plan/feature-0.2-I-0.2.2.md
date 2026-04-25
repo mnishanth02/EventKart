@@ -20,30 +20,30 @@ Implements `POST /api/v1/auth/otp/verify` — validates a 6-digit OTP against Re
 
 ## Files Created
 
-| File | Purpose |
-|------|---------|
-| `packages/shared/src/constants/session.ts` | SESSION_TTL_SECONDS, SESSION_COOKIE_NAME |
-| `apps/api/src/lib/session.ts` | Session CRUD (Redis), cookie options builder |
-| `apps/api/test/lib/session.test.ts` | 14 session lib unit tests |
-| `apps/api/test/modules/auth/otp-verify.test.ts` | 15 OTP verify integration tests |
+| File                                            | Purpose                                      |
+| ----------------------------------------------- | -------------------------------------------- |
+| `packages/shared/src/constants/session.ts`      | SESSION_TTL_SECONDS, SESSION_COOKIE_NAME     |
+| `apps/api/src/lib/session.ts`                   | Session CRUD (Redis), cookie options builder |
+| `apps/api/test/lib/session.test.ts`             | 14 session lib unit tests                    |
+| `apps/api/test/modules/auth/otp-verify.test.ts` | 15 OTP verify integration tests              |
 
 ## Files Modified
 
-| File | Changes |
-|------|---------|
-| `packages/shared/src/constants/index.ts` | Export session constants |
-| `packages/shared/src/schemas/otp.ts` | Added otpVerifyRequestSchema, otpVerifyDataSchema |
-| `packages/shared/src/schemas/index.ts` | Export verify schemas |
-| `apps/api/src/lib/config.ts` | Added OTP_HMAC_SECRET, COOKIE_DOMAIN env vars |
-| `apps/api/src/lib/otp.ts` | Atomic Lua verify, timing-safe compare, secret from param |
-| `apps/api/src/lib/errors.ts` | OtpExpiredError, OtpInvalidError, OtpMaxAttemptsError |
-| `apps/api/src/modules/auth/service.ts` | verifyOtpAndCreateSession function |
-| `apps/api/src/modules/auth/schemas.ts` | otpVerifyBodySchema, otpVerifyResponseSchema |
-| `apps/api/src/modules/auth/routes.ts` | POST /otp/verify route |
-| `apps/api/src/app.ts` | Registered @fastify/cookie plugin |
-| `apps/api/.env.example` | COOKIE_DOMAIN documentation |
-| `apps/api/test/setup.ts` | Added eval to MockRedis |
-| `apps/api/test/lib/otp.test.ts` | Updated for secret param, added verifyAndConsumeOtp tests |
+| File                                     | Changes                                                   |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `packages/shared/src/constants/index.ts` | Export session constants                                  |
+| `packages/shared/src/schemas/otp.ts`     | Added otpVerifyRequestSchema, otpVerifyDataSchema         |
+| `packages/shared/src/schemas/index.ts`   | Export verify schemas                                     |
+| `apps/api/src/lib/config.ts`             | Added OTP_HMAC_SECRET, COOKIE_DOMAIN env vars             |
+| `apps/api/src/lib/otp.ts`                | Atomic Lua verify, timing-safe compare, secret from param |
+| `apps/api/src/lib/errors.ts`             | OtpExpiredError, OtpInvalidError, OtpMaxAttemptsError     |
+| `apps/api/src/modules/auth/service.ts`   | verifyOtpAndCreateSession function                        |
+| `apps/api/src/modules/auth/schemas.ts`   | otpVerifyBodySchema, otpVerifyResponseSchema              |
+| `apps/api/src/modules/auth/routes.ts`    | POST /otp/verify route                                    |
+| `apps/api/src/app.ts`                    | Registered @fastify/cookie plugin                         |
+| `apps/api/.env.example`                  | COOKIE_DOMAIN documentation                               |
+| `apps/api/test/setup.ts`                 | Added eval to MockRedis                                   |
+| `apps/api/test/lib/otp.test.ts`          | Updated for secret param, added verifyAndConsumeOtp tests |
 
 ## Validation
 

@@ -7,7 +7,11 @@ interface TableSkeletonProps {
 	className?: string;
 }
 
-export function TableSkeleton({ rows = 5, columns = 4, className }: TableSkeletonProps) {
+export function TableSkeleton({
+	rows = 5,
+	columns = 4,
+	className,
+}: TableSkeletonProps) {
 	return (
 		<div aria-hidden="true" className={cn("w-full space-y-2", className)}>
 			{/* Header row */}

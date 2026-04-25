@@ -1,8 +1,8 @@
 import type { Database } from "@repo/db";
+import { and, eq, inArray } from "@repo/db";
 import { organizers } from "@repo/db/schema";
 import type { RazorpayAccountStatus } from "@repo/shared/constants";
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from "@repo/shared/constants";
-import { and, eq, inArray } from "drizzle-orm";
 import type { FastifyBaseLogger } from "fastify";
 import { createAuditLogger } from "../../lib/audit.js";
 import { NotFoundError } from "../../lib/errors.js";

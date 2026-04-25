@@ -1,8 +1,8 @@
 import type { Database } from "@repo/db";
+import { and, eq, inArray, sql } from "@repo/db";
 import { auditLog, organizers, verificationDocuments } from "@repo/db/schema";
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from "@repo/shared/constants";
 import type { AdminVerificationListParams } from "@repo/shared/schemas";
-import { and, eq, inArray, sql } from "drizzle-orm";
 import type { FastifyBaseLogger } from "fastify";
 import { ConflictError, NotFoundError } from "../../lib/errors.js";
 import type { AppQueues } from "../../lib/queue.js";

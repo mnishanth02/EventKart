@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { OTP_RATE_LIMIT_WINDOW_SECONDS } from "@repo/shared/constants/otp";
 import { Button } from "@repo/ui/components/ui/button";
 import {
 	Dialog,
@@ -8,10 +8,10 @@ import {
 	DialogTitle,
 } from "@repo/ui/components/ui/dialog";
 import { Spinner } from "@repo/ui/components/ui/spinner";
-import { OTP_RATE_LIMIT_WINDOW_SECONDS } from "@repo/shared/constants/otp";
-import { apiClient, ApiClientError } from "#/lib/api-client";
-import { PhoneInput } from "./phone-input";
+import { useEffect, useState } from "react";
+import { ApiClientError, apiClient } from "#/lib/api-client";
 import { OtpInput } from "./otp-input";
+import { PhoneInput } from "./phone-input";
 
 type Step = "phone" | "otp";
 
@@ -265,5 +265,5 @@ function OtpLoginDialog({
 	);
 }
 
-export { OtpLoginDialog };
 export type { OtpLoginDialogProps };
+export { OtpLoginDialog };

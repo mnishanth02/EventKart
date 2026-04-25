@@ -1,11 +1,11 @@
-import { AlertCircle, X } from "lucide-react";
 import {
 	Alert,
-	AlertTitle,
 	AlertDescription,
+	AlertTitle,
 } from "@repo/ui/components/ui/alert";
 import { Button } from "@repo/ui/components/ui/button";
 import { cn } from "@repo/ui/lib/utils";
+import { AlertCircle, X } from "lucide-react";
 import { ApiClientError } from "#/lib/api-client.shared";
 
 export interface ApiErrorAlertProps {

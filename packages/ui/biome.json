@@ -1,0 +1,32 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
+	"extends": ["../../biome.json"],
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": false
+	},
+	"overrides": [
+		{
+			"includes": ["src/components/ui/**"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"useSemanticElements": "warn",
+						"useFocusableInteractive": "warn",
+						"useAriaPropsForRole": "warn",
+						"useKeyWithClickEvents": "warn",
+						"noRedundantRoles": "warn"
+					},
+					"suspicious": {
+						"noArrayIndexKey": "warn",
+						"noDocumentCookie": "warn"
+					},
+					"security": {
+						"noDangerouslySetInnerHtml": "warn"
+					}
+				}
+			}
+		}
+	]
+}

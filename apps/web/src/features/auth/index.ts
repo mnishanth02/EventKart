@@ -1,21 +1,18 @@
 // Types
-export type { AuthSession, AuthState } from "./types";
 
 // Server function re-exports
 export { getCurrentUser } from "./api";
-
-// Query options
-export { AUTH_QUERY_KEY, sessionQueryOptions } from "./queries";
-
-// Hooks
-export { useAuth, useAuthActions, useRequireAuth } from "./hooks";
-
 // Components
 export {
+	OtpInput,
+	type OtpInputProps,
 	OtpLoginDialog,
 	type OtpLoginDialogProps,
 	PhoneInput,
 	type PhoneInputProps,
-	OtpInput,
-	type OtpInputProps,
 } from "./components";
+// Hooks
+export { useAuth, useAuthActions, useRequireAuth } from "./hooks";
+// Query options
+export { AUTH_QUERY_KEY, sessionQueryOptions } from "./queries";
+export type { AuthSession, AuthState } from "./types";

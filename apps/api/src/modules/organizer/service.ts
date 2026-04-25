@@ -1,10 +1,10 @@
 import type { Database } from "@repo/db";
+import { eq } from "@repo/db";
 import { organizers } from "@repo/db/schema";
 import type {
 	OrganizerRegistration,
 	OrganizerUpdate,
 } from "@repo/shared/schemas";
-import { eq } from "drizzle-orm";
 import type { FastifyBaseLogger } from "fastify";
 import { ConflictError } from "../../lib/errors.js";
 

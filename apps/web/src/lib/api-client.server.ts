@@ -11,15 +11,19 @@
  * For browser-side calls, use `apiClient` from `#/lib/api-client` instead.
  */
 
-import { serverEnv } from "#/lib/env/server";
 import {
 	API_VERSION,
-	type RequestOptions,
 	parseApiResponse,
+	type RequestOptions,
 } from "#/lib/api-client.shared";
+import { serverEnv } from "#/lib/env/server";
 
 // Re-export shared types for convenience
-export { ApiClientError, type ApiErrorBody, type RequestOptions } from "#/lib/api-client.shared";
+export {
+	ApiClientError,
+	type ApiErrorBody,
+	type RequestOptions,
+} from "#/lib/api-client.shared";
 
 // ── Helpers ────────────────────────────────────────────────────────
 

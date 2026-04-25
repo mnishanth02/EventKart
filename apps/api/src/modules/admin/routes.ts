@@ -47,7 +47,6 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 				},
 			},
 		},
-		// @ts-expect-error — ZodCoercedNumber + ZodTypeProvider handler type mismatch (pre-existing drizzle-orm duplicate types issue)
 		async (request) => {
 			const result = await listVerifications(app.db, request.query);
 			return { success: true as const, data: result.data, meta: result.meta };

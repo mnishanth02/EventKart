@@ -1,7 +1,7 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarProvider } from "@repo/ui/components/ui/sidebar";
-import { getCurrentUser } from "#/lib/auth/server-fns";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { FullPageSpinner } from "#/components/loading";
+import { getCurrentUser } from "#/lib/auth/server-fns";
 
 export const Route = createFileRoute("/_authed")({
 	beforeLoad: async () => {

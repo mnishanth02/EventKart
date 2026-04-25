@@ -90,7 +90,7 @@ export async function sendSmsOtp(
 
 export async function sendWhatsAppOtp(
 	phone: string,
-	otp: string,
+	_otp: string,
 	config: Msg91Config,
 	log: FastifyBaseLogger,
 ): Promise<OtpDeliveryResult> {
@@ -147,7 +147,7 @@ export async function sendOtpWithFallback(
 	}
 
 	log.info(
-		{ phone: phone.slice(0, 6) + "****" },
+		{ phone: `${phone.slice(0, 6)}****` },
 		"SMS OTP failed, trying WhatsApp fallback",
 	);
 	return sendWhatsAppOtp(phone, otp, config, log);

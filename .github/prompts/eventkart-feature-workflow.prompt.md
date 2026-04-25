@@ -1,9 +1,28 @@
 ---
 agent: agent
-description: 'EventKart: End-to-end feature workflow — plan, implement, and review features from v1-implementation-plan.md'
-argument-hint: 'Feature IDs, module name, or implementation scope to build'
-tools: ['search/changes', 'search/codebase', 'edit/editFiles', 'vscode/extensions', 'web/fetch', 'web/githubRepo', 'openSimpleBrowser', 'read/problems', 'execute/createAndRunTask', 'search', 'searchResults', 'read/terminalLastCommand', 'read/terminalSelection', 'execute/testFailure', 'search/usages', 'vscode/vscodeAPI']
+description: "EventKart: End-to-end feature workflow — plan, implement, and review features from v1-implementation-plan.md"
+argument-hint: "Feature IDs, module name, or implementation scope to build"
+tools:
+  [
+    "search/changes",
+    "search/codebase",
+    "edit/editFiles",
+    "vscode/extensions",
+    "web/fetch",
+    "web/githubRepo",
+    "openSimpleBrowser",
+    "read/problems",
+    "execute/createAndRunTask",
+    "search",
+    "searchResults",
+    "read/terminalLastCommand",
+    "read/terminalSelection",
+    "execute/testFailure",
+    "search/usages",
+    "vscode/vscodeAPI",
+  ]
 ---
+
 # EventKart Feature Workflow
 
 You are building a production-ready feature for EventKart — an event ticketing platform built as a pnpm + Turborepo monorepo (TanStack Start frontend, Fastify v5 API, shared packages).
@@ -55,6 +74,7 @@ Follow the review process defined in `.github/prompts/eventkart-review.prompt.md
 ## Phase 5: Wrap Up
 
 After all phases complete:
+
 1. Summarize what was built (endpoints, routes, schemas, tests).
 2. List any known limitations or follow-up work.
 3. Ask: _"Should I commit these changes and create a PR?"_

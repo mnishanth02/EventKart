@@ -1,12 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import {
-	BuildingIcon,
-	LayoutDashboardIcon,
-	LogOutIcon,
-	ShieldIcon,
-	UserIcon,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Badge } from "@repo/ui/components/ui/badge";
 import {
 	Sidebar,
 	SidebarContent,
@@ -20,10 +12,18 @@ import {
 	SidebarMenuItem,
 	SidebarRail,
 } from "@repo/ui/components/ui/sidebar";
-import { Badge } from "@repo/ui/components/ui/badge";
+import { Link, useNavigate } from "@tanstack/react-router";
+import type { LucideIcon } from "lucide-react";
+import {
+	BuildingIcon,
+	LayoutDashboardIcon,
+	LogOutIcon,
+	ShieldIcon,
+	UserIcon,
+} from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "#/lib/api-client";
 import { useAuthActions } from "#/features/auth/hooks";
+import { apiClient } from "#/lib/api-client";
 import type { AuthSession } from "#/lib/auth/server-fns";
 
 // ── Navigation Config ──────────────────────────────────────────────
@@ -71,7 +71,9 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 			// API failed — clear local cache so UI reflects logged-out state,
 			// but warn the user that the server session may persist.
 			clearSession();
-			toast.error("Logout may not have completed. Please close your browser if issues persist.");
+			toast.error(
+				"Logout may not have completed. Please close your browser if issues persist.",
+			);
 		}
 		void navigate({ to: "/" });
 	}
@@ -126,5 +128,5 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 	);
 }
 
-export { AuthedSidebar };
 export type { AuthedSidebarProps };
+export { AuthedSidebar };

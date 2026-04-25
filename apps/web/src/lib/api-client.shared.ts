@@ -65,9 +65,9 @@ export function isMutatingMethod(method: string): boolean {
  */
 export async function parseApiResponse<T>(response: Response): Promise<T> {
 	if (!response.ok) {
-		const errorBody = (await response.json().catch(() => null)) as
-			| ApiErrorBody
-			| null;
+		const errorBody = (await response
+			.json()
+			.catch(() => null)) as ApiErrorBody | null;
 		throw new ApiClientError(
 			response.status,
 			errorBody?.error?.code ?? "UNKNOWN_ERROR",

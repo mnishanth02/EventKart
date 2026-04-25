@@ -63,10 +63,10 @@ result = lang_cache.search(prompt="How do I reset my password?")
 ```
 
 **Best practices:**
+
 - Start with threshold 0.9, adjust based on your use case
 - Use custom attributes to filter results within a single cache
 - Monitor cache hit rates to evaluate effectiveness
 - Use separate cache IDs for fundamentally different LLM tasks
 
 Reference: [LangCache Best Practices](https://redis.io/docs/latest/develop/ai/langcache/)
-

@@ -1,8 +1,8 @@
-import * as React from "react";
-import { Link } from "@tanstack/react-router";
-import { SearchIcon } from "lucide-react";
 import { ThemeToggle } from "@repo/ui/components/theme-toggle";
 import { cn } from "@repo/ui/lib/utils";
+import { Link } from "@tanstack/react-router";
+import { SearchIcon } from "lucide-react";
+import * as React from "react";
 
 function PublicHeader() {
 	const [scrolled, setScrolled] = React.useState(false);
@@ -79,7 +79,9 @@ function NavLink({ to, label }: { to: string; label: string }) {
 			to={to}
 			activeOptions={{ exact: true }}
 			className="nav-link px-3 py-2 text-sm font-medium"
-			activeProps={{ className: "nav-link px-3 py-2 text-sm font-medium is-active" }}
+			activeProps={{
+				className: "nav-link px-3 py-2 text-sm font-medium is-active",
+			}}
 		>
 			{label}
 		</Link>

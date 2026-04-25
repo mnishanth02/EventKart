@@ -1,5 +1,5 @@
-import { useId } from "react";
 import { Input } from "@repo/ui/components/ui/input";
+import { useId } from "react";
 
 interface PhoneInputProps {
 	value: string;
@@ -56,5 +56,5 @@ function PhoneInput({
 	);
 }
 
-export { PhoneInput };
 export type { PhoneInputProps };
+export { PhoneInput };

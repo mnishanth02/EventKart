@@ -43,7 +43,6 @@ vi.mock("../../../src/modules/organizer/policy-service.js", () => ({
 }));
 
 import type { FastifyInstance } from "fastify";
-import { generateCsrfToken } from "../../../src/plugins/csrf.js";
 import { buildTestApp } from "../../helpers/build-app.js";
 
 // ── Constants ────────────────────────────────────────────────────
@@ -52,7 +51,7 @@ const SESSION_COOKIE_NAME = "kiran_session";
 const TEST_SESSION_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 const TEST_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const TEST_ORGANIZER_ID = "660e8400-e29b-41d4-a716-446655440001";
-const TEST_CSRF_SECRET = "eventkart-csrf-secret-v1";
+const _TEST_CSRF_SECRET = "eventkart-csrf-secret-v1";
 
 const ALL_DOC_TYPES = ["aadhaar", "pan", "gst_certificate", "bank_proof"];
 const ALL_POLICY_TYPES = ["platform_terms", "refund_policy"];

@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef } from "react";
 import { cn } from "@repo/ui/lib/utils";
+import { useEffect, useId, useRef } from "react";
 
 interface OtpInputProps {
 	value: string;
@@ -10,7 +10,14 @@ interface OtpInputProps {
 }
 
 const OTP_LENGTH = 6;
-const DIGIT_KEYS = ["otp-0", "otp-1", "otp-2", "otp-3", "otp-4", "otp-5"] as const;
+const DIGIT_KEYS = [
+	"otp-0",
+	"otp-1",
+	"otp-2",
+	"otp-3",
+	"otp-4",
+	"otp-5",
+] as const;
 
 function OtpInput({
 	value,
@@ -67,7 +74,10 @@ function OtpInput({
 
 	function handlePaste(e: React.ClipboardEvent) {
 		e.preventDefault();
-		const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+		const pasted = e.clipboardData
+			.getData("text")
+			.replace(/\D/g, "")
+			.slice(0, OTP_LENGTH);
 		if (pasted.length > 0) {
 			onChange(pasted);
 			focusInput(Math.min(pasted.length, OTP_LENGTH - 1));
@@ -76,9 +86,7 @@ function OtpInput({
 
 	return (
 		<fieldset className="flex flex-col gap-1.5 border-none p-0">
-			<legend className="text-sm font-medium">
-				Verification Code
-			</legend>
+			<legend className="text-sm font-medium">Verification Code</legend>
 			<div className="flex items-center justify-center gap-2">
 				{digits.map((digit, index) => (
 					<input
@@ -108,7 +116,11 @@ function OtpInput({
 				))}
 			</div>
 			{error ? (
-				<p id={errorId} className="text-center text-sm text-destructive" role="alert">
+				<p
+					id={errorId}
+					className="text-center text-sm text-destructive"
+					role="alert"
+				>
 					{error}
 				</p>
 			) : null}
@@ -116,5 +128,5 @@ function OtpInput({
 	);
 }
 
-export { OtpInput };
 export type { OtpInputProps };
+export { OtpInput };

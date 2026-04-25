@@ -28,13 +28,13 @@ Per v1-implementation-plan: "queue depth, oldest job age, retry count, DLQ count
 
 ### Instruments Added (metrics.ts)
 
-| Instrument | Type | Description |
-|---|---|---|
-| `queue.depth` | ObservableGauge | Waiting + active jobs per queue (existing, now wired) |
+| Instrument             | Type            | Description                                                |
+| ---------------------- | --------------- | ---------------------------------------------------------- |
+| `queue.depth`          | ObservableGauge | Waiting + active jobs per queue (existing, now wired)      |
 | `queue.oldest_job_age` | ObservableGauge | Age of oldest waiting job in seconds (existing, now wired) |
-| `queue.delayed_jobs` | ObservableGauge | NEW — delayed/retry jobs per queue |
-| `queue.failed_jobs` | ObservableGauge | NEW — failed jobs per queue |
-| `queue.dlq.depth` | ObservableGauge | NEW — total dead-letter queue depth |
+| `queue.delayed_jobs`   | ObservableGauge | NEW — delayed/retry jobs per queue                         |
+| `queue.failed_jobs`    | ObservableGauge | NEW — failed jobs per queue                                |
+| `queue.dlq.depth`      | ObservableGauge | NEW — total dead-letter queue depth                        |
 
 ### Metrics Plugin Changes (plugins/metrics.ts)
 
@@ -54,16 +54,17 @@ Per v1-implementation-plan: "queue depth, oldest job age, retry count, DLQ count
 
 ### Task Table
 
-| # | Task | Status | Completed |
-|---|------|--------|-----------|
-| 1 | Add queue metric instruments to metrics.ts | ✅ | 2026-04-23 |
-| 2 | Add queue polling to plugins/metrics.ts | ✅ | 2026-04-23 |
-| 3 | Update test mocks + add queue metrics tests | ✅ | 2026-04-23 |
-| 4 | Validate: check-types + lint + test (403 tests passing) | ✅ | 2026-04-23 |
+| #   | Task                                                    | Status | Completed  |
+| --- | ------------------------------------------------------- | ------ | ---------- |
+| 1   | Add queue metric instruments to metrics.ts              | ✅     | 2026-04-23 |
+| 2   | Add queue polling to plugins/metrics.ts                 | ✅     | 2026-04-23 |
+| 3   | Update test mocks + add queue metrics tests             | ✅     | 2026-04-23 |
+| 4   | Validate: check-types + lint + test (403 tests passing) | ✅     | 2026-04-23 |
 
 ### Files Summary
 
 **Modified files:**
+
 - `apps/api/src/lib/metrics.ts` — Added 3 new ObservableGauge instruments, updated section comment
 - `apps/api/src/plugins/metrics.ts` — Added queue polling (30s), observable callbacks, `queue` dependency
 - `apps/api/test/setup.ts` — Added `getJobs` + `delayed` to MockQueue

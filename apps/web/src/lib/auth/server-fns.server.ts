@@ -6,14 +6,11 @@
  * handler in `./server-fns.ts` via dynamic import.
  */
 
-import { getRequestHeader } from "@tanstack/react-start/server";
-import { SESSION_COOKIE_NAME } from "@repo/shared/constants/session";
-import { userRoleSchema } from "@repo/shared/constants/roles";
 import type { UserRole } from "@repo/shared/constants/roles";
-import {
-	serverApiClient,
-	ApiClientError,
-} from "#/lib/api-client.server";
+import { userRoleSchema } from "@repo/shared/constants/roles";
+import { SESSION_COOKIE_NAME } from "@repo/shared/constants/session";
+import { getRequestHeader } from "@tanstack/react-start/server";
+import { ApiClientError, serverApiClient } from "#/lib/api-client.server";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -33,10 +30,7 @@ type SessionApiResponse = {
  * Extracts a single cookie value from a raw `Cookie` header string.
  * Returns `undefined` when the cookie is not present.
  */
-function extractCookie(
-	cookieHeader: string,
-	name: string,
-): string | undefined {
+function extractCookie(cookieHeader: string, name: string): string | undefined {
 	const cookies = cookieHeader.split(";");
 	for (const cookie of cookies) {
 		const [cookieName, ...rest] = cookie.trim().split("=");
@@ -62,7 +56,7 @@ export function getForwardedAuthHeaders(): Record<string, string> {
 	if (cookieHeader) {
 		const sessionCookie = extractCookie(cookieHeader, SESSION_COOKIE_NAME);
 		if (sessionCookie) {
-			headers["Cookie"] = `${SESSION_COOKIE_NAME}=${sessionCookie}`;
+			headers.Cookie = `${SESSION_COOKIE_NAME}=${sessionCookie}`;
 		}
 	}
 

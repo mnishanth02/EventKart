@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Database } from "@repo/db";
+import { and, eq, isNull, sql } from "@repo/db";
 import { emailVerifications, users } from "@repo/db/schema";
 import {
 	EMAIL_VERIFICATION_RATE_LIMIT_SECONDS,
@@ -7,7 +8,6 @@ import {
 	EMAIL_VERIFICATION_TOKEN_TTL_SECONDS,
 } from "@repo/shared/constants";
 import type { Queue } from "bullmq";
-import { and, eq, isNull, sql } from "drizzle-orm";
 import type { FastifyBaseLogger } from "fastify";
 import type { Redis } from "ioredis";
 import {

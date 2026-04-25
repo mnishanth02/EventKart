@@ -159,7 +159,7 @@ describe("POST /api/v1/organizers", () => {
 			});
 
 			expect(mockRegisterOrganizer).toHaveBeenCalledTimes(1);
-			const [deps, userId, data] = mockRegisterOrganizer.mock.calls[0] as [
+			const [_deps, userId, data] = mockRegisterOrganizer.mock.calls[0] as [
 				unknown,
 				string,
 				unknown,

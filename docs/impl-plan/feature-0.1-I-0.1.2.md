@@ -24,27 +24,27 @@ Create the `packages/db` workspace package providing the Drizzle ORM database cl
 
 ## Key Architecture Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| PostgreSQL driver | postgres.js (`postgres`) | Lightweight, explicit `prepare: false` at driver level, serverless-friendly |
-| ORM | Drizzle ORM | Type-safe, SQL-like API, lightweight, great TS types |
-| Migrations | Drizzle Kit | Integrated with Drizzle ORM, generates SQL migrations |
-| PgBouncer compat | `prepare: false` | Mandatory for transaction pooling mode |
-| Migration client | Separate `createMigrationClient` | Direct DB connection for migrations (bypasses PgBouncer in production) |
+| Decision          | Choice                           | Rationale                                                                   |
+| ----------------- | -------------------------------- | --------------------------------------------------------------------------- |
+| PostgreSQL driver | postgres.js (`postgres`)         | Lightweight, explicit `prepare: false` at driver level, serverless-friendly |
+| ORM               | Drizzle ORM                      | Type-safe, SQL-like API, lightweight, great TS types                        |
+| Migrations        | Drizzle Kit                      | Integrated with Drizzle ORM, generates SQL migrations                       |
+| PgBouncer compat  | `prepare: false`                 | Mandatory for transaction pooling mode                                      |
+| Migration client  | Separate `createMigrationClient` | Direct DB connection for migrations (bypasses PgBouncer in production)      |
 
 ## Implementation Tasks
 
-| # | Task | File(s) | Complexity | Status |
-|---|------|---------|------------|--------|
-| 1 | Package setup | `packages/db/package.json` [new] | S | ✅ 2026-04-22 |
-| 2 | TypeScript config | `packages/db/tsconfig.json` [new] | S | ✅ 2026-04-22 |
-| 3 | Vitest config | `packages/db/vitest.config.ts` [new] | S | ✅ 2026-04-22 |
-| 4 | Drizzle Kit config | `packages/db/drizzle.config.ts` [new] | S | ✅ 2026-04-22 |
-| 5 | Database client factory | `packages/db/src/client.ts` [new] | M | ✅ 2026-04-22 |
-| 6 | Package barrel export | `packages/db/src/index.ts` [new] | S | ✅ 2026-04-22 |
-| 7 | Schema barrel export | `packages/db/src/schema/index.ts` [new] | S | ✅ 2026-04-22 |
-| 8 | Seed script skeleton | `packages/db/src/seed.ts` [new] | S | ✅ 2026-04-22 |
-| 9 | Smoke tests | `packages/db/test/client.test.ts` [new] | S | ✅ 2026-04-22 |
+| #   | Task                    | File(s)                                 | Complexity | Status        |
+| --- | ----------------------- | --------------------------------------- | ---------- | ------------- |
+| 1   | Package setup           | `packages/db/package.json` [new]        | S          | ✅ 2026-04-22 |
+| 2   | TypeScript config       | `packages/db/tsconfig.json` [new]       | S          | ✅ 2026-04-22 |
+| 3   | Vitest config           | `packages/db/vitest.config.ts` [new]    | S          | ✅ 2026-04-22 |
+| 4   | Drizzle Kit config      | `packages/db/drizzle.config.ts` [new]   | S          | ✅ 2026-04-22 |
+| 5   | Database client factory | `packages/db/src/client.ts` [new]       | M          | ✅ 2026-04-22 |
+| 6   | Package barrel export   | `packages/db/src/index.ts` [new]        | S          | ✅ 2026-04-22 |
+| 7   | Schema barrel export    | `packages/db/src/schema/index.ts` [new] | S          | ✅ 2026-04-22 |
+| 8   | Seed script skeleton    | `packages/db/src/seed.ts` [new]         | S          | ✅ 2026-04-22 |
+| 9   | Smoke tests             | `packages/db/test/client.test.ts` [new] | S          | ✅ 2026-04-22 |
 
 ## Package Exports
 
@@ -68,13 +68,13 @@ const migrationDb = createMigrationClient(process.env.MIGRATION_DATABASE_URL);
 
 ## DB Scripts (packages/db)
 
-| Script | Command | Purpose |
-|--------|---------|---------|
-| `db:generate` | `drizzle-kit generate` | Generate SQL migrations from schema changes |
-| `db:migrate` | `drizzle-kit migrate` | Apply pending migrations |
-| `db:push` | `drizzle-kit push` | Push schema directly (rapid dev, no migration files) |
-| `db:studio` | `drizzle-kit studio` | Open Drizzle Studio GUI |
-| `db:seed` | `tsx src/seed.ts` | Run seed script |
+| Script        | Command                | Purpose                                              |
+| ------------- | ---------------------- | ---------------------------------------------------- |
+| `db:generate` | `drizzle-kit generate` | Generate SQL migrations from schema changes          |
+| `db:migrate`  | `drizzle-kit migrate`  | Apply pending migrations                             |
+| `db:push`     | `drizzle-kit push`     | Push schema directly (rapid dev, no migration files) |
+| `db:studio`   | `drizzle-kit studio`   | Open Drizzle Studio GUI                              |
+| `db:seed`     | `tsx src/seed.ts`      | Run seed script                                      |
 
 ## Testing Plan
 
@@ -89,14 +89,14 @@ const migrationDb = createMigrationClient(process.env.MIGRATION_DATABASE_URL);
 
 ## Files Summary
 
-| File | Action |
-|------|--------|
-| `packages/db/package.json` | [new] |
-| `packages/db/tsconfig.json` | [new] |
-| `packages/db/vitest.config.ts` | [new] |
-| `packages/db/drizzle.config.ts` | [new] |
-| `packages/db/src/index.ts` | [new] |
-| `packages/db/src/client.ts` | [new] |
-| `packages/db/src/schema/index.ts` | [new] |
-| `packages/db/src/seed.ts` | [new] |
-| `packages/db/test/client.test.ts` | [new] |
+| File                              | Action |
+| --------------------------------- | ------ |
+| `packages/db/package.json`        | [new]  |
+| `packages/db/tsconfig.json`       | [new]  |
+| `packages/db/vitest.config.ts`    | [new]  |
+| `packages/db/drizzle.config.ts`   | [new]  |
+| `packages/db/src/index.ts`        | [new]  |
+| `packages/db/src/client.ts`       | [new]  |
+| `packages/db/src/schema/index.ts` | [new]  |
+| `packages/db/src/seed.ts`         | [new]  |
+| `packages/db/test/client.test.ts` | [new]  |

@@ -213,7 +213,7 @@ describe("PUT /api/v1/organizers/me", () => {
 			});
 
 			expect(mockUpdateOrganizer).toHaveBeenCalledTimes(1);
-			const [deps, userId, data] = mockUpdateOrganizer.mock.calls[0] as [
+			const [_deps, userId, data] = mockUpdateOrganizer.mock.calls[0] as [
 				unknown,
 				string,
 				unknown,

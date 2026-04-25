@@ -6,8 +6,8 @@
  * out of the client bundle graph.
  */
 
-import { createServerFn } from "@tanstack/react-start";
 import type { UserRole } from "@repo/shared/constants/roles";
+import { createServerFn } from "@tanstack/react-start";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -28,4 +28,3 @@ export const getCurrentUser = createServerFn({ method: "GET" }).handler(
 		return fetchCurrentUser();
 	},
 );
-

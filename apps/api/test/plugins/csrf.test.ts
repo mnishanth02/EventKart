@@ -280,7 +280,7 @@ describe("csrf plugin", () => {
 			// Flip a character in the signature portion
 			const parts = token.split(".");
 			const tamperedSig =
-				parts[1]!.slice(0, -2) + (parts[1]!.endsWith("AA") ? "BB" : "AA");
+				parts[1]?.slice(0, -2) + (parts[1]?.endsWith("AA") ? "BB" : "AA");
 			const tampered = `${parts[0]}.${tamperedSig}`;
 
 			const res = await app.inject({
@@ -509,8 +509,8 @@ describe("csrf plugin", () => {
 			const parts = token.split(".");
 
 			expect(parts).toHaveLength(2);
-			expect(parts[0]!.length).toBeGreaterThan(0);
-			expect(parts[1]!.length).toBeGreaterThan(0);
+			expect(parts[0]?.length).toBeGreaterThan(0);
+			expect(parts[1]?.length).toBeGreaterThan(0);
 		});
 	});
 

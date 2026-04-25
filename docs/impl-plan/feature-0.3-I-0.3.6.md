@@ -32,26 +32,26 @@
 
 ## Design Decisions
 
-| Decision | Choice | Rationale |
-|---|---|---|
-| File split | `api-client.ts` (browser + shared types) + `api-client.server.ts` (server-only) | `.server.ts` convention prevents server code in client bundle. Types/error class shared from `api-client.ts`. |
-| Browser URL env var | `VITE_API_URL` in `publicEnv` | Consistent with existing `VITE_*` convention. Accessed via `publicEnv` (never raw `import.meta.env`). |
-| CSRF scope | Included in I-0.3.6 | CSRF is foundational to "all frontend-API communication" — deferring would leave the client unusable for mutations. |
-| Cookie forwarding | Accept optional `headers` param | I-0.2.9 will pass forwarded cookies via this param. I-0.3.6 provides the hook, not the implementation. |
-| Error class location | `api-client.ts` (shared) | Importable by both browser and server code without circular deps. |
+| Decision             | Choice                                                                          | Rationale                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| File split           | `api-client.ts` (browser + shared types) + `api-client.server.ts` (server-only) | `.server.ts` convention prevents server code in client bundle. Types/error class shared from `api-client.ts`.       |
+| Browser URL env var  | `VITE_API_URL` in `publicEnv`                                                   | Consistent with existing `VITE_*` convention. Accessed via `publicEnv` (never raw `import.meta.env`).               |
+| CSRF scope           | Included in I-0.3.6                                                             | CSRF is foundational to "all frontend-API communication" — deferring would leave the client unusable for mutations. |
+| Cookie forwarding    | Accept optional `headers` param                                                 | I-0.2.9 will pass forwarded cookies via this param. I-0.3.6 provides the hook, not the implementation.              |
+| Error class location | `api-client.ts` (shared)                                                        | Importable by both browser and server code without circular deps.                                                   |
 
 ## Implementation Tasks
 
-| # | Task | File | Action | Complexity | Depends on |
-|---|------|------|--------|------------|------------|
-| 1 | Add `VITE_API_URL` to public env schema | `apps/web/src/lib/env/public.ts` | modify | S | — |
-| 2 | Update `.env.example` with `VITE_API_URL` | `apps/web/.env.example` | modify | S | — |
-| 3 | Update `.env.local` with `VITE_API_URL` | `apps/web/.env.local` | modify | S | — |
-| 4 | Create browser API client + shared types | `apps/web/src/lib/api-client.ts` | new | M | 1 |
-| 5 | Create server API client | `apps/web/src/lib/api-client.server.ts` | new | M | 4 |
-| 6 | Write browser client tests | `apps/web/src/lib/api-client.test.ts` | new | M | 4 |
-| 7 | Write server client tests | `apps/web/src/lib/api-client.server.test.ts` | new | M | 5 |
-| 8 | Run validation (check-types, lint, test) | — | verify | S | 6, 7 |
+| #   | Task                                      | File                                         | Action | Complexity | Depends on |
+| --- | ----------------------------------------- | -------------------------------------------- | ------ | ---------- | ---------- |
+| 1   | Add `VITE_API_URL` to public env schema   | `apps/web/src/lib/env/public.ts`             | modify | S          | —          |
+| 2   | Update `.env.example` with `VITE_API_URL` | `apps/web/.env.example`                      | modify | S          | —          |
+| 3   | Update `.env.local` with `VITE_API_URL`   | `apps/web/.env.local`                        | modify | S          | —          |
+| 4   | Create browser API client + shared types  | `apps/web/src/lib/api-client.ts`             | new    | M          | 1          |
+| 5   | Create server API client                  | `apps/web/src/lib/api-client.server.ts`      | new    | M          | 4          |
+| 6   | Write browser client tests                | `apps/web/src/lib/api-client.test.ts`        | new    | M          | 4          |
+| 7   | Write server client tests                 | `apps/web/src/lib/api-client.server.test.ts` | new    | M          | 5          |
+| 8   | Run validation (check-types, lint, test)  | —                                            | verify | S          | 6, 7       |
 
 ## API Error Envelope (Reference)
 
@@ -70,15 +70,15 @@ The Fastify API returns errors in this shape (from `apps/api/src/plugins/error-h
 
 ## Files Summary
 
-| File | Action | Workspace |
-|------|--------|-----------|
-| `apps/web/src/lib/env/public.ts` | modify | web |
-| `apps/web/.env.example` | modify | web |
-| `apps/web/.env.local` | modify | web |
-| `apps/web/src/lib/api-client.ts` | new | web |
-| `apps/web/src/lib/api-client.server.ts` | new | web |
-| `apps/web/src/lib/api-client.test.ts` | new | web |
-| `apps/web/src/lib/api-client.server.test.ts` | new | web |
+| File                                         | Action | Workspace |
+| -------------------------------------------- | ------ | --------- |
+| `apps/web/src/lib/env/public.ts`             | modify | web       |
+| `apps/web/.env.example`                      | modify | web       |
+| `apps/web/.env.local`                        | modify | web       |
+| `apps/web/src/lib/api-client.ts`             | new    | web       |
+| `apps/web/src/lib/api-client.server.ts`      | new    | web       |
+| `apps/web/src/lib/api-client.test.ts`        | new    | web       |
+| `apps/web/src/lib/api-client.server.test.ts` | new    | web       |
 
 ## Testing Plan
 

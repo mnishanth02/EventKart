@@ -46,10 +46,10 @@ describe("getForwardedAuthHeaders", () => {
 		);
 		const headers = getForwardedAuthHeaders();
 
-		expect(headers["Cookie"]).toBe("kiran_session=abc123");
+		expect(headers.Cookie).toBe("kiran_session=abc123");
 		// Must NOT contain the other cookies
-		expect(headers["Cookie"]).not.toContain("theme");
-		expect(headers["Cookie"]).not.toContain("_ga");
+		expect(headers.Cookie).not.toContain("theme");
+		expect(headers.Cookie).not.toContain("_ga");
 	});
 
 	it("forwards x-request-id when present", async () => {
@@ -62,7 +62,7 @@ describe("getForwardedAuthHeaders", () => {
 		const headers = getForwardedAuthHeaders();
 
 		expect(headers["X-Request-ID"]).toBe("req-12345");
-		expect(headers["Cookie"]).toBe("kiran_session=sess_xyz");
+		expect(headers.Cookie).toBe("kiran_session=sess_xyz");
 	});
 
 	it("returns empty object when no session cookie exists", async () => {
@@ -96,7 +96,7 @@ describe("getForwardedAuthHeaders", () => {
 		);
 		const headers = getForwardedAuthHeaders();
 
-		expect(headers["Cookie"]).toBe("kiran_session=abc=def=ghi");
+		expect(headers.Cookie).toBe("kiran_session=abc=def=ghi");
 	});
 });
 

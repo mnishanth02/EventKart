@@ -71,23 +71,23 @@ export type AgentItem = typeof agents.$inferSelect;
 
 ```typescript
 export const agents = pgTable(
-  'agents',
+  "agents",
   {
-    id: text('id')
+    id: text("id")
       .primaryKey()
-      .$defaultFn(() => idGenerator('agents'))
+      .$defaultFn(() => idGenerator("agents"))
       .notNull(),
-    slug: varchar('slug', { length: 100 })
+    slug: varchar("slug", { length: 100 })
       .$defaultFn(() => randomSlug(4))
       .unique(),
-    userId: text('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
+    userId: text("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
-    clientId: text('client_id'),
-    chatConfig: jsonb('chat_config').$type<LobeAgentChatConfig>(),
+    clientId: text("client_id"),
+    chatConfig: jsonb("chat_config").$type<LobeAgentChatConfig>(),
     ...timestamps,
   },
-  (t) => [uniqueIndex('client_id_user_id_unique').on(t.clientId, t.userId)],
+  (t) => [uniqueIndex("client_id_user_id_unique").on(t.clientId, t.userId)],
 );
 ```
 
@@ -97,18 +97,18 @@ export const agents = pgTable(
 
 ```typescript
 export const agentsKnowledgeBases = pgTable(
-  'agents_knowledge_bases',
+  "agents_knowledge_bases",
   {
-    agentId: text('agent_id')
-      .references(() => agents.id, { onDelete: 'cascade' })
+    agentId: text("agent_id")
+      .references(() => agents.id, { onDelete: "cascade" })
       .notNull(),
-    knowledgeBaseId: text('knowledge_base_id')
-      .references(() => knowledgeBases.id, { onDelete: 'cascade' })
+    knowledgeBaseId: text("knowledge_base_id")
+      .references(() => knowledgeBases.id, { onDelete: "cascade" })
       .notNull(),
-    userId: text('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
+    userId: text("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
-    enabled: boolean('enabled').default(true),
+    enabled: boolean("enabled").default(true),
     ...timestamps,
   },
   (t) => [primaryKey({ columns: [t.agentId, t.knowledgeBaseId] })],
@@ -150,7 +150,10 @@ const rows = await this.db
     topic: topics,
   })
   .from(agentEvalRunTopics)
-  .leftJoin(agentEvalTestCases, eq(agentEvalRunTopics.testCaseId, agentEvalTestCases.id))
+  .leftJoin(
+    agentEvalTestCases,
+    eq(agentEvalRunTopics.testCaseId, agentEvalTestCases.id),
+  )
   .leftJoin(topics, eq(agentEvalRunTopics.topicId, topics.id))
   .where(eq(agentEvalRunTopics.runId, runId))
   .orderBy(asc(agentEvalRunTopics.createdAt));
@@ -170,10 +173,13 @@ const rows = await this.db
   .select({
     id: agentEvalDatasets.id,
     name: agentEvalDatasets.name,
-    testCaseCount: count(agentEvalTestCases.id).as('testCaseCount'),
+    testCaseCount: count(agentEvalTestCases.id).as("testCaseCount"),
   })
   .from(agentEvalDatasets)
-  .leftJoin(agentEvalTestCases, eq(agentEvalDatasets.id, agentEvalTestCases.datasetId))
+  .leftJoin(
+    agentEvalTestCases,
+    eq(agentEvalDatasets.id, agentEvalTestCases.datasetId),
+  )
   .groupBy(agentEvalDatasets.id);
 ```
 
