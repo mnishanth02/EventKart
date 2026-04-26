@@ -33,7 +33,7 @@ export async function listVerifications(
 		.from(organizers)
 		.where(condition);
 
-	const total = countRows[0]?.total ?? 0;
+	const total = Number(countRows[0]?.total ?? 0);
 
 	// Get paginated organizer rows
 	const rows = await db
@@ -76,7 +76,7 @@ export async function listVerifications(
 			.groupBy(verificationDocuments.organizerId);
 
 		for (const d of docCounts) {
-			docCountMap.set(d.organizerId, d.docCount);
+			docCountMap.set(d.organizerId, Number(d.docCount));
 		}
 	}
 

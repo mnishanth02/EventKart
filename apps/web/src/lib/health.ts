@@ -3,7 +3,7 @@
  * Extracted from route handlers for testability.
  */
 
-import { serverApiClient } from "#/lib/api-client.server";
+import { serverEnv } from "#/lib/env/server";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -30,10 +30,14 @@ const API_TIMEOUT_MS = 5_000;
  */
 export async function checkApiReachability(): Promise<HealthCheck> {
 	const start = performance.now();
+	const baseUrl = serverEnv.INTERNAL_API_URL ?? "http://localhost:3001";
 	try {
-		await serverApiClient<{ status: string }>("/ready", {
+		const res = await fetch(`${baseUrl}/ready`, {
 			signal: AbortSignal.timeout(API_TIMEOUT_MS),
 		});
+		if (!res.ok) {
+			throw new Error(`HTTP ${res.status}`);
+		}
 		return {
 			name: "api",
 			status: "ok",
