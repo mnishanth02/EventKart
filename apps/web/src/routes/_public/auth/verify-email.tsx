@@ -141,8 +141,8 @@ function CenteredCard({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="page-wrap flex min-h-[50vh] items-center justify-center py-12">
-			<Card className="w-full max-w-md text-center">
+		<div className="mx-auto flex min-h-[50vh] w-full max-w-md items-center justify-center px-4 py-12">
+			<Card className="w-full text-center">
 				<CardHeader>
 					<CardTitle>{title}</CardTitle>
 					<CardDescription>{description}</CardDescription>

@@ -56,7 +56,7 @@ function PublicHeader() {
 						to="/"
 						className="flex items-center gap-2 text-lg font-bold tracking-tight text-foreground no-underline"
 					>
-						<span className="display-title">eventKart</span>
+						<span className="font-display">eventKart</span>
 					</Link>
 
 					{/* Desktop nav links */}
@@ -97,9 +97,10 @@ function NavLink({ to, label }: { to: string; label: string }) {
 		<Link
 			to={to}
 			activeOptions={{ exact: true }}
-			className="nav-link px-3 py-2 text-sm font-medium"
+			className="chalk-underline px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground no-underline"
 			activeProps={{
-				className: "nav-link px-3 py-2 text-sm font-medium is-active",
+				className:
+					"chalk-underline is-active px-3 py-2 text-sm font-medium text-foreground no-underline",
 			}}
 		>
 			{label}
