@@ -6,6 +6,7 @@ import {
 	eventCategories,
 	eventCategoryEnum,
 	eventCurrencyEnum,
+	eventPricingTiers,
 	eventSportEnum,
 	eventStatusEnum,
 	events,
@@ -108,6 +109,8 @@ describe("schema exports", () => {
 		expect(events.registrationOpensAt).toBeDefined();
 		expect(events.registrationClosesAt).toBeDefined();
 		expect(events.routeDetails).toBeDefined();
+		expect(events.refundPolicy).toBeDefined();
+		expect(events.cancellationPolicy).toBeDefined();
 		expect(events.isPaid).toBeDefined();
 		expect(events.currency).toBeDefined();
 		expect(events.status).toBeDefined();
@@ -147,6 +150,18 @@ describe("schema exports", () => {
 		expect(eventCategories.sortOrder).toBeDefined();
 		expect(eventCategories.createdAt).toBeDefined();
 		expect(eventCategories.updatedAt).toBeDefined();
+	});
+
+	it("exports eventPricingTiers table with expected columns", () => {
+		expect(eventPricingTiers).toBeDefined();
+		expect(eventPricingTiers.id).toBeDefined();
+		expect(eventPricingTiers.eventId).toBeDefined();
+		expect(eventPricingTiers.eventCategoryId).toBeDefined();
+		expect(eventPricingTiers.basePrice).toBeDefined();
+		expect(eventPricingTiers.earlyBirdPrice).toBeDefined();
+		expect(eventPricingTiers.earlyBirdDeadline).toBeDefined();
+		expect(eventPricingTiers.createdAt).toBeDefined();
+		expect(eventPricingTiers.updatedAt).toBeDefined();
 	});
 
 	it("exports slugRedirects table with expected columns", () => {

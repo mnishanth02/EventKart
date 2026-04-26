@@ -50,6 +50,31 @@ export {
 	eventCategoryRecordSchema,
 	eventCategorySlugSchema,
 } from "./event-category.js";
+export type {
+	EventPoliciesConfig,
+	EventPoliciesConfigInput,
+	EventPoliciesRecord,
+} from "./event-policy.js";
+export {
+	eventPoliciesConfigSchema,
+	eventPoliciesRecordSchema,
+	eventPolicyTextSchema,
+} from "./event-policy.js";
+export type {
+	EventPricingConfig,
+	EventPricingConfigInput,
+	EventPricingTierConfig,
+	EventPricingTierConfigInput,
+	EventPricingTierRecord,
+	EventPricingTierWithCategory,
+} from "./event-pricing.js";
+export {
+	eventPriceSchema,
+	eventPricingConfigSchema,
+	eventPricingTierConfigSchema,
+	eventPricingTierRecordSchema,
+	eventPricingTierWithCategorySchema,
+} from "./event-pricing.js";
 export type { EventSlug, EventSlugInput } from "./event-slug.js";
 export { eventSlugSchema } from "./event-slug.js";
 export type { UUID } from "./id.js";

@@ -227,6 +227,8 @@ export const eventSchema = z.object({
 	registrationOpensAt: eventDateTimeSchema.nullable(),
 	registrationClosesAt: eventDateTimeSchema.nullable(),
 	routeDetails: z.string(),
+	refundPolicy: z.string().nullable(),
+	cancellationPolicy: z.string().nullable(),
 	isPaid: z.boolean(),
 	currency: eventCurrencySchema,
 	status: eventStatusSchema,

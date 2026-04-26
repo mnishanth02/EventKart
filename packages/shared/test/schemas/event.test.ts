@@ -122,6 +122,8 @@ describe("eventSchema", () => {
 			...V1_EVENT_ALLOWED_VALUES,
 			addressLine2: null,
 			postalCode: null,
+			refundPolicy: null,
+			cancellationPolicy: null,
 			status: "draft",
 			createdAt: "2026-04-26T12:00:00.000Z",
 			updatedAt: "2026-04-26T12:00:00.000Z",

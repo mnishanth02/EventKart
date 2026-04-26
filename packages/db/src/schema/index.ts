@@ -2,6 +2,7 @@ export { auditLog } from "./audit-log.js";
 export { consentRecords, consentTypeEnum } from "./consent-records.js";
 export { emailVerifications } from "./email-verifications.js";
 export { eventCategories } from "./event-categories.js";
+export { eventPricingTiers } from "./event-pricing-tiers.js";
 export {
 	eventCategoryEnum,
 	eventCurrencyEnum,

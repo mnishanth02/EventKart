@@ -10,11 +10,19 @@ import {
 	eventCategoriesResponseSchema,
 	eventErrorResponseSchema,
 	eventIdParamsSchema,
+	eventPoliciesBodySchema,
+	eventPoliciesResponseSchema,
+	eventPricingBodySchema,
+	eventPricingResponseSchema,
 } from "./schemas.js";
 import {
 	createDraftEvent,
+	getEventPolicies,
 	listEventCategories,
+	listEventPricing,
 	replaceEventCategories,
+	replaceEventPricing,
+	updateEventPolicies,
 } from "./service.js";
 
 const eventRoutes: FastifyPluginAsync = async (app) => {
@@ -69,6 +77,9 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			const categories = await listEventCategories(
 				app.db,
 				request.params.eventId,
+				request.session?.role === "organizer"
+					? request.session.userId
+					: undefined,
 			);
 
 			return { success: true as const, data: { categories } };
@@ -106,6 +117,124 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			);
 
 			return { success: true as const, data: { categories } };
+		},
+	);
+
+	typedApp.get(
+		"/:eventId/policies",
+		{
+			schema: {
+				params: eventIdParamsSchema,
+				response: {
+					200: eventPoliciesResponseSchema,
+					400: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const policies = await getEventPolicies(
+				app.db,
+				request.params.eventId,
+				request.session?.role === "organizer"
+					? request.session.userId
+					: undefined,
+			);
+
+			return { success: true as const, data: policies };
+		},
+	);
+
+	typedApp.put(
+		"/:eventId/policies",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				body: eventPoliciesBodySchema,
+				response: {
+					200: eventPoliciesResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const policies = await updateEventPolicies(
+				{ db: app.db, log: request.log },
+				session.userId,
+				request.params.eventId,
+				request.body,
+			);
+
+			return { success: true as const, data: policies };
+		},
+	);
+
+	typedApp.get(
+		"/:eventId/pricing",
+		{
+			schema: {
+				params: eventIdParamsSchema,
+				response: {
+					200: eventPricingResponseSchema,
+					400: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const tiers = await listEventPricing(
+				app.db,
+				request.params.eventId,
+				request.session?.role === "organizer"
+					? request.session.userId
+					: undefined,
+			);
+
+			return { success: true as const, data: { tiers } };
+		},
+	);
+
+	typedApp.put(
+		"/:eventId/pricing",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				body: eventPricingBodySchema,
+				response: {
+					200: eventPricingResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const tiers = await replaceEventPricing(
+				{ db: app.db, log: request.log },
+				session.userId,
+				request.params.eventId,
+				request.body,
+			);
+
+			return { success: true as const, data: { tiers } };
 		},
 	);
 };

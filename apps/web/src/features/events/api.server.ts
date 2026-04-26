@@ -6,18 +6,24 @@
  * in `./api.ts` createServerFn handlers.
  */
 
-import type { CreateEvent, EventCategoriesConfig } from "@repo/shared/schemas";
+import type {
+	CreateEvent,
+	EventCategoriesConfig,
+	EventPoliciesConfig,
+	EventPricingConfig,
+} from "@repo/shared/schemas";
 import { serverApiClient } from "#/lib/api-client.server";
 import {
 	assertSameOriginMutationRequest,
 	getForwardedAuthHeaders,
 } from "#/lib/auth/server-fns.server";
-import type { EventCategoriesResponse, EventResponse } from "./types";
+import type {
+	EventCategoriesResponse,
+	EventPoliciesResponse,
+	EventPricingResponse,
+	EventResponse,
+} from "./types";
 
-/**
- * Creates a V1 event via POST /api/v1/events.
- * Forwards the user's session cookie for organizer auth.
- */
 export async function createEventOnServer(
 	data: CreateEvent,
 ): Promise<EventResponse> {
@@ -30,10 +36,6 @@ export async function createEventOnServer(
 	});
 }
 
-/**
- * Lists configured distance categories via GET /api/v1/events/:eventId/categories.
- * Forwards the user's session cookie for organizer auth.
- */
 export async function listEventCategoriesOnServer(
 	eventId: string,
 ): Promise<EventCategoriesResponse> {
@@ -44,10 +46,6 @@ export async function listEventCategoriesOnServer(
 	);
 }
 
-/**
- * Replaces configured distance categories via PUT /api/v1/events/:eventId/categories.
- * Forwards the user's session cookie for organizer auth.
- */
 export async function replaceEventCategoriesOnServer(
 	eventId: string,
 	config: EventCategoriesConfig,
@@ -62,4 +60,48 @@ export async function replaceEventCategoriesOnServer(
 			headers,
 		},
 	);
+}
+
+export async function getEventPoliciesOnServer(
+	eventId: string,
+): Promise<EventPoliciesResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventPoliciesResponse>(`/events/${eventId}/policies`, {
+		headers,
+	});
+}
+
+export async function updateEventPoliciesOnServer(
+	eventId: string,
+	config: EventPoliciesConfig,
+): Promise<EventPoliciesResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventPoliciesResponse>(`/events/${eventId}/policies`, {
+		method: "PUT",
+		body: config,
+		headers,
+	});
+}
+
+export async function listEventPricingOnServer(
+	eventId: string,
+): Promise<EventPricingResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventPricingResponse>(`/events/${eventId}/pricing`, {
+		headers,
+	});
+}
+
+export async function replaceEventPricingOnServer(
+	eventId: string,
+	config: EventPricingConfig,
+): Promise<EventPricingResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventPricingResponse>(`/events/${eventId}/pricing`, {
+		method: "PUT",
+		body: config,
+		headers,
+	});
 }

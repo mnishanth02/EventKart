@@ -50,6 +50,7 @@ export const eventCategories = pgTable(
 			table.eventId,
 			table.sortOrder,
 		),
+		unique("event_categories_id_event_id_unique").on(table.id, table.eventId),
 		check(
 			"event_categories_name_not_blank_check",
 			sql.raw(`char_length(btrim("name")) > 0`),

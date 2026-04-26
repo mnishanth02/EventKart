@@ -1,5 +1,10 @@
 import type { Database } from "@repo/db";
-import { eventCategories, slugRedirects } from "@repo/db/schema";
+import {
+	eventCategories,
+	eventPricingTiers,
+	slugRedirects,
+} from "@repo/db/schema";
+import { eventPricingConfigSchema } from "@repo/shared/schemas";
 import { EVENT_SLUG_MAX_LENGTH } from "@repo/shared/utils";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -12,28 +17,37 @@ import {
 	createDraftEvent,
 	type EventSlugStore,
 	type EventSlugTransactionalStore,
+	getApplicableEventPrice,
+	getEventPolicies,
 	listEventCategories,
+	listEventPricing,
 	recordEventSlugRedirect,
 	replaceEventCategories,
+	replaceEventPricing,
 	reserveUniqueEventSlug,
+	updateEventPolicies,
 	updateEventSlug,
 } from "../../../src/modules/events/service.js";
 
 const EVENT_ID = "11111111-1111-4111-8111-111111111111";
 const CATEGORY_5K_ID = "22222222-2222-4222-8222-222222222222";
 const CATEGORY_10K_ID = "33333333-3333-4333-8333-333333333333";
+const PRICING_5K_ID = "44444444-4444-4444-8444-444444444444";
+const PRICING_10K_ID = "55555555-5555-4555-8555-555555555555";
 const OTHER_ORGANIZER_ID = "770e8400-e29b-41d4-a716-446655440002";
 
 type SelectRows = Record<string, unknown>[];
 
 function createSelectQuery(rows: SelectRows) {
 	const query = {
+		for: vi.fn(),
 		from: vi.fn(),
 		limit: vi.fn(),
 		orderBy: vi.fn(),
 		where: vi.fn(),
 	};
 
+	query.for.mockReturnValue(query);
 	query.from.mockReturnValue(query);
 	query.where.mockReturnValue(query);
 	query.limit.mockResolvedValue(rows);
@@ -165,6 +179,8 @@ function buildEventRow(overrides: Record<string, unknown> = {}) {
 		registrationOpensAt: new Date("2026-07-01T03:30:00.000Z"),
 		registrationClosesAt: new Date("2026-08-14T12:30:00.000Z"),
 		routeDetails: "Single-loop 10K route through Race Course Road.",
+		refundPolicy: null,
+		cancellationPolicy: null,
 		isPaid: true,
 		currency: "INR",
 		status: "draft",
@@ -204,6 +220,44 @@ function buildEventCategoryRow(overrides: Record<string, unknown> = {}) {
 		...overrides,
 	};
 }
+
+function buildEventPricingTierRow(overrides: Record<string, unknown> = {}) {
+	return {
+		id: PRICING_5K_ID,
+		eventId: EVENT_ID,
+		eventCategoryId: CATEGORY_5K_ID,
+		basePrice: 999,
+		earlyBirdPrice: 799,
+		earlyBirdDeadline: new Date("2026-07-01T03:30:00.000Z"),
+		createdAt: new Date("2026-04-26T12:00:00.000Z"),
+		updatedAt: new Date("2026-04-26T12:00:00.000Z"),
+		...overrides,
+	};
+}
+
+const validEventPricingInput = eventPricingConfigSchema.parse({
+	tiers: [
+		{
+			eventCategoryId: CATEGORY_5K_ID,
+			basePrice: 999,
+			earlyBirdPrice: 799,
+			earlyBirdDeadline: "2026-07-01T03:30:00.000Z",
+		},
+		{
+			eventCategoryId: CATEGORY_10K_ID,
+			basePrice: 1499,
+			earlyBirdPrice: null,
+			earlyBirdDeadline: null,
+		},
+	],
+});
+
+const validEventPoliciesInput = {
+	refundPolicy:
+		"Refunds are available until seven days before race day, less payment gateway fees.",
+	cancellationPolicy:
+		"If the event is cancelled by the organizer, registered participants receive a full refund.",
+};
 
 describe("event slug service", () => {
 	it("generates a suffix when an active event already uses the base slug", async () => {
@@ -484,7 +538,10 @@ describe("event category service", () => {
 				sortOrder: 1,
 			}),
 		];
-		const { db } = createMockSlugStore([[{ id: EVENT_ID }], categoryRows]);
+		const { db } = createMockSlugStore([
+			[buildEventRow({ status: "published" })],
+			categoryRows,
+		]);
 
 		const result = await listEventCategories(db, EVENT_ID);
 
@@ -496,6 +553,28 @@ describe("event category service", () => {
 			distanceMeters: 5_000,
 			sortOrder: 0,
 		});
+	});
+
+	it("allows an organizer to list categories for their own non-public event", async () => {
+		const categoryRows = [buildEventCategoryRow()];
+		const { db } = createMockSlugStore([
+			[buildEventRow({ status: "under_review" })],
+			[organizerRow],
+			categoryRows,
+		]);
+
+		const result = await listEventCategories(db, EVENT_ID, TEST_USER_ID);
+
+		expect(result).toHaveLength(1);
+		expect(result[0]?.slug).toBe("5k");
+	});
+
+	it("does not expose draft categories without organizer ownership", async () => {
+		const { db } = createMockSlugStore([[buildEventRow()]]);
+
+		await expect(listEventCategories(db, EVENT_ID)).rejects.toThrow(
+			NotFoundError,
+		);
 	});
 
 	it("returns 404 when listing categories for a missing event", async () => {
@@ -517,11 +596,13 @@ describe("event category service", () => {
 				sortOrder: 1,
 			}),
 		];
-		const { db, deleteFn, insertValues, transaction } = createMockSlugStore([
-			[organizerRow],
-			[buildEventRow()],
-			categoryRows,
-		]);
+		const { db, deleteFn, insertValues, selectQueries, transaction } =
+			createMockSlugStore([
+				[organizerRow],
+				[buildEventRow()],
+				[],
+				categoryRows,
+			]);
 		const log = { info: vi.fn() };
 
 		const result = await replaceEventCategories(
@@ -532,6 +613,7 @@ describe("event category service", () => {
 		);
 
 		expect(transaction).toHaveBeenCalledOnce();
+		expect(selectQueries[1]?.for).toHaveBeenCalledWith("update");
 		expect(deleteFn).toHaveBeenCalledWith(eventCategories);
 		expect(insertValues).toHaveBeenCalledWith([
 			{
@@ -559,6 +641,25 @@ describe("event category service", () => {
 			}),
 			"Event categories replaced",
 		);
+	});
+
+	it("returns 409 instead of silently deleting pricing when replacing priced categories", async () => {
+		const { db, deleteFn, insert } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow()],
+			[buildEventPricingTierRow()],
+		]);
+
+		await expect(
+			replaceEventCategories(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validEventCategoriesInput,
+			),
+		).rejects.toThrow(ConflictError);
+		expect(deleteFn).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
 	});
 
 	it("returns 404 when replacing categories without an organizer profile", async () => {
@@ -660,6 +761,423 @@ describe("event category service", () => {
 				TEST_USER_ID,
 				EVENT_ID,
 				input,
+			),
+		).rejects.toThrow(ValidationError);
+		expect(select).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
+	});
+});
+
+describe("event policy service", () => {
+	it("returns nullable policies for a draft event without saved policy text", async () => {
+		const { db } = createMockSlugStore([
+			[buildEventRow({ status: "published" })],
+			[buildEventRow({ status: "published" })],
+		]);
+
+		const result = await getEventPolicies(db, EVENT_ID);
+
+		expect(result).toEqual({
+			eventId: EVENT_ID,
+			refundPolicy: null,
+			cancellationPolicy: null,
+			updatedAt: "2026-04-26T12:00:00.000Z",
+		});
+	});
+
+	it("updates policies atomically for an organizer-owned draft event", async () => {
+		const updatedAt = new Date("2026-04-27T12:00:00.000Z");
+		const { db, selectQueries, transaction, updateSet } = createMockSlugStore(
+			[[organizerRow], [buildEventRow()]],
+			[
+				buildEventRow({
+					...validEventPoliciesInput,
+					updatedAt,
+				}),
+			],
+		);
+		const log = { info: vi.fn() };
+
+		const result = await updateEventPolicies(
+			{ db, log },
+			TEST_USER_ID,
+			EVENT_ID,
+			validEventPoliciesInput,
+		);
+
+		expect(transaction).toHaveBeenCalledOnce();
+		expect(selectQueries[1]?.for).toHaveBeenCalledWith("update");
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining(validEventPoliciesInput),
+		);
+		expect(result).toEqual({
+			eventId: EVENT_ID,
+			...validEventPoliciesInput,
+			updatedAt: "2026-04-27T12:00:00.000Z",
+		});
+		expect(log.info).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventId: EVENT_ID,
+				organizerId: TEST_ORGANIZER_ID,
+				userId: TEST_USER_ID,
+			}),
+			"Event policies updated",
+		);
+	});
+
+	it("does not expose draft policies without organizer ownership", async () => {
+		const { db } = createMockSlugStore([[buildEventRow()]]);
+
+		await expect(getEventPolicies(db, EVENT_ID)).rejects.toThrow(NotFoundError);
+	});
+
+	it("trims policy text before updating", async () => {
+		const { db, updateSet } = createMockSlugStore(
+			[[organizerRow], [buildEventRow()]],
+			[
+				buildEventRow({
+					...validEventPoliciesInput,
+				}),
+			],
+		);
+
+		await updateEventPolicies(
+			{ db, log: { info: vi.fn() } },
+			TEST_USER_ID,
+			EVENT_ID,
+			{
+				refundPolicy: `  ${validEventPoliciesInput.refundPolicy}  `,
+				cancellationPolicy: `  ${validEventPoliciesInput.cancellationPolicy}  `,
+			},
+		);
+
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining(validEventPoliciesInput),
+		);
+	});
+
+	it("returns 403 when updating policies for another organizer's event", async () => {
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ organizerId: OTHER_ORGANIZER_ID })],
+		]);
+
+		await expect(
+			updateEventPolicies(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validEventPoliciesInput,
+			),
+		).rejects.toThrow(ForbiddenError);
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when updating policies for a published event", async () => {
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ status: "published" })],
+		]);
+
+		await expect(
+			updateEventPolicies(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validEventPoliciesInput,
+			),
+		).rejects.toThrow(ConflictError);
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("rejects invalid policies before touching the database", async () => {
+		const { db, select, update } = createMockSlugStore();
+
+		await expect(
+			updateEventPolicies(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				{
+					refundPolicy: "",
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				},
+			),
+		).rejects.toThrow(ValidationError);
+		expect(select).not.toHaveBeenCalled();
+		expect(update).not.toHaveBeenCalled();
+	});
+});
+
+describe("event pricing service", () => {
+	const categoryRows = [
+		buildEventCategoryRow(),
+		buildEventCategoryRow({
+			id: CATEGORY_10K_ID,
+			name: "10K",
+			slug: "10k",
+			distanceMeters: 10_000,
+			sortOrder: 1,
+		}),
+	];
+	const pricingRows = [
+		buildEventPricingTierRow(),
+		buildEventPricingTierRow({
+			id: PRICING_10K_ID,
+			eventCategoryId: CATEGORY_10K_ID,
+			basePrice: 1499,
+			earlyBirdPrice: null,
+			earlyBirdDeadline: null,
+		}),
+	];
+
+	it("lists pricing tiers with their categories ordered by category sort order", async () => {
+		const { db } = createMockSlugStore([
+			[buildEventRow({ status: "published" })],
+			categoryRows,
+			pricingRows,
+		]);
+
+		const result = await listEventPricing(db, EVENT_ID);
+
+		expect(result.map((tier) => tier.category.slug)).toEqual(["5k", "10k"]);
+		expect(result[0]).toMatchObject({
+			id: PRICING_5K_ID,
+			eventId: EVENT_ID,
+			eventCategoryId: CATEGORY_5K_ID,
+			basePrice: 999,
+			earlyBirdPrice: 799,
+			earlyBirdDeadline: "2026-07-01T03:30:00.000Z",
+		});
+	});
+
+	it("does not expose draft pricing without organizer ownership", async () => {
+		const { db } = createMockSlugStore([[buildEventRow()]]);
+
+		await expect(listEventPricing(db, EVENT_ID)).rejects.toThrow(NotFoundError);
+	});
+
+	it("replaces pricing tiers atomically for an organizer-owned draft event", async () => {
+		const { db, deleteFn, insertValues, selectQueries, transaction } =
+			createMockSlugStore([
+				[organizerRow],
+				[buildEventRow()],
+				categoryRows,
+				pricingRows,
+			]);
+		const log = { info: vi.fn() };
+
+		const result = await replaceEventPricing(
+			{ db, log },
+			TEST_USER_ID,
+			EVENT_ID,
+			validEventPricingInput,
+		);
+
+		expect(transaction).toHaveBeenCalledOnce();
+		expect(selectQueries[1]?.for).toHaveBeenCalledWith("update");
+		expect(deleteFn).toHaveBeenCalledWith(eventPricingTiers);
+		expect(insertValues).toHaveBeenCalledWith([
+			{
+				eventId: EVENT_ID,
+				eventCategoryId: CATEGORY_5K_ID,
+				basePrice: 999,
+				earlyBirdPrice: 799,
+				earlyBirdDeadline: new Date("2026-07-01T03:30:00.000Z"),
+			},
+			{
+				eventId: EVENT_ID,
+				eventCategoryId: CATEGORY_10K_ID,
+				basePrice: 1499,
+				earlyBirdPrice: null,
+				earlyBirdDeadline: null,
+			},
+		]);
+		expect(result.map((tier) => tier.category.slug)).toEqual(["5k", "10k"]);
+		expect(log.info).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventId: EVENT_ID,
+				organizerId: TEST_ORGANIZER_ID,
+				userId: TEST_USER_ID,
+				tierCount: 2,
+			}),
+			"Event pricing replaced",
+		);
+	});
+
+	it("returns the early-bird price when the timestamp is before the deadline", async () => {
+		const { db } = createMockSlugStore([
+			[buildEventRow()],
+			[buildEventCategoryRow()],
+			[buildEventPricingTierRow()],
+		]);
+
+		const result = await getApplicableEventPrice(
+			db,
+			EVENT_ID,
+			CATEGORY_5K_ID,
+			new Date("2026-06-15T03:30:00.000Z"),
+		);
+
+		expect(result).toEqual({
+			eventId: EVENT_ID,
+			eventCategoryId: CATEGORY_5K_ID,
+			price: 799,
+			basePrice: 999,
+			earlyBirdPrice: 799,
+			earlyBirdDeadline: "2026-07-01T03:30:00.000Z",
+			isEarlyBird: true,
+			asOf: "2026-06-15T03:30:00.000Z",
+		});
+	});
+
+	it("returns the base price after the early-bird deadline", async () => {
+		const { db } = createMockSlugStore([
+			[buildEventRow()],
+			[buildEventCategoryRow()],
+			[buildEventPricingTierRow()],
+		]);
+
+		const result = await getApplicableEventPrice(
+			db,
+			EVENT_ID,
+			CATEGORY_5K_ID,
+			new Date("2026-07-02T03:30:00.000Z"),
+		);
+
+		expect(result.price).toBe(999);
+		expect(result.isEarlyBird).toBe(false);
+	});
+
+	it("rejects applicable price lookup when the category is not part of the event", async () => {
+		const { db } = createMockSlugStore([[buildEventRow()], []]);
+
+		await expect(
+			getApplicableEventPrice(
+				db,
+				EVENT_ID,
+				CATEGORY_5K_ID,
+				new Date("2026-06-15T03:30:00.000Z"),
+			),
+		).rejects.toThrow(ValidationError);
+	});
+
+	it("rejects applicable price lookup when no pricing tier exists", async () => {
+		const { db } = createMockSlugStore([
+			[buildEventRow()],
+			[buildEventCategoryRow()],
+			[],
+		]);
+
+		await expect(
+			getApplicableEventPrice(
+				db,
+				EVENT_ID,
+				CATEGORY_5K_ID,
+				new Date("2026-06-15T03:30:00.000Z"),
+			),
+		).rejects.toThrow(NotFoundError);
+	});
+
+	it("returns 403 when replacing pricing for another organizer's event", async () => {
+		const { db, deleteFn, insert } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ organizerId: OTHER_ORGANIZER_ID })],
+		]);
+
+		await expect(
+			replaceEventPricing(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validEventPricingInput,
+			),
+		).rejects.toThrow(ForbiddenError);
+		expect(deleteFn).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when replacing pricing for a published event", async () => {
+		const { db, deleteFn, insert } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ status: "published" })],
+		]);
+
+		await expect(
+			replaceEventPricing(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validEventPricingInput,
+			),
+		).rejects.toThrow(ConflictError);
+		expect(deleteFn).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when pricing categories are not configured", async () => {
+		const { db, deleteFn, insert } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow()],
+			[],
+		]);
+
+		await expect(
+			replaceEventPricing(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validEventPricingInput,
+			),
+		).rejects.toThrow(ConflictError);
+		expect(deleteFn).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it("rejects pricing that does not cover every event category", async () => {
+		const { db, deleteFn, insert } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow()],
+			categoryRows,
+		]);
+
+		await expect(
+			replaceEventPricing(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				{
+					tiers: [
+						{
+							eventCategoryId: CATEGORY_5K_ID,
+							basePrice: 999,
+						},
+					],
+				},
+			),
+		).rejects.toThrow(ValidationError);
+		expect(deleteFn).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it("rejects invalid pricing before touching the database", async () => {
+		const { db, select, insert } = createMockSlugStore();
+
+		await expect(
+			replaceEventPricing(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				{
+					tiers: [
+						{
+							eventCategoryId: CATEGORY_5K_ID,
+							basePrice: 999,
+							earlyBirdPrice: 999,
+							earlyBirdDeadline: "2026-07-01T03:30:00.000Z",
+						},
+					],
+				},
 			),
 		).rejects.toThrow(ValidationError);
 		expect(select).not.toHaveBeenCalled();

@@ -9,7 +9,11 @@ import {
 } from "vitest";
 
 const mockCreateDraftEvent = vi.fn();
+const mockListEventPricing = vi.fn();
 const mockListEventCategories = vi.fn();
+const mockGetEventPolicies = vi.fn();
+const mockUpdateEventPolicies = vi.fn();
+const mockReplaceEventPricing = vi.fn();
 const mockReplaceEventCategories = vi.fn();
 
 vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
@@ -20,8 +24,14 @@ vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	return {
 		...actual,
 		createDraftEvent: (...args: unknown[]) => mockCreateDraftEvent(...args),
+		getEventPolicies: (...args: unknown[]) => mockGetEventPolicies(...args),
+		listEventPricing: (...args: unknown[]) => mockListEventPricing(...args),
 		listEventCategories: (...args: unknown[]) =>
 			mockListEventCategories(...args),
+		updateEventPolicies: (...args: unknown[]) =>
+			mockUpdateEventPolicies(...args),
+		replaceEventPricing: (...args: unknown[]) =>
+			mockReplaceEventPricing(...args),
 		replaceEventCategories: (...args: unknown[]) =>
 			mockReplaceEventCategories(...args),
 	};
@@ -85,6 +95,8 @@ const mockEvent = {
 	registrationOpensAt: "2026-07-01T03:30:00.000Z",
 	registrationClosesAt: "2026-08-14T12:30:00.000Z",
 	routeDetails: "Single-loop 10K route through Race Course Road.",
+	refundPolicy: null,
+	cancellationPolicy: null,
 	isPaid: true,
 	currency: "INR",
 	status: "draft",
@@ -109,6 +121,36 @@ const validCategoriesBody = {
 	],
 };
 
+const validPricingBody = {
+	tiers: [
+		{
+			eventCategoryId: TEST_CATEGORY_5K_ID,
+			basePrice: 999,
+			earlyBirdPrice: 799,
+			earlyBirdDeadline: "2026-07-01T03:30:00.000Z",
+		},
+		{
+			eventCategoryId: TEST_CATEGORY_10K_ID,
+			basePrice: 1499,
+			earlyBirdPrice: null,
+			earlyBirdDeadline: null,
+		},
+	],
+};
+
+const validPoliciesBody = {
+	refundPolicy:
+		"Refunds are available until seven days before race day, less payment gateway fees.",
+	cancellationPolicy:
+		"If the event is cancelled by the organizer, registered participants receive a full refund.",
+};
+
+const mockPolicies = {
+	eventId: TEST_EVENT_ID,
+	...validPoliciesBody,
+	updatedAt: "2026-04-26T12:00:00.000Z",
+};
+
 const mockCategories = [
 	{
 		id: TEST_CATEGORY_5K_ID,
@@ -129,6 +171,31 @@ const mockCategories = [
 		sortOrder: 1,
 		createdAt: "2026-04-26T12:00:00.000Z",
 		updatedAt: "2026-04-26T12:00:00.000Z",
+	},
+];
+
+const mockPricingTiers = [
+	{
+		id: "44444444-4444-4444-8444-444444444444",
+		eventId: TEST_EVENT_ID,
+		eventCategoryId: TEST_CATEGORY_5K_ID,
+		basePrice: 999,
+		earlyBirdPrice: 799,
+		earlyBirdDeadline: "2026-07-01T03:30:00.000Z",
+		createdAt: "2026-04-26T12:00:00.000Z",
+		updatedAt: "2026-04-26T12:00:00.000Z",
+		category: mockCategories[0],
+	},
+	{
+		id: "55555555-5555-4555-8555-555555555555",
+		eventId: TEST_EVENT_ID,
+		eventCategoryId: TEST_CATEGORY_10K_ID,
+		basePrice: 1499,
+		earlyBirdPrice: null,
+		earlyBirdDeadline: null,
+		createdAt: "2026-04-26T12:00:00.000Z",
+		updatedAt: "2026-04-26T12:00:00.000Z",
+		category: mockCategories[1],
 	},
 ];
 
@@ -395,6 +462,25 @@ describe("GET /api/v1/events/:eventId/categories", () => {
 		expect(mockListEventCategories).toHaveBeenCalledWith(
 			expect.anything(),
 			TEST_EVENT_ID,
+			undefined,
+		);
+	});
+
+	it("passes organizer identity for authenticated draft reads", async () => {
+		setupOrganizerSession(app);
+		mockListEventCategories.mockResolvedValue(mockCategories);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(mockListEventCategories).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+			TEST_USER_ID,
 		);
 	});
 
@@ -625,5 +711,453 @@ describe("PUT /api/v1/events/:eventId/categories", () => {
 			error: { code: "VALIDATION_ERROR" },
 		});
 		expect(mockReplaceEventCategories).not.toHaveBeenCalled();
+	});
+});
+
+describe("GET /api/v1/events/:eventId/policies", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		mockGetEventPolicies.mockReset();
+	});
+
+	it("returns event policies without requiring authentication", async () => {
+		mockGetEventPolicies.mockResolvedValue(mockPolicies);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: mockPolicies,
+		});
+		expect(mockGetEventPolicies).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+			undefined,
+		);
+	});
+
+	it("passes organizer identity for authenticated draft policy reads", async () => {
+		setupOrganizerSession(app);
+		mockGetEventPolicies.mockResolvedValue(mockPolicies);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(mockGetEventPolicies).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+			TEST_USER_ID,
+		);
+	});
+
+	it("returns nullable policy fields for draft events without saved policies", async () => {
+		mockGetEventPolicies.mockResolvedValue({
+			eventId: TEST_EVENT_ID,
+			refundPolicy: null,
+			cancellationPolicy: null,
+			updatedAt: "2026-04-26T12:00:00.000Z",
+		});
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data.refundPolicy).toBeNull();
+		expect(response.json().data.cancellationPolicy).toBeNull();
+	});
+
+	it("returns 404 when the event is missing", async () => {
+		mockGetEventPolicies.mockRejectedValue(
+			new NotFoundError("Event not found"),
+		);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+		});
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "NOT_FOUND" },
+		});
+	});
+});
+
+describe("PUT /api/v1/events/:eventId/policies", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockUpdateEventPolicies.mockReset();
+	});
+
+	it("updates policies for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		mockUpdateEventPolicies.mockResolvedValue(mockPolicies);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+			...csrf,
+			payload: validPoliciesBody,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: mockPolicies,
+		});
+		expect(mockUpdateEventPolicies).toHaveBeenCalledOnce();
+		const [_deps, userId, eventId, body] = mockUpdateEventPolicies.mock
+			.calls[0] as [unknown, string, string, Record<string, unknown>];
+		expect(userId).toBe(TEST_USER_ID);
+		expect(eventId).toBe(TEST_EVENT_ID);
+		expect(body).toEqual(validPoliciesBody);
+	});
+
+	it("returns 401 when no session cookie is provided", async () => {
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+			payload: validPoliciesBody,
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "UNAUTHORIZED" },
+		});
+		expect(mockUpdateEventPolicies).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when an authenticated participant updates policies", async () => {
+		setupParticipantSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+			...csrf,
+			payload: validPoliciesBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "INSUFFICIENT_ROLE" },
+		});
+		expect(mockUpdateEventPolicies).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 and does not call service when CSRF token is missing", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			payload: validPoliciesBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockUpdateEventPolicies).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when the event is not draft", async () => {
+		setupOrganizerSession(app);
+		mockUpdateEventPolicies.mockRejectedValue(
+			new ConflictError(
+				"Event policies can only be updated while the event is in draft status",
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+			...csrf,
+			payload: validPoliciesBody,
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CONFLICT" },
+		});
+	});
+
+	it.each([
+		["blank refund policy", { ...validPoliciesBody, refundPolicy: "   " }],
+		[
+			"blank cancellation policy",
+			{ ...validPoliciesBody, cancellationPolicy: "   " },
+		],
+	])("returns 400 for %s", async (_name, payload) => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/policies`,
+			...csrf,
+			payload,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "VALIDATION_ERROR" },
+		});
+		expect(mockUpdateEventPolicies).not.toHaveBeenCalled();
+	});
+});
+
+describe("GET /api/v1/events/:eventId/pricing", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockListEventPricing.mockReset();
+	});
+
+	it("returns event pricing without requiring authentication", async () => {
+		mockListEventPricing.mockResolvedValue(mockPricingTiers);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/pricing`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: { tiers: mockPricingTiers },
+		});
+		expect(mockListEventPricing).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+			undefined,
+		);
+	});
+
+	it("passes organizer identity for authenticated draft pricing reads", async () => {
+		setupOrganizerSession(app);
+		mockListEventPricing.mockResolvedValue(mockPricingTiers);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/pricing`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(mockListEventPricing).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+			TEST_USER_ID,
+		);
+	});
+
+	it("returns 404 when the event is missing", async () => {
+		mockListEventPricing.mockRejectedValue(
+			new NotFoundError("Event not found"),
+		);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/pricing`,
+		});
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "NOT_FOUND" },
+		});
+	});
+});
+
+describe("PUT /api/v1/events/:eventId/pricing", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockReplaceEventPricing.mockReset();
+	});
+
+	it("replaces pricing for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		mockReplaceEventPricing.mockResolvedValue(mockPricingTiers);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/pricing`,
+			...csrf,
+			payload: validPricingBody,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: { tiers: mockPricingTiers },
+		});
+		expect(mockReplaceEventPricing).toHaveBeenCalledOnce();
+		const [_deps, userId, eventId, body] = mockReplaceEventPricing.mock
+			.calls[0] as [unknown, string, string, Record<string, unknown>];
+		expect(userId).toBe(TEST_USER_ID);
+		expect(eventId).toBe(TEST_EVENT_ID);
+		expect(body).toEqual(validPricingBody);
+	});
+
+	it("returns 401 when no session cookie is provided", async () => {
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/pricing`,
+			payload: validPricingBody,
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "UNAUTHORIZED" },
+		});
+		expect(mockReplaceEventPricing).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when an authenticated participant replaces pricing", async () => {
+		setupParticipantSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/pricing`,
+			...csrf,
+			payload: validPricingBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "INSUFFICIENT_ROLE" },
+		});
+		expect(mockReplaceEventPricing).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 and does not call service when CSRF token is missing", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/pricing`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			payload: validPricingBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockReplaceEventPricing).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when the event is not draft", async () => {
+		setupOrganizerSession(app);
+		mockReplaceEventPricing.mockRejectedValue(
+			new ConflictError(
+				"Event pricing can only be updated while the event is in draft status",
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/pricing`,
+			...csrf,
+			payload: validPricingBody,
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CONFLICT" },
+		});
+	});
+
+	it("returns 400 for invalid early-bird pricing", async () => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/pricing`,
+			...csrf,
+			payload: {
+				tiers: [
+					{
+						eventCategoryId: TEST_CATEGORY_5K_ID,
+						basePrice: 999,
+						earlyBirdPrice: 999,
+						earlyBirdDeadline: "2026-07-01T03:30:00.000Z",
+					},
+				],
+			},
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "VALIDATION_ERROR" },
+		});
+		expect(mockReplaceEventPricing).not.toHaveBeenCalled();
 	});
 });

@@ -79,6 +79,28 @@ function ConfigureEventCategoriesPage() {
 				/>
 			) : null}
 
+			{categoriesQuery.data && categoriesQuery.data.length > 0 ? (
+				<Card className="border-dashed">
+					<CardHeader>
+						<CardTitle>Next: configure pricing</CardTitle>
+						<CardDescription>
+							Set base prices and optional early-bird discounts for each saved
+							distance category.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Button asChild>
+							<Link
+								to="/org/events/$eventId/configure-pricing"
+								params={{ eventId }}
+							>
+								Configure pricing
+							</Link>
+						</Button>
+					</CardContent>
+				</Card>
+			) : null}
+
 			{categoriesQuery.data?.length === 0 ? (
 				<Card className="border-dashed">
 					<CardContent className="py-4">

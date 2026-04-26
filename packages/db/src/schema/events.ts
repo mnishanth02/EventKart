@@ -72,6 +72,8 @@ export const events = pgTable(
 			withTimezone: true,
 		}),
 		routeDetails: text("route_details").notNull(),
+		refundPolicy: text("refund_policy"),
+		cancellationPolicy: text("cancellation_policy"),
 		isPaid: boolean("is_paid").notNull().default(V1_EVENT_IS_PAID),
 		currency: eventCurrencyEnum("currency")
 			.notNull()

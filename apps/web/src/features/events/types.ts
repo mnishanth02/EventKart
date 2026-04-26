@@ -1,6 +1,20 @@
-import type { Event, EventCategoryRecord } from "@repo/shared/schemas";
+import type {
+	Event,
+	EventCategoryRecord,
+	EventPoliciesConfig,
+	EventPoliciesRecord,
+	EventPricingConfig,
+	EventPricingTierWithCategory,
+} from "@repo/shared/schemas";
 
-export type { Event, EventCategoryRecord };
+export type {
+	Event,
+	EventCategoryRecord,
+	EventPoliciesConfig,
+	EventPoliciesRecord,
+	EventPricingConfig,
+	EventPricingTierWithCategory,
+};
 
 export type EventResponse = {
 	success: true;
@@ -12,4 +26,16 @@ export type EventCategoriesResponse = {
 	data: {
 		categories: EventCategoryRecord[];
 	};
+};
+
+export type EventPricingResponse = {
+	success: true;
+	data: {
+		tiers: EventPricingTierWithCategory[];
+	};
+};
+
+export type EventPoliciesResponse = {
+	success: true;
+	data: EventPoliciesRecord;
 };

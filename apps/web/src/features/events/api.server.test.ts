@@ -1,8 +1,13 @@
 // @vitest-environment node
-import type { CreateEvent, EventCategoriesConfig } from "@repo/shared/schemas";
+import type {
+	CreateEvent,
+	EventCategoriesConfig,
+	EventPricingConfig,
+} from "@repo/shared/schemas";
 import {
 	defaultEventCategoriesConfig,
 	eventCategoriesConfigSchema,
+	eventPricingConfigSchema,
 } from "@repo/shared/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { serverApiClient } from "#/lib/api-client.server";
@@ -13,7 +18,9 @@ import {
 import {
 	createEventOnServer,
 	listEventCategoriesOnServer,
+	listEventPricingOnServer,
 	replaceEventCategoriesOnServer,
+	replaceEventPricingOnServer,
 } from "./api.server";
 
 vi.mock("#/lib/api-client.server", () => ({
@@ -54,6 +61,23 @@ const validCategoryConfig = eventCategoriesConfigSchema.parse(
 	defaultEventCategoriesConfig,
 ) satisfies EventCategoriesConfig;
 
+const validPricingConfig = eventPricingConfigSchema.parse({
+	tiers: [
+		{
+			eventCategoryId: "33333333-3333-4333-8333-333333333330",
+			basePrice: 999,
+			earlyBirdPrice: 799,
+			earlyBirdDeadline: "2026-07-01T03:30:00.000Z",
+		},
+		{
+			eventCategoryId: "33333333-3333-4333-8333-333333333331",
+			basePrice: 1499,
+			earlyBirdPrice: null,
+			earlyBirdDeadline: null,
+		},
+	],
+}) satisfies EventPricingConfig;
+
 const categoryRecords = validCategoryConfig.categories.map(
 	(category, index) => ({
 		...category,
@@ -63,6 +87,18 @@ const categoryRecords = validCategoryConfig.categories.map(
 		updatedAt: "2026-04-26T12:00:00.000Z",
 	}),
 );
+
+const pricingTiers = validPricingConfig.tiers.map((tier, index) => ({
+	id: `44444444-4444-4444-8444-44444444444${index}`,
+	eventId,
+	eventCategoryId: tier.eventCategoryId,
+	basePrice: tier.basePrice,
+	earlyBirdPrice: tier.earlyBirdPrice ?? null,
+	earlyBirdDeadline: tier.earlyBirdDeadline ?? null,
+	createdAt: "2026-04-26T12:00:00.000Z",
+	updatedAt: "2026-04-26T12:00:00.000Z",
+	category: categoryRecords[index],
+}));
 
 describe("createEventOnServer", () => {
 	beforeEach(() => {
@@ -186,6 +222,76 @@ describe("replaceEventCategoriesOnServer", () => {
 
 		await expect(
 			replaceEventCategoriesOnServer(eventId, validCategoryConfig),
+		).rejects.toThrow("Invalid request origin");
+
+		expect(serverApiClient).not.toHaveBeenCalled();
+	});
+});
+
+describe("listEventPricingOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("fetches event pricing with forwarded auth headers", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: { tiers: pricingTiers },
+		});
+
+		await listEventPricingOnServer(eventId);
+
+		expect(assertSameOriginMutationRequest).not.toHaveBeenCalled();
+		expect(serverApiClient).toHaveBeenCalledWith(`/events/${eventId}/pricing`, {
+			headers: {
+				Cookie: "session=test-session",
+				"X-Request-ID": "req-1",
+			},
+		});
+	});
+});
+
+describe("replaceEventPricingOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("puts the pricing config with same-origin validation and auth headers", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: { tiers: pricingTiers },
+		});
+
+		await replaceEventPricingOnServer(eventId, validPricingConfig);
+
+		expect(assertSameOriginMutationRequest).toHaveBeenCalledOnce();
+		expect(serverApiClient).toHaveBeenCalledWith(`/events/${eventId}/pricing`, {
+			method: "PUT",
+			body: validPricingConfig,
+			headers: {
+				Cookie: "session=test-session",
+				"X-Request-ID": "req-1",
+			},
+		});
+	});
+
+	it("does not forward the update when same-origin validation fails", async () => {
+		vi.mocked(assertSameOriginMutationRequest).mockImplementationOnce(() => {
+			throw new Error("Invalid request origin");
+		});
+
+		await expect(
+			replaceEventPricingOnServer(eventId, validPricingConfig),
 		).rejects.toThrow("Invalid request origin");
 
 		expect(serverApiClient).not.toHaveBeenCalled();
