@@ -1,8 +1,14 @@
+import type { Database } from "@repo/db";
 import { slugRedirects } from "@repo/db/schema";
 import { EVENT_SLUG_MAX_LENGTH } from "@repo/shared/utils";
 import { describe, expect, it, vi } from "vitest";
-import { ConflictError } from "../../../src/lib/errors.js";
 import {
+	ConflictError,
+	NotFoundError,
+	ValidationError,
+} from "../../../src/lib/errors.js";
+import {
+	createDraftEvent,
 	type EventSlugStore,
 	type EventSlugTransactionalStore,
 	recordEventSlugRedirect,
@@ -31,13 +37,16 @@ function createSelectQuery(rows: SelectRows) {
 function createMockSlugStore(
 	selectResults: SelectRows[] = [],
 	updateRows: SelectRows = [],
+	insertRows: SelectRows = [],
 ) {
 	const pendingSelectResults = [...selectResults];
 	const selectQueries: ReturnType<typeof createSelectQuery>[] = [];
 	const insertOnConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
-	const insertValues = vi
-		.fn()
-		.mockReturnValue({ onConflictDoUpdate: insertOnConflictDoUpdate });
+	const insertReturning = vi.fn().mockResolvedValue(insertRows);
+	const insertValues = vi.fn().mockReturnValue({
+		onConflictDoUpdate: insertOnConflictDoUpdate,
+		returning: insertReturning,
+	});
 	const insert = vi.fn().mockReturnValue({ values: insertValues });
 	const deleteWhere = vi.fn().mockResolvedValue(undefined);
 	const deleteFn = vi.fn().mockReturnValue({ where: deleteWhere });
@@ -71,6 +80,7 @@ function createMockSlugStore(
 		deleteWhere,
 		insert,
 		insertOnConflictDoUpdate,
+		insertReturning,
 		insertValues,
 		select,
 		selectQueries,
@@ -79,6 +89,80 @@ function createMockSlugStore(
 		updateReturning,
 		updateSet,
 		updateWhere,
+	};
+}
+
+function asDatabase(db: EventSlugTransactionalStore): Database {
+	return db as unknown as Database;
+}
+
+const TEST_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
+const TEST_ORGANIZER_ID = "660e8400-e29b-41d4-a716-446655440001";
+
+const validCreateEventInput = {
+	title: "Coimbatore City 10K",
+	description:
+		"A paid running event for Coimbatore runners with a clearly marked city route.",
+	venueName: "Race Course Grounds",
+	addressLine1: "Race Course Road, Gopalapuram",
+	startAt: "2026-08-15T00:30:00.000Z",
+	endAt: "2026-08-15T03:30:00.000Z",
+	registrationOpensAt: "2026-07-01T03:30:00.000Z",
+	registrationClosesAt: "2026-08-14T12:30:00.000Z",
+	routeDetails: "Single-loop 10K route through Race Course Road.",
+};
+
+const organizerRow = {
+	id: TEST_ORGANIZER_ID,
+	userId: TEST_USER_ID,
+	businessName: "CoimbatoreRunners",
+	contactName: "Ramesh Kumar",
+	contactEmail: "ramesh@coimbatorerunners.in",
+	contactPhone: "+919876543210",
+	city: "Coimbatore",
+	description: "Premier running event organizer in Coimbatore",
+	website: "https://coimbatorerunners.in",
+	verificationStatus: "pending_documents",
+	isVerified: false,
+	submittedForReviewAt: null,
+	reviewedAt: null,
+	rejectionReason: null,
+	razorpayAccountStatus: "not_started",
+	razorpayAccountId: null,
+	createdAt: new Date("2026-04-24T00:00:00.000Z"),
+	updatedAt: new Date("2026-04-24T00:00:00.000Z"),
+};
+
+function buildEventRow(overrides: Record<string, unknown> = {}) {
+	return {
+		id: EVENT_ID,
+		organizerId: TEST_ORGANIZER_ID,
+		title: "Coimbatore City 10K",
+		slug: "coimbatore-city-10k",
+		description:
+			"A paid running event for Coimbatore runners with a clearly marked city route.",
+		eventType: "race",
+		sport: "running",
+		category: "running",
+		venueName: "Race Course Grounds",
+		addressLine1: "Race Course Road, Gopalapuram",
+		addressLine2: null,
+		city: "Coimbatore",
+		state: "Tamil Nadu",
+		country: "India",
+		postalCode: null,
+		timezone: "Asia/Kolkata",
+		startAt: new Date("2026-08-15T00:30:00.000Z"),
+		endAt: new Date("2026-08-15T03:30:00.000Z"),
+		registrationOpensAt: new Date("2026-07-01T03:30:00.000Z"),
+		registrationClosesAt: new Date("2026-08-14T12:30:00.000Z"),
+		routeDetails: "Single-loop 10K route through Race Course Road.",
+		isPaid: true,
+		currency: "INR",
+		status: "draft",
+		createdAt: new Date("2026-04-26T12:00:00.000Z"),
+		updatedAt: new Date("2026-04-26T12:00:00.000Z"),
+		...overrides,
 	};
 }
 
@@ -235,5 +319,116 @@ describe("event slug service", () => {
 			"Unable to reserve a unique event slug after 3 attempts",
 		);
 		expect(select).toHaveBeenCalledTimes(3);
+	});
+});
+
+describe("createDraftEvent", () => {
+	it("creates a draft paid running event with shared V1 defaults", async () => {
+		const { db, insertValues } = createMockSlugStore(
+			[[organizerRow], [], []],
+			[],
+			[buildEventRow()],
+		);
+		const log = { info: vi.fn() };
+
+		const result = await createDraftEvent(
+			{ db: asDatabase(db), log },
+			TEST_USER_ID,
+			validCreateEventInput,
+		);
+
+		expect(result).toMatchObject({
+			id: EVENT_ID,
+			organizerId: TEST_ORGANIZER_ID,
+			slug: "coimbatore-city-10k",
+			status: "draft",
+			eventType: "race",
+			sport: "running",
+			category: "running",
+			city: "Coimbatore",
+			isPaid: true,
+			currency: "INR",
+		});
+		expect(insertValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				organizerId: TEST_ORGANIZER_ID,
+				slug: "coimbatore-city-10k",
+				status: "draft",
+				city: "Coimbatore",
+				state: "Tamil Nadu",
+				country: "India",
+				timezone: "Asia/Kolkata",
+				isPaid: true,
+				currency: "INR",
+				startAt: expect.any(Date),
+				endAt: expect.any(Date),
+			}),
+		);
+		expect(log.info).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventId: EVENT_ID,
+				organizerId: TEST_ORGANIZER_ID,
+				userId: TEST_USER_ID,
+			}),
+			"Draft event created",
+		);
+	});
+
+	it("returns 404 when the authenticated organizer profile does not exist", async () => {
+		const { db, insert } = createMockSlugStore([[]]);
+
+		await expect(
+			createDraftEvent(
+				{ db: asDatabase(db), log: { info: vi.fn() } },
+				TEST_USER_ID,
+				validCreateEventInput,
+			),
+		).rejects.toThrow(NotFoundError);
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		["city", { city: "Chennai" }],
+		["event type", { eventType: "workshop" }],
+		["payment", { isPaid: false }],
+		[
+			"date order",
+			{
+				startAt: "2026-08-15T03:30:00.000Z",
+				endAt: "2026-08-15T00:30:00.000Z",
+			},
+		],
+	])("rejects invalid V1 %s constraints", async (_name, override) => {
+		const { db, select, insert } = createMockSlugStore();
+
+		await expect(
+			createDraftEvent(
+				{ db: asDatabase(db), log: { info: vi.fn() } },
+				TEST_USER_ID,
+				{ ...validCreateEventInput, ...override },
+			),
+		).rejects.toThrow(ValidationError);
+		expect(select).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it("uses a suffixed slug when the base slug already exists", async () => {
+		const { db, insertValues, select } = createMockSlugStore(
+			[[organizerRow], [{ id: "existing-event" }], [], []],
+			[],
+			[buildEventRow({ slug: "coimbatore-city-10k-2" })],
+		);
+
+		const result = await createDraftEvent(
+			{ db: asDatabase(db), log: { info: vi.fn() } },
+			TEST_USER_ID,
+			validCreateEventInput,
+		);
+
+		expect(result.slug).toBe("coimbatore-city-10k-2");
+		expect(insertValues).toHaveBeenCalledWith(
+			expect.objectContaining({ slug: "coimbatore-city-10k-2" }),
+		);
+		expect(select).toHaveBeenCalledTimes(4);
 	});
 });

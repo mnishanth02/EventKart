@@ -1,9 +1,20 @@
 import { and, type Database, eq, ne } from "@repo/db";
 import { events, slugRedirects } from "@repo/db/schema";
-import type { EventSlug } from "@repo/shared/schemas";
-import { eventSlugSchema } from "@repo/shared/schemas";
+import { DEFAULT_EVENT_STATUS } from "@repo/shared/constants";
+import type { Event, EventSlug } from "@repo/shared/schemas";
+import {
+	createEventInputSchema,
+	eventSchema,
+	eventSlugSchema,
+} from "@repo/shared/schemas";
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
-import { ConflictError, NotFoundError } from "../../lib/errors.js";
+import type { FastifyBaseLogger } from "fastify";
+import {
+	ConflictError,
+	NotFoundError,
+	ValidationError,
+} from "../../lib/errors.js";
+import { getOrganizerByUserId } from "../organizer/service.js";
 
 export const EVENT_SLUG_RESOURCE_TYPE = "event";
 export const DEFAULT_EVENT_SLUG_MAX_ATTEMPTS = 50;
@@ -42,6 +53,152 @@ export interface UpdateEventSlugResult {
 	changed: boolean;
 	previousSlug: EventSlug;
 	slug: EventSlug;
+}
+
+export interface CreateDraftEventDeps {
+	db: Database;
+	log: Pick<FastifyBaseLogger, "info">;
+}
+
+type EventRow = typeof events.$inferSelect;
+
+function isUniqueViolation(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error as { code: string }).code === "23505"
+	);
+}
+
+function toEventResponse(row: EventRow): Event {
+	return eventSchema.parse({
+		id: row.id,
+		organizerId: row.organizerId,
+		slug: row.slug,
+		title: row.title,
+		description: row.description,
+		eventType: row.eventType,
+		sport: row.sport,
+		category: row.category,
+		venueName: row.venueName,
+		addressLine1: row.addressLine1,
+		addressLine2: row.addressLine2,
+		city: row.city,
+		state: row.state,
+		country: row.country,
+		postalCode: row.postalCode,
+		timezone: row.timezone,
+		startAt: row.startAt.toISOString(),
+		endAt: row.endAt.toISOString(),
+		registrationOpensAt: row.registrationOpensAt?.toISOString() ?? null,
+		registrationClosesAt: row.registrationClosesAt?.toISOString() ?? null,
+		routeDetails: row.routeDetails,
+		isPaid: row.isPaid,
+		currency: row.currency,
+		status: row.status,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+	});
+}
+
+function toValidationDetails(error: {
+	issues: Array<{ path: PropertyKey[]; message: string; code: string }>;
+}) {
+	return {
+		issues: error.issues.map((issue) => ({
+			code: issue.code,
+			message: issue.message,
+			path: issue.path.map(String),
+		})),
+	};
+}
+
+export async function createDraftEvent(
+	deps: CreateDraftEventDeps,
+	userId: string,
+	input: unknown,
+): Promise<Event> {
+	const parsed = createEventInputSchema.safeParse(input);
+	if (!parsed.success) {
+		throw new ValidationError(
+			"Invalid event details",
+			toValidationDetails(parsed.error),
+		);
+	}
+
+	const { db, log } = deps;
+	const organizer = await getOrganizerByUserId(db, userId);
+
+	if (!organizer) {
+		throw new NotFoundError(
+			"Organizer profile not found. Please register first.",
+		);
+	}
+
+	const data = parsed.data;
+
+	for (let attempt = 1; attempt <= 3; attempt += 1) {
+		const slug = await generateUniqueEventSlug(db, data.title);
+
+		try {
+			const [inserted] = await db
+				.insert(events)
+				.values({
+					organizerId: organizer.id,
+					title: data.title,
+					slug,
+					description: data.description,
+					eventType: data.eventType,
+					sport: data.sport,
+					category: data.category,
+					venueName: data.venueName,
+					addressLine1: data.addressLine1,
+					addressLine2: data.addressLine2 ?? null,
+					city: data.city,
+					state: data.state,
+					country: data.country,
+					postalCode: data.postalCode ?? null,
+					timezone: data.timezone,
+					startAt: new Date(data.startAt),
+					endAt: new Date(data.endAt),
+					registrationOpensAt: data.registrationOpensAt
+						? new Date(data.registrationOpensAt)
+						: null,
+					registrationClosesAt: data.registrationClosesAt
+						? new Date(data.registrationClosesAt)
+						: null,
+					routeDetails: data.routeDetails,
+					isPaid: data.isPaid,
+					currency: data.currency,
+					status: DEFAULT_EVENT_STATUS,
+				})
+				.returning();
+
+			if (!inserted) {
+				throw new Error("Failed to insert event record");
+			}
+
+			log.info(
+				{ eventId: inserted.id, organizerId: organizer.id, userId },
+				"Draft event created",
+			);
+
+			return toEventResponse(inserted);
+		} catch (error: unknown) {
+			if (isUniqueViolation(error) && attempt < 3) {
+				continue;
+			}
+
+			if (isUniqueViolation(error)) {
+				throw new ConflictError("Unable to reserve a unique event slug");
+			}
+
+			throw error;
+		}
+	}
+
+	throw new ConflictError("Unable to reserve a unique event slug");
 }
 
 function parseEventSlug(slug: string): EventSlug {

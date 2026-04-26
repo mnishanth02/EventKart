@@ -49,6 +49,7 @@
 | 37  | I-1.1.6 + I-1.1.7 — DB & Shared Schema Foundation (Verification Badge + Razorpay) | —                                                          | ✅ Complete | 2026-07-25 | 2026-07-25   |
 | 38  | I-1.1.7 — Razorpay Route Linked-Account Creation (Backend)                        | —                                                          | ✅ Complete | 2026-07-25 | 2026-07-25   |
 | 39  | I-1.2.10 — Event Slug Generation API Service                                      | —                                                          | ✅ Complete | 2026-04-26 | 2026-04-26   |
+| 40  | I-1.2.1 — Event Creation Form (DB/API/Web)                                        | —                                                          | ✅ Complete | 2026-04-26 | 2026-04-26   |
 
 ## Completed Implementation Plans
 
@@ -67,7 +68,7 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 | Phase 0 | 0.3 — Design System & App Shell                     | ✅ Complete    | All features complete: I-0.3.1 through I-0.3.6, plus I-0.2.9 and I-0.2.7.                                                                                                                                                                                         |
 | Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | ✅ Complete    | All features complete: I-0.4.1 (Sentry), I-0.4.2 (Pino/OTEL), I-0.4.3 (Health checks), I-0.4.4 (Audit log), I-0.4.5 (Production metrics), I-0.4.6 (BullMQ observability). 403 API tests passing.                                                                  |
 | Phase 1 | 1.1 — Organizer Signup & Verification               | ✅ Complete    | All 8 features (I-1.1.1 through I-1.1.8) complete. Includes registration, document upload, policy acceptance, verification tracking, admin review, verification badge, Razorpay linked-account creation, profile management. 528 API tests, 76 web tests passing. |
-| Phase 1 | 1.2 — Event Creation & Management                   | 🟡 In Progress | I-1.2.10 event slug generation API service complete. Remaining event creation, configuration, image upload, edit, publish, and admin review features are not started.                                                                                              |
+| Phase 1 | 1.2 — Event Creation & Management                   | 🟡 In Progress | I-1.2.10 event slug generation API service and I-1.2.1 event creation form complete (DB/shared/API/web). Category/distance configuration, pricing, registration fields, refund policy, image upload, edit, publish, and admin review features remain.              |
 
 ## Foundation (Pre-Phase 0) — Completed
 

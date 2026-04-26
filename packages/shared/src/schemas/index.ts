@@ -29,6 +29,12 @@ export type { DateString, DateTimeString, Timestamp } from "./date.js";
 export { dateSchema, datetimeSchema, timestampSchema } from "./date.js";
 export type { Email, EmailInput } from "./email.js";
 export { emailSchema } from "./email.js";
+export type { CreateEvent, CreateEventInput, Event } from "./event.js";
+export {
+	createEventBaseSchema,
+	createEventInputSchema,
+	eventSchema,
+} from "./event.js";
 export type { EventSlug, EventSlugInput } from "./event-slug.js";
 export { eventSlugSchema } from "./event-slug.js";
 export type { UUID } from "./id.js";

@@ -3,8 +3,12 @@ import {
 	auditLog,
 	consentRecords,
 	consentTypeEnum,
+	eventCategoryEnum,
+	eventCurrencyEnum,
+	eventSportEnum,
 	eventStatusEnum,
 	events,
+	eventTypeEnum,
 	sessions,
 	slugRedirectResourceTypeEnum,
 	slugRedirects,
@@ -86,6 +90,25 @@ describe("schema exports", () => {
 		expect(events.organizerId).toBeDefined();
 		expect(events.title).toBeDefined();
 		expect(events.slug).toBeDefined();
+		expect(events.description).toBeDefined();
+		expect(events.eventType).toBeDefined();
+		expect(events.sport).toBeDefined();
+		expect(events.category).toBeDefined();
+		expect(events.venueName).toBeDefined();
+		expect(events.addressLine1).toBeDefined();
+		expect(events.addressLine2).toBeDefined();
+		expect(events.city).toBeDefined();
+		expect(events.state).toBeDefined();
+		expect(events.country).toBeDefined();
+		expect(events.postalCode).toBeDefined();
+		expect(events.timezone).toBeDefined();
+		expect(events.startAt).toBeDefined();
+		expect(events.endAt).toBeDefined();
+		expect(events.registrationOpensAt).toBeDefined();
+		expect(events.registrationClosesAt).toBeDefined();
+		expect(events.routeDetails).toBeDefined();
+		expect(events.isPaid).toBeDefined();
+		expect(events.currency).toBeDefined();
 		expect(events.status).toBeDefined();
 		expect(events.createdAt).toBeDefined();
 		expect(events.updatedAt).toBeDefined();
@@ -100,6 +123,17 @@ describe("schema exports", () => {
 			"completed",
 			"cancelled",
 		]);
+	});
+
+	it("exports V1 event foundation enums with correct values", () => {
+		expect(eventTypeEnum).toBeDefined();
+		expect(eventTypeEnum.enumValues).toEqual(["race"]);
+		expect(eventSportEnum).toBeDefined();
+		expect(eventSportEnum.enumValues).toEqual(["running"]);
+		expect(eventCategoryEnum).toBeDefined();
+		expect(eventCategoryEnum.enumValues).toEqual(["running"]);
+		expect(eventCurrencyEnum).toBeDefined();
+		expect(eventCurrencyEnum.enumValues).toEqual(["INR"]);
 	});
 
 	it("exports slugRedirects table with expected columns", () => {

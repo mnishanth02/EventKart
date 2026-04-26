@@ -6,6 +6,37 @@ export {
 	EMAIL_VERIFICATION_TOKEN_BYTES,
 	EMAIL_VERIFICATION_TOKEN_TTL_SECONDS,
 } from "./email-verification.js";
+export type {
+	EventCategory,
+	EventCurrency,
+	EventSport,
+	EventStatus,
+	EventType,
+} from "./event.js";
+export {
+	DEFAULT_EVENT_STATUS,
+	EVENT_CATEGORIES,
+	eventCategorySchema,
+	EVENT_CURRENCIES,
+	eventCurrencySchema,
+	EVENT_SPORTS,
+	eventSportSchema,
+	EVENT_STATUSES,
+	eventStatusSchema,
+	EVENT_STATUS_LABELS,
+	EVENT_TYPES,
+	eventTypeSchema,
+	V1_EVENT_ALLOWED_VALUES,
+	V1_EVENT_CATEGORY,
+	V1_EVENT_CITY,
+	V1_EVENT_COUNTRY,
+	V1_EVENT_CURRENCY,
+	V1_EVENT_IS_PAID,
+	V1_EVENT_SPORT,
+	V1_EVENT_STATE,
+	V1_EVENT_TIMEZONE,
+	V1_EVENT_TYPE,
+} from "./event.js";
 export type { OtpDeliveryMode } from "./otp.js";
 export {
 	OTP_DELIVERY_MODES,

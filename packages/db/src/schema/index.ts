@@ -1,7 +1,14 @@
 export { auditLog } from "./audit-log.js";
 export { consentRecords, consentTypeEnum } from "./consent-records.js";
 export { emailVerifications } from "./email-verifications.js";
-export { eventStatusEnum, events } from "./events.js";
+export {
+	eventCategoryEnum,
+	eventCurrencyEnum,
+	eventSportEnum,
+	eventStatusEnum,
+	events,
+	eventTypeEnum,
+} from "./events.js";
 export {
 	organizers,
 	razorpayAccountStatusEnum,

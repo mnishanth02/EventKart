@@ -16,6 +16,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
 	BuildingIcon,
+	CalendarPlusIcon,
 	ClipboardCheckIcon,
 	FileCheckIcon,
 	LayoutDashboardIcon,
@@ -40,6 +41,7 @@ const NAV_ITEMS: Record<Area, NavItem[]> = {
 	my: [{ label: "Dashboard", href: "/my", icon: LayoutDashboardIcon }],
 	org: [
 		{ label: "Dashboard", href: "/org", icon: LayoutDashboardIcon },
+		{ label: "Create Event", href: "/org/events/new", icon: CalendarPlusIcon },
 		{ label: "Profile", href: "/org/profile", icon: UserIcon },
 		{ label: "Policies", href: "/org/policies", icon: FileCheckIcon },
 		{

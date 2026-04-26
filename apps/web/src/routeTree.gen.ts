@@ -26,6 +26,7 @@ import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/regi
 import { Route as AuthedOrgProfileRouteImport } from './routes/_authed/org/profile'
 import { Route as AuthedOrgPoliciesRouteImport } from './routes/_authed/org/policies'
 import { Route as AuthedAdminVerificationsIndexRouteImport } from './routes/_authed/admin/verifications/index'
+import { Route as AuthedOrgEventsNewRouteImport } from './routes/_authed/org/events/new'
 import { Route as AuthedAdminVerificationsOrganizerIdRouteImport } from './routes/_authed/admin/verifications/$organizerId'
 
 const ReadyRoute = ReadyRouteImport.update({
@@ -112,6 +113,11 @@ const AuthedAdminVerificationsIndexRoute =
     path: '/verifications/',
     getParentRoute: () => AuthedAdminRoute,
   } as any)
+const AuthedOrgEventsNewRoute = AuthedOrgEventsNewRouteImport.update({
+  id: '/events/new',
+  path: '/events/new',
+  getParentRoute: () => AuthedOrgRoute,
+} as any)
 const AuthedAdminVerificationsOrganizerIdRoute =
   AuthedAdminVerificationsOrganizerIdRouteImport.update({
     id: '/verifications/$organizerId',
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/my/': typeof AuthedMyIndexRoute
   '/org/': typeof AuthedOrgIndexRoute
   '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
+  '/org/events/new': typeof AuthedOrgEventsNewRoute
   '/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/my': typeof AuthedMyIndexRoute
   '/org': typeof AuthedOrgIndexRoute
   '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
+  '/org/events/new': typeof AuthedOrgEventsNewRoute
   '/admin/verifications': typeof AuthedAdminVerificationsIndexRoute
 }
 export interface FileRoutesById {
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/_authed/my/': typeof AuthedMyIndexRoute
   '/_authed/org/': typeof AuthedOrgIndexRoute
   '/_authed/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
+  '/_authed/org/events/new': typeof AuthedOrgEventsNewRoute
   '/_authed/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
 }
 export interface FileRouteTypes {
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/my/'
     | '/org/'
     | '/admin/verifications/$organizerId'
+    | '/org/events/new'
     | '/admin/verifications/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/my'
     | '/org'
     | '/admin/verifications/$organizerId'
+    | '/org/events/new'
     | '/admin/verifications'
   id:
     | '__root__'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/_authed/my/'
     | '/_authed/org/'
     | '/_authed/admin/verifications/$organizerId'
+    | '/_authed/org/events/new'
     | '/_authed/admin/verifications/'
   fileRoutesById: FileRoutesById
 }
@@ -357,6 +369,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAdminVerificationsIndexRouteImport
       parentRoute: typeof AuthedAdminRoute
     }
+    '/_authed/org/events/new': {
+      id: '/_authed/org/events/new'
+      path: '/events/new'
+      fullPath: '/org/events/new'
+      preLoaderRoute: typeof AuthedOrgEventsNewRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
     '/_authed/admin/verifications/$organizerId': {
       id: '/_authed/admin/verifications/$organizerId'
       path: '/verifications/$organizerId'
@@ -402,6 +421,7 @@ interface AuthedOrgRouteChildren {
   AuthedOrgRegisterRoute: typeof AuthedOrgRegisterRoute
   AuthedOrgVerificationRoute: typeof AuthedOrgVerificationRoute
   AuthedOrgIndexRoute: typeof AuthedOrgIndexRoute
+  AuthedOrgEventsNewRoute: typeof AuthedOrgEventsNewRoute
 }
 
 const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
@@ -410,6 +430,7 @@ const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
   AuthedOrgRegisterRoute: AuthedOrgRegisterRoute,
   AuthedOrgVerificationRoute: AuthedOrgVerificationRoute,
   AuthedOrgIndexRoute: AuthedOrgIndexRoute,
+  AuthedOrgEventsNewRoute: AuthedOrgEventsNewRoute,
 }
 
 const AuthedOrgRouteWithChildren = AuthedOrgRoute._addFileChildren(
