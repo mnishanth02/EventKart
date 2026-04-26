@@ -129,7 +129,10 @@ function ProgressStepper({ data }: { data: VerificationStatusResponse }) {
 	const currentIndex = getCurrentStepIndex(data);
 
 	return (
-		<div className="flex items-start gap-0">
+		<ol
+			className="flex items-start gap-0 overflow-x-auto pb-2"
+			aria-label="Verification progress steps"
+		>
 			{VERIFICATION_STEPS.map((step, index) => {
 				const completed = isStepCompleted(index, data);
 				const isCurrent = index === currentIndex && !completed;
@@ -138,7 +141,20 @@ function ProgressStepper({ data }: { data: VerificationStatusResponse }) {
 				const subtext = getStepSubtext(index, data);
 
 				return (
-					<div key={step.id} className="flex flex-1 items-start">
+					<li
+						key={step.id}
+						className="flex min-w-24 flex-1 items-start"
+						aria-current={isCurrent ? "step" : undefined}
+						aria-label={`${step.label}: ${
+							completed
+								? "completed"
+								: isRejected
+									? "rejected"
+									: isCurrent
+										? "current"
+										: "not started"
+						}${subtext ? `, ${subtext}` : ""}`}
+					>
 						<div className="flex flex-col items-center gap-1">
 							<div
 								className={`flex size-8 items-center justify-center rounded-full border-2 ${
@@ -189,10 +205,10 @@ function ProgressStepper({ data }: { data: VerificationStatusResponse }) {
 								}`}
 							/>
 						) : null}
-					</div>
+					</li>
 				);
 			})}
-		</div>
+		</ol>
 	);
 }
 
@@ -324,7 +340,7 @@ function ApprovedBanner() {
 // ── Main Component ──────────────────────────────────────────────────
 
 export function VerificationStatusTracker() {
-	const { data, isLoading, isError } = useQuery(
+	const { data, isLoading, isError, refetch } = useQuery(
 		verificationStatusQueryOptions(),
 	);
 
@@ -332,7 +348,11 @@ export function VerificationStatusTracker() {
 		return (
 			<Card>
 				<CardContent className="py-6">
-					<p className="text-muted-foreground text-center">
+					<p
+						className="text-center text-muted-foreground"
+						role="status"
+						aria-live="polite"
+					>
 						Loading verification status...
 					</p>
 				</CardContent>
@@ -344,9 +364,14 @@ export function VerificationStatusTracker() {
 		return (
 			<Card>
 				<CardContent className="py-6">
-					<p className="text-muted-foreground text-center">
+					<p className="text-center text-muted-foreground" role="alert">
 						Unable to load verification status.
 					</p>
+					<div className="mt-4 flex justify-center">
+						<Button type="button" variant="outline" onClick={() => refetch()}>
+							Retry
+						</Button>
+					</div>
 				</CardContent>
 			</Card>
 		);
@@ -357,7 +382,7 @@ export function VerificationStatusTracker() {
 	return (
 		<Card>
 			<CardHeader>
-				<div className="flex items-center justify-between">
+				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<CardTitle>Verification Progress</CardTitle>
 					<Badge variant={getStatusBadgeVariant(status)}>
 						{VERIFICATION_STATUS_LABELS[status] ?? status}

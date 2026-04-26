@@ -16,6 +16,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
 	BuildingIcon,
+	ClipboardCheckIcon,
+	FileCheckIcon,
 	LayoutDashboardIcon,
 	LogOutIcon,
 	ShieldIcon,
@@ -36,8 +38,24 @@ type NavItem = {
 
 const NAV_ITEMS: Record<Area, NavItem[]> = {
 	my: [{ label: "Dashboard", href: "/my", icon: LayoutDashboardIcon }],
-	org: [{ label: "Dashboard", href: "/org", icon: LayoutDashboardIcon }],
-	admin: [{ label: "Dashboard", href: "/admin", icon: LayoutDashboardIcon }],
+	org: [
+		{ label: "Dashboard", href: "/org", icon: LayoutDashboardIcon },
+		{ label: "Profile", href: "/org/profile", icon: UserIcon },
+		{ label: "Policies", href: "/org/policies", icon: FileCheckIcon },
+		{
+			label: "Verification",
+			href: "/org/verification",
+			icon: ClipboardCheckIcon,
+		},
+	],
+	admin: [
+		{ label: "Dashboard", href: "/admin", icon: LayoutDashboardIcon },
+		{
+			label: "Verifications",
+			href: "/admin/verifications",
+			icon: ClipboardCheckIcon,
+		},
+	],
 };
 
 const AREA_CONFIG: Record<Area, { label: string; icon: LucideIcon }> = {

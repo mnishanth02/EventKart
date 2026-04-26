@@ -4,12 +4,15 @@
  * the client bundle.
  */
 
-import type {
-	AdminApproveBody,
-	AdminRejectBody,
-	OffsetPaginationMeta,
+import {
+	adminApproveBodySchema,
+	adminRejectBodySchema,
+	adminVerificationListParamsSchema,
+	type OffsetPaginationMeta,
+	uuidSchema,
 } from "@repo/shared/schemas";
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod/v4";
 import type {
 	AdminReviewActionResponse,
 	AdminVerificationDetail,
@@ -17,12 +20,28 @@ import type {
 	DocumentViewUrl,
 } from "./types";
 
+const organizerIdInputSchema = z.object({
+	organizerId: uuidSchema,
+});
+
+const documentViewUrlInputSchema = organizerIdInputSchema.extend({
+	documentId: uuidSchema,
+});
+
+const approveOrganizerInputSchema = z.object({
+	organizerId: uuidSchema,
+	body: adminApproveBodySchema,
+});
+
+const rejectOrganizerInputSchema = z.object({
+	organizerId: uuidSchema,
+	body: adminRejectBodySchema,
+});
+
 // ── List Verifications ─────────────────────────────────────────────
 
 export const getAdminVerifications = createServerFn({ method: "GET" })
-	.inputValidator(
-		(data: { page?: number; limit?: number; status?: string }) => data,
-	)
+	.inputValidator((data) => adminVerificationListParamsSchema.parse(data ?? {}))
 	.handler(
 		async ({
 			data,
@@ -39,7 +58,7 @@ export const getAdminVerifications = createServerFn({ method: "GET" })
 // ── Verification Detail ────────────────────────────────────────────
 
 export const getAdminVerificationDetail = createServerFn({ method: "GET" })
-	.inputValidator((data: { organizerId: string }) => data)
+	.inputValidator((data) => organizerIdInputSchema.parse(data))
 	.handler(async ({ data }): Promise<AdminVerificationDetail> => {
 		const { fetchAdminVerificationDetail } = await import("./api.server");
 		const response = await fetchAdminVerificationDetail(data.organizerId);
@@ -49,7 +68,7 @@ export const getAdminVerificationDetail = createServerFn({ method: "GET" })
 // ── Document View URL ──────────────────────────────────────────────
 
 export const getDocumentViewUrl = createServerFn({ method: "GET" })
-	.inputValidator((data: { organizerId: string; documentId: string }) => data)
+	.inputValidator((data) => documentViewUrlInputSchema.parse(data))
 	.handler(async ({ data }): Promise<DocumentViewUrl> => {
 		const { fetchDocumentViewUrl } = await import("./api.server");
 		const response = await fetchDocumentViewUrl(
@@ -62,9 +81,7 @@ export const getDocumentViewUrl = createServerFn({ method: "GET" })
 // ── Approve Organizer ──────────────────────────────────────────────
 
 export const approveOrganizer = createServerFn({ method: "POST" })
-	.inputValidator(
-		(data: { organizerId: string; body: AdminApproveBody }) => data,
-	)
+	.inputValidator((data) => approveOrganizerInputSchema.parse(data))
 	.handler(async ({ data }): Promise<AdminReviewActionResponse> => {
 		const { approveOrganizerOnServer } = await import("./api.server");
 		const response = await approveOrganizerOnServer(
@@ -77,9 +94,7 @@ export const approveOrganizer = createServerFn({ method: "POST" })
 // ── Reject Organizer ───────────────────────────────────────────────
 
 export const rejectOrganizer = createServerFn({ method: "POST" })
-	.inputValidator(
-		(data: { organizerId: string; body: AdminRejectBody }) => data,
-	)
+	.inputValidator((data) => rejectOrganizerInputSchema.parse(data))
 	.handler(async ({ data }): Promise<AdminReviewActionResponse> => {
 		const { rejectOrganizerOnServer } = await import("./api.server");
 		const response = await rejectOrganizerOnServer(data.organizerId, data.body);

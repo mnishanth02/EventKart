@@ -18,7 +18,13 @@ import { updateOrganizerProfile } from "../api";
 import { ORGANIZER_QUERY_KEY } from "../queries";
 import type { OrganizerProfile } from "../types";
 
-function FormFieldError({ errors }: { errors: ReadonlyArray<unknown> }) {
+function FormFieldError({
+	id,
+	errors,
+}: {
+	id: string;
+	errors: ReadonlyArray<unknown>;
+}) {
 	const messages = errors
 		.filter(
 			(e): e is { message: string } =>
@@ -27,7 +33,7 @@ function FormFieldError({ errors }: { errors: ReadonlyArray<unknown> }) {
 		.map((e) => e.message);
 	if (messages.length === 0) return null;
 	return (
-		<p className="text-sm text-destructive" role="alert">
+		<p id={id} className="text-sm text-destructive" role="alert">
 			{messages[0]}
 		</p>
 	);
@@ -139,11 +145,16 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 									name={field.name}
 									value={field.state.value ?? ""}
 									placeholder="Acme Events"
+									aria-describedby={`${field.name}-error`}
+									aria-invalid={field.state.meta.errors.length > 0}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
 								{field.state.meta.isTouched && (
-									<FormFieldError errors={field.state.meta.errors} />
+									<FormFieldError
+										id={`${field.name}-error`}
+										errors={field.state.meta.errors}
+									/>
 								)}
 							</div>
 						)}
@@ -159,11 +170,16 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 									name={field.name}
 									value={field.state.value ?? ""}
 									placeholder="Jane Doe"
+									aria-describedby={`${field.name}-error`}
+									aria-invalid={field.state.meta.errors.length > 0}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
 								{field.state.meta.isTouched && (
-									<FormFieldError errors={field.state.meta.errors} />
+									<FormFieldError
+										id={`${field.name}-error`}
+										errors={field.state.meta.errors}
+									/>
 								)}
 							</div>
 						)}
@@ -181,11 +197,16 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 										type="email"
 										value={field.state.value ?? ""}
 										placeholder="jane@acme.com"
+										aria-describedby={`${field.name}-error`}
+										aria-invalid={field.state.meta.errors.length > 0}
 										onBlur={field.handleBlur}
 										onChange={(e) => field.handleChange(e.target.value)}
 									/>
 									{field.state.meta.isTouched && (
-										<FormFieldError errors={field.state.meta.errors} />
+										<FormFieldError
+											id={`${field.name}-error`}
+											errors={field.state.meta.errors}
+										/>
 									)}
 								</div>
 							)}
@@ -201,11 +222,16 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 										type="tel"
 										value={field.state.value ?? ""}
 										placeholder="+91 98765 43210"
+										aria-describedby={`${field.name}-error`}
+										aria-invalid={field.state.meta.errors.length > 0}
 										onBlur={field.handleBlur}
 										onChange={(e) => field.handleChange(e.target.value)}
 									/>
 									{field.state.meta.isTouched && (
-										<FormFieldError errors={field.state.meta.errors} />
+										<FormFieldError
+											id={`${field.name}-error`}
+											errors={field.state.meta.errors}
+										/>
 									)}
 								</div>
 							)}
@@ -222,11 +248,16 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 									name={field.name}
 									value={field.state.value ?? ""}
 									placeholder="Coimbatore"
+									aria-describedby={`${field.name}-error`}
+									aria-invalid={field.state.meta.errors.length > 0}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
 								{field.state.meta.isTouched && (
-									<FormFieldError errors={field.state.meta.errors} />
+									<FormFieldError
+										id={`${field.name}-error`}
+										errors={field.state.meta.errors}
+									/>
 								)}
 							</div>
 						)}
@@ -243,13 +274,18 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 									value={field.state.value ?? ""}
 									placeholder="Tell us about your organization..."
 									rows={4}
+									aria-describedby={`${field.name}-error`}
+									aria-invalid={field.state.meta.errors.length > 0}
 									onBlur={field.handleBlur}
 									onChange={(e) =>
 										field.handleChange(e.target.value || undefined)
 									}
 								/>
 								{field.state.meta.isTouched && (
-									<FormFieldError errors={field.state.meta.errors} />
+									<FormFieldError
+										id={`${field.name}-error`}
+										errors={field.state.meta.errors}
+									/>
 								)}
 							</div>
 						)}
@@ -266,13 +302,18 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 									type="url"
 									value={field.state.value ?? ""}
 									placeholder="https://acme-events.com"
+									aria-describedby={`${field.name}-error`}
+									aria-invalid={field.state.meta.errors.length > 0}
 									onBlur={field.handleBlur}
 									onChange={(e) =>
 										field.handleChange(e.target.value || undefined)
 									}
 								/>
 								{field.state.meta.isTouched && (
-									<FormFieldError errors={field.state.meta.errors} />
+									<FormFieldError
+										id={`${field.name}-error`}
+										errors={field.state.meta.errors}
+									/>
 								)}
 							</div>
 						)}

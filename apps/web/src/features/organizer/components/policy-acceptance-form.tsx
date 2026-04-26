@@ -14,11 +14,16 @@ import {
 import { Checkbox } from "@repo/ui/components/ui/checkbox";
 import { Label } from "@repo/ui/components/ui/label";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ApiClientError } from "#/lib/api-client.shared";
 import { acceptOrganizerPolicies } from "../api";
-import { POLICY_STATUS_QUERY_KEY, policyStatusQueryOptions } from "../queries";
+import {
+	POLICY_STATUS_QUERY_KEY,
+	policyStatusQueryOptions,
+	VERIFICATION_STATUS_QUERY_KEY,
+} from "../queries";
 
 const POLICY_DESCRIPTIONS: Record<OrganizerPolicyType, string> = {
 	platform_terms:
@@ -42,6 +47,9 @@ export function PolicyAcceptanceForm() {
 			void queryClient.invalidateQueries({
 				queryKey: POLICY_STATUS_QUERY_KEY,
 			});
+			void queryClient.invalidateQueries({
+				queryKey: VERIFICATION_STATUS_QUERY_KEY,
+			});
 			toast.success("Policies accepted successfully!");
 		},
 		onError: (error: unknown) => {
@@ -55,8 +63,6 @@ export function PolicyAcceptanceForm() {
 		},
 	});
 
-	const allChecked = REQUIRED_ORGANIZER_POLICIES.every((p) => checked[p]);
-
 	function handleAccept() {
 		mutation.mutate([...REQUIRED_ORGANIZER_POLICIES]);
 	}
@@ -64,12 +70,47 @@ export function PolicyAcceptanceForm() {
 	if (policyQuery.isLoading) {
 		return (
 			<div className="flex items-center justify-center py-12">
-				<p className="text-muted-foreground">Loading policy status...</p>
+				<p className="text-muted-foreground" role="status" aria-live="polite">
+					Loading policy status...
+				</p>
 			</div>
 		);
 	}
 
+	if (policyQuery.isError) {
+		return (
+			<Card>
+				<CardHeader>
+					<CardTitle className="text-2xl">Platform Policies</CardTitle>
+					<CardDescription>
+						Required organizer policy acceptance status could not be loaded.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p className="text-sm text-destructive" role="alert">
+						Failed to load policy status. Please refresh the page and try again.
+					</p>
+					<Button
+						type="button"
+						className="mt-4"
+						onClick={() => policyQuery.refetch()}
+					>
+						Retry
+					</Button>
+				</CardContent>
+			</Card>
+		);
+	}
+
 	const allAccepted = policyQuery.data?.allRequiredAccepted === true;
+	const acceptedPolicyTypes = new Set(
+		policyQuery.data?.policies
+			.filter((policy) => policy.isCurrentVersionAccepted)
+			.map((policy) => policy.policyType) ?? [],
+	);
+	const allReadyToAccept = REQUIRED_ORGANIZER_POLICIES.every(
+		(policyType) => acceptedPolicyTypes.has(policyType) || checked[policyType],
+	);
 
 	if (allAccepted) {
 		return (
@@ -116,6 +157,14 @@ export function PolicyAcceptanceForm() {
 							</div>
 						</div>
 					))}
+					<div className="flex flex-col gap-2 pt-2 sm:flex-row">
+						<Button asChild>
+							<Link to="/org/verification">Continue to Verification</Link>
+						</Button>
+						<Button asChild variant="outline">
+							<Link to="/org">Back to Dashboard</Link>
+						</Button>
+					</div>
 				</CardContent>
 			</Card>
 		);
@@ -141,7 +190,10 @@ export function PolicyAcceptanceForm() {
 							<h3 className="font-semibold">
 								{ORGANIZER_POLICY_LABELS[policyType]}
 							</h3>
-							<p className="text-sm text-muted-foreground">
+							<p
+								id={`policy-${policyType}-description`}
+								className="text-sm text-muted-foreground"
+							>
 								{POLICY_DESCRIPTIONS[policyType]}
 							</p>
 
@@ -157,6 +209,7 @@ export function PolicyAcceptanceForm() {
 									<Checkbox
 										id={`policy-${policyType}`}
 										checked={checked[policyType] ?? false}
+										aria-describedby={`policy-${policyType}-description`}
 										onCheckedChange={(value) =>
 											setChecked((prev) => ({
 												...prev,
@@ -178,8 +231,9 @@ export function PolicyAcceptanceForm() {
 				})}
 
 				<Button
+					type="button"
 					className="w-full"
-					disabled={!allChecked || mutation.isPending}
+					disabled={!allReadyToAccept || mutation.isPending}
 					onClick={handleAccept}
 				>
 					{mutation.isPending ? "Accepting Policies..." : "Accept All Policies"}

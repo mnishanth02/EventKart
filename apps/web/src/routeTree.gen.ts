@@ -20,6 +20,7 @@ import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
 import { Route as AuthedOrgIndexRouteImport } from './routes/_authed/org/index'
 import { Route as AuthedMyIndexRouteImport } from './routes/_authed/my/index'
 import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
+import { Route as PublicAuthVerifyEmailRouteImport } from './routes/_public/auth/verify-email'
 import { Route as AuthedOrgVerificationRouteImport } from './routes/_authed/org/verification'
 import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/register'
 import { Route as AuthedOrgProfileRouteImport } from './routes/_authed/org/profile'
@@ -80,6 +81,11 @@ const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedAdminRoute,
 } as any)
+const PublicAuthVerifyEmailRoute = PublicAuthVerifyEmailRouteImport.update({
+  id: '/auth/verify-email',
+  path: '/auth/verify-email',
+  getParentRoute: () => PublicRoute,
+} as any)
 const AuthedOrgVerificationRoute = AuthedOrgVerificationRouteImport.update({
   id: '/verification',
   path: '/verification',
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/org/profile': typeof AuthedOrgProfileRoute
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
+  '/auth/verify-email': typeof PublicAuthVerifyEmailRoute
   '/admin/': typeof AuthedAdminIndexRoute
   '/my/': typeof AuthedMyIndexRoute
   '/org/': typeof AuthedOrgIndexRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/org/profile': typeof AuthedOrgProfileRoute
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
+  '/auth/verify-email': typeof PublicAuthVerifyEmailRoute
   '/admin': typeof AuthedAdminIndexRoute
   '/my': typeof AuthedMyIndexRoute
   '/org': typeof AuthedOrgIndexRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/_authed/org/profile': typeof AuthedOrgProfileRoute
   '/_authed/org/register': typeof AuthedOrgRegisterRoute
   '/_authed/org/verification': typeof AuthedOrgVerificationRoute
+  '/_public/auth/verify-email': typeof PublicAuthVerifyEmailRoute
   '/_authed/admin/': typeof AuthedAdminIndexRoute
   '/_authed/my/': typeof AuthedMyIndexRoute
   '/_authed/org/': typeof AuthedOrgIndexRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/org/profile'
     | '/org/register'
     | '/org/verification'
+    | '/auth/verify-email'
     | '/admin/'
     | '/my/'
     | '/org/'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/org/profile'
     | '/org/register'
     | '/org/verification'
+    | '/auth/verify-email'
     | '/admin'
     | '/my'
     | '/org'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/_authed/org/profile'
     | '/_authed/org/register'
     | '/_authed/org/verification'
+    | '/_public/auth/verify-email'
     | '/_authed/admin/'
     | '/_authed/my/'
     | '/_authed/org/'
@@ -302,6 +314,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthedAdminIndexRouteImport
       parentRoute: typeof AuthedAdminRoute
+    }
+    '/_public/auth/verify-email': {
+      id: '/_public/auth/verify-email'
+      path: '/auth/verify-email'
+      fullPath: '/auth/verify-email'
+      preLoaderRoute: typeof PublicAuthVerifyEmailRouteImport
+      parentRoute: typeof PublicRoute
     }
     '/_authed/org/verification': {
       id: '/_authed/org/verification'
@@ -414,10 +433,12 @@ const AuthedRouteWithChildren =
 
 interface PublicRouteChildren {
   PublicIndexRoute: typeof PublicIndexRoute
+  PublicAuthVerifyEmailRoute: typeof PublicAuthVerifyEmailRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
   PublicIndexRoute: PublicIndexRoute,
+  PublicAuthVerifyEmailRoute: PublicAuthVerifyEmailRoute,
 }
 
 const PublicRouteWithChildren =
