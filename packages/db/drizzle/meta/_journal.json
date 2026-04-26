@@ -50,6 +50,13 @@
 			"when": 1777091223997,
 			"tag": "0006_brief_slapstick",
 			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1777208762853,
+			"tag": "0007_known_lucky_pierre",
+			"breakpoints": true
 		}
 	]
 }

@@ -71,11 +71,13 @@ vi.mock("ioredis", () => {
 });
 
 // Global mock for @repo/db — prevents real PostgreSQL connections in all tests.
-vi.mock("@repo/db", () => {
+vi.mock("@repo/db", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@repo/db")>();
 	const mockDb = {
 		execute: vi.fn().mockResolvedValue([{ "?column?": 1 }]),
 	};
 	return {
+		...actual,
 		createDatabase: vi.fn().mockReturnValue(mockDb),
 		createMigrationClient: vi.fn().mockReturnValue({}),
 		pingDatabase: vi.fn().mockResolvedValue(undefined),

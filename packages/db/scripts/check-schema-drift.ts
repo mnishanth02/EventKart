@@ -16,11 +16,36 @@ const env = {
 };
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "drizzle-drift-"));
+const tempConfigPath = path.join(
+	pkgRoot,
+	`.drizzle-drift-${process.pid}.config.ts`,
+);
+const existingMetaDir = path.join(pkgRoot, "drizzle", "meta");
+const tempMetaDir = path.join(tmpDir, "meta");
 
 try {
 	console.log("🔍 Checking for schema drift…");
 
-	execSync(`npx drizzle-kit generate --out "${tmpDir}"`, {
+	fs.cpSync(existingMetaDir, tempMetaDir, { recursive: true });
+
+	fs.writeFileSync(
+		tempConfigPath,
+		[
+			'import { defineConfig } from "drizzle-kit";',
+			"",
+			"export default defineConfig({",
+			'\tdialect: "postgresql",',
+			'\tschema: "./src/schema/index.ts",',
+			`\tout: ${JSON.stringify(tmpDir)},`,
+			"\tdbCredentials: {",
+			'\t\turl: process.env.DATABASE_URL ?? "postgres://drift-check@localhost/dummy",',
+			"\t},",
+			"});",
+			"",
+		].join("\n"),
+	);
+
+	execSync(`pnpm exec drizzle-kit generate --config "${tempConfigPath}"`, {
 		cwd: pkgRoot,
 		env,
 		stdio: "pipe",
@@ -35,10 +60,10 @@ try {
 			"❌ Schema drift detected: schema changes without migration files.",
 		);
 		console.error("   Generated files:", generated.join(", "));
-		process.exit(1);
+		process.exitCode = 1;
+	} else {
+		console.log("✅ No schema drift — all changes have migration files.");
 	}
-
-	console.log("✅ No schema drift — all changes have migration files.");
 } catch (error) {
 	// drizzle-kit generate exits 0 even when "nothing to generate", but may print
 	// "No schema changes, nothing to migrate" to stderr and still exit 0.
@@ -53,8 +78,9 @@ try {
 		console.log("✅ No schema drift — all changes have migration files.");
 	} else {
 		console.error("❌ Schema drift check failed:", message);
-		process.exit(1);
+		process.exitCode = 1;
 	}
 } finally {
+	fs.rmSync(tempConfigPath, { force: true });
 	fs.rmSync(tmpDir, { recursive: true, force: true });
 }

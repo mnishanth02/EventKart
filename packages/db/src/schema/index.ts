@@ -1,12 +1,17 @@
 export { auditLog } from "./audit-log.js";
 export { consentRecords, consentTypeEnum } from "./consent-records.js";
 export { emailVerifications } from "./email-verifications.js";
+export { eventStatusEnum, events } from "./events.js";
 export {
 	organizers,
 	razorpayAccountStatusEnum,
 	verificationStatusEnum,
 } from "./organizers.js";
 export { sessions } from "./sessions.js";
+export {
+	slugRedirectResourceTypeEnum,
+	slugRedirects,
+} from "./slug-redirects.js";
 export { userRoleEnum, users } from "./users.js";
 export {
 	documentStatusEnum,
