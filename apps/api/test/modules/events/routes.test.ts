@@ -9,6 +9,8 @@ import {
 } from "vitest";
 
 const mockCreateDraftEvent = vi.fn();
+const mockListEventCategories = vi.fn();
+const mockReplaceEventCategories = vi.fn();
 
 vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	const actual =
@@ -18,11 +20,20 @@ vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	return {
 		...actual,
 		createDraftEvent: (...args: unknown[]) => mockCreateDraftEvent(...args),
+		listEventCategories: (...args: unknown[]) =>
+			mockListEventCategories(...args),
+		replaceEventCategories: (...args: unknown[]) =>
+			mockReplaceEventCategories(...args),
 	};
 });
 
 import type { FastifyInstance } from "fastify";
-import { NotFoundError, ValidationError } from "../../../src/lib/errors.js";
+import {
+	ConflictError,
+	ForbiddenError,
+	NotFoundError,
+	ValidationError,
+} from "../../../src/lib/errors.js";
 import { generateCsrfToken } from "../../../src/plugins/csrf.js";
 import { buildTestApp } from "../../helpers/build-app.js";
 
@@ -34,6 +45,8 @@ const TEST_SESSION_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 const TEST_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const TEST_ORGANIZER_ID = "660e8400-e29b-41d4-a716-446655440001";
 const TEST_EVENT_ID = "11111111-1111-4111-8111-111111111111";
+const TEST_CATEGORY_5K_ID = "22222222-2222-4222-8222-222222222222";
+const TEST_CATEGORY_10K_ID = "33333333-3333-4333-8333-333333333333";
 const TEST_CSRF_SECRET = "eventkart-csrf-secret-v1";
 
 const validCreateEventBody = {
@@ -78,6 +91,46 @@ const mockEvent = {
 	createdAt: "2026-04-26T12:00:00.000Z",
 	updatedAt: "2026-04-26T12:00:00.000Z",
 };
+
+const validCategoriesBody = {
+	categories: [
+		{
+			name: "5K",
+			slug: "5k",
+			distanceMeters: 5000,
+			sortOrder: 0,
+		},
+		{
+			name: "10K",
+			slug: "10k",
+			distanceMeters: 10000,
+			sortOrder: 1,
+		},
+	],
+};
+
+const mockCategories = [
+	{
+		id: TEST_CATEGORY_5K_ID,
+		eventId: TEST_EVENT_ID,
+		name: "5K",
+		slug: "5k",
+		distanceMeters: 5000,
+		sortOrder: 0,
+		createdAt: "2026-04-26T12:00:00.000Z",
+		updatedAt: "2026-04-26T12:00:00.000Z",
+	},
+	{
+		id: TEST_CATEGORY_10K_ID,
+		eventId: TEST_EVENT_ID,
+		name: "10K",
+		slug: "10k",
+		distanceMeters: 10000,
+		sortOrder: 1,
+		createdAt: "2026-04-26T12:00:00.000Z",
+		updatedAt: "2026-04-26T12:00:00.000Z",
+	},
+];
 
 function getSessionRedisMock(app: FastifyInstance) {
 	return app.redis.session.get as ReturnType<typeof vi.fn>;
@@ -307,5 +360,270 @@ describe("POST /api/v1/events", () => {
 			error: { code: "CSRF_VALIDATION_FAILED" },
 		});
 		expect(mockCreateDraftEvent).not.toHaveBeenCalled();
+	});
+});
+
+describe("GET /api/v1/events/:eventId/categories", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockListEventCategories.mockReset();
+	});
+
+	it("returns event categories without requiring authentication", async () => {
+		mockListEventCategories.mockResolvedValue(mockCategories);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: { categories: mockCategories },
+		});
+		expect(mockListEventCategories).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+		);
+	});
+
+	it("returns 404 when the event is missing", async () => {
+		mockListEventCategories.mockRejectedValue(
+			new NotFoundError("Event not found"),
+		);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+		});
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "NOT_FOUND" },
+		});
+	});
+});
+
+describe("PUT /api/v1/events/:eventId/categories", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockReplaceEventCategories.mockReset();
+	});
+
+	it("replaces categories for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		mockReplaceEventCategories.mockResolvedValue(mockCategories);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+			...csrf,
+			payload: validCategoriesBody,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: { categories: mockCategories },
+		});
+		expect(mockReplaceEventCategories).toHaveBeenCalledOnce();
+		const [_deps, userId, eventId, body] = mockReplaceEventCategories.mock
+			.calls[0] as [unknown, string, string, Record<string, unknown>];
+		expect(userId).toBe(TEST_USER_ID);
+		expect(eventId).toBe(TEST_EVENT_ID);
+		expect(body).toEqual(validCategoriesBody);
+	});
+
+	it("returns 401 when no session cookie is provided", async () => {
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+			payload: validCategoriesBody,
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "UNAUTHORIZED" },
+		});
+		expect(mockReplaceEventCategories).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when an authenticated participant replaces categories", async () => {
+		setupParticipantSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+			...csrf,
+			payload: validCategoriesBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "INSUFFICIENT_ROLE" },
+		});
+		expect(mockReplaceEventCategories).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 and does not call service when CSRF token is missing", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			payload: validCategoriesBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockReplaceEventCategories).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when the organizer does not own the event", async () => {
+		setupOrganizerSession(app);
+		mockReplaceEventCategories.mockRejectedValue(
+			new ForbiddenError("You do not have access to this event"),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+			...csrf,
+			payload: validCategoriesBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "FORBIDDEN" },
+		});
+	});
+
+	it("returns 404 when the event is missing", async () => {
+		setupOrganizerSession(app);
+		mockReplaceEventCategories.mockRejectedValue(
+			new NotFoundError("Event not found"),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+			...csrf,
+			payload: validCategoriesBody,
+		});
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "NOT_FOUND" },
+		});
+	});
+
+	it("returns 409 when the event is not draft", async () => {
+		setupOrganizerSession(app);
+		mockReplaceEventCategories.mockRejectedValue(
+			new ConflictError(
+				"Event categories can only be updated while the event is in draft status",
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+			...csrf,
+			payload: validCategoriesBody,
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CONFLICT" },
+		});
+	});
+
+	it.each([
+		["empty category array", { categories: [] }],
+		[
+			"duplicate slugs",
+			{
+				categories: [
+					{
+						name: "5K",
+						slug: "5k",
+						distanceMeters: 5000,
+						sortOrder: 0,
+					},
+					{
+						name: "Five Kilometres",
+						slug: "5k",
+						distanceMeters: 5000,
+						sortOrder: 1,
+					},
+				],
+			},
+		],
+		[
+			"invalid distance",
+			{
+				categories: [
+					{
+						name: "5K",
+						slug: "5k",
+						distanceMeters: 0,
+						sortOrder: 0,
+					},
+				],
+			},
+		],
+	])("returns 400 for %s", async (_name, payload) => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories`,
+			...csrf,
+			payload,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "VALIDATION_ERROR" },
+		});
+		expect(mockReplaceEventCategories).not.toHaveBeenCalled();
 	});
 });

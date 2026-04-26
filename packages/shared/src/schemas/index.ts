@@ -35,6 +35,21 @@ export {
 	createEventInputSchema,
 	eventSchema,
 } from "./event.js";
+export type {
+	EventCategoriesConfig,
+	EventCategoriesConfigInput,
+	EventCategoryConfig,
+	EventCategoryConfigInput,
+	EventCategoryRecord,
+	EventCategorySlug,
+} from "./event-category.js";
+export {
+	defaultEventCategoriesConfig,
+	eventCategoriesConfigSchema,
+	eventCategoryConfigSchema,
+	eventCategoryRecordSchema,
+	eventCategorySlugSchema,
+} from "./event-category.js";
 export type { EventSlug, EventSlugInput } from "./event-slug.js";
 export { eventSlugSchema } from "./event-slug.js";
 export type { UUID } from "./id.js";

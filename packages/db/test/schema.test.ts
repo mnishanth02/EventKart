@@ -3,6 +3,7 @@ import {
 	auditLog,
 	consentRecords,
 	consentTypeEnum,
+	eventCategories,
 	eventCategoryEnum,
 	eventCurrencyEnum,
 	eventSportEnum,
@@ -134,6 +135,18 @@ describe("schema exports", () => {
 		expect(eventCategoryEnum.enumValues).toEqual(["running"]);
 		expect(eventCurrencyEnum).toBeDefined();
 		expect(eventCurrencyEnum.enumValues).toEqual(["INR"]);
+	});
+
+	it("exports eventCategories table with expected columns", () => {
+		expect(eventCategories).toBeDefined();
+		expect(eventCategories.id).toBeDefined();
+		expect(eventCategories.eventId).toBeDefined();
+		expect(eventCategories.name).toBeDefined();
+		expect(eventCategories.slug).toBeDefined();
+		expect(eventCategories.distanceMeters).toBeDefined();
+		expect(eventCategories.sortOrder).toBeDefined();
+		expect(eventCategories.createdAt).toBeDefined();
+		expect(eventCategories.updatedAt).toBeDefined();
 	});
 
 	it("exports slugRedirects table with expected columns", () => {

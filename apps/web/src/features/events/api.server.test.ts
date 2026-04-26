@@ -1,12 +1,20 @@
 // @vitest-environment node
-import type { CreateEvent } from "@repo/shared/schemas";
+import type { CreateEvent, EventCategoriesConfig } from "@repo/shared/schemas";
+import {
+	defaultEventCategoriesConfig,
+	eventCategoriesConfigSchema,
+} from "@repo/shared/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { serverApiClient } from "#/lib/api-client.server";
 import {
 	assertSameOriginMutationRequest,
 	getForwardedAuthHeaders,
 } from "#/lib/auth/server-fns.server";
-import { createEventOnServer } from "./api.server";
+import {
+	createEventOnServer,
+	listEventCategoriesOnServer,
+	replaceEventCategoriesOnServer,
+} from "./api.server";
 
 vi.mock("#/lib/api-client.server", () => ({
 	serverApiClient: vi.fn(),
@@ -40,6 +48,21 @@ const validCreateEvent = {
 	isPaid: true,
 	currency: "INR",
 } satisfies CreateEvent;
+
+const eventId = "11111111-1111-4111-8111-111111111111";
+const validCategoryConfig = eventCategoriesConfigSchema.parse(
+	defaultEventCategoriesConfig,
+) satisfies EventCategoriesConfig;
+
+const categoryRecords = validCategoryConfig.categories.map(
+	(category, index) => ({
+		...category,
+		id: `33333333-3333-4333-8333-33333333333${index}`,
+		eventId,
+		createdAt: "2026-04-26T12:00:00.000Z",
+		updatedAt: "2026-04-26T12:00:00.000Z",
+	}),
+);
 
 describe("createEventOnServer", () => {
 	beforeEach(() => {
@@ -88,6 +111,82 @@ describe("createEventOnServer", () => {
 		await expect(createEventOnServer(validCreateEvent)).rejects.toThrow(
 			"Invalid request origin",
 		);
+
+		expect(serverApiClient).not.toHaveBeenCalled();
+	});
+});
+
+describe("listEventCategoriesOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("fetches event categories with forwarded auth headers", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: { categories: categoryRecords },
+		});
+
+		await listEventCategoriesOnServer(eventId);
+
+		expect(assertSameOriginMutationRequest).not.toHaveBeenCalled();
+		expect(serverApiClient).toHaveBeenCalledWith(
+			`/events/${eventId}/categories`,
+			{
+				headers: {
+					Cookie: "session=test-session",
+					"X-Request-ID": "req-1",
+				},
+			},
+		);
+	});
+});
+
+describe("replaceEventCategoriesOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("puts the category config with same-origin validation and auth headers", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: { categories: categoryRecords },
+		});
+
+		await replaceEventCategoriesOnServer(eventId, validCategoryConfig);
+
+		expect(assertSameOriginMutationRequest).toHaveBeenCalledOnce();
+		expect(serverApiClient).toHaveBeenCalledWith(
+			`/events/${eventId}/categories`,
+			{
+				method: "PUT",
+				body: validCategoryConfig,
+				headers: {
+					Cookie: "session=test-session",
+					"X-Request-ID": "req-1",
+				},
+			},
+		);
+	});
+
+	it("does not forward the update when same-origin validation fails", async () => {
+		vi.mocked(assertSameOriginMutationRequest).mockImplementationOnce(() => {
+			throw new Error("Invalid request origin");
+		});
+
+		await expect(
+			replaceEventCategoriesOnServer(eventId, validCategoryConfig),
+		).rejects.toThrow("Invalid request origin");
 
 		expect(serverApiClient).not.toHaveBeenCalled();
 	});

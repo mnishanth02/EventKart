@@ -6,9 +6,16 @@ import { requireRole } from "../../middleware/require-role.js";
 import {
 	createEventBodySchema,
 	createEventResponseSchema,
+	eventCategoriesBodySchema,
+	eventCategoriesResponseSchema,
 	eventErrorResponseSchema,
+	eventIdParamsSchema,
 } from "./schemas.js";
-import { createDraftEvent } from "./service.js";
+import {
+	createDraftEvent,
+	listEventCategories,
+	replaceEventCategories,
+} from "./service.js";
 
 const eventRoutes: FastifyPluginAsync = async (app) => {
 	const typedApp = app.withTypeProvider<ZodTypeProvider>();
@@ -43,6 +50,62 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 
 			reply.code(201);
 			return { success: true as const, data: event };
+		},
+	);
+
+	typedApp.get(
+		"/:eventId/categories",
+		{
+			schema: {
+				params: eventIdParamsSchema,
+				response: {
+					200: eventCategoriesResponseSchema,
+					400: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const categories = await listEventCategories(
+				app.db,
+				request.params.eventId,
+			);
+
+			return { success: true as const, data: { categories } };
+		},
+	);
+
+	typedApp.put(
+		"/:eventId/categories",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				body: eventCategoriesBodySchema,
+				response: {
+					200: eventCategoriesResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const categories = await replaceEventCategories(
+				{ db: app.db, log: request.log },
+				session.userId,
+				request.params.eventId,
+				request.body,
+			);
+
+			return { success: true as const, data: { categories } };
 		},
 	);
 };

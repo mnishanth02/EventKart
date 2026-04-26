@@ -108,7 +108,10 @@ export function EventCreateForm() {
 		onSuccess: (event) => {
 			const eventReference = event.slug || event.id;
 			toast.success(`Event created as a draft: ${eventReference}`);
-			void navigate({ to: "/org" });
+			void navigate({
+				to: "/org/events/$eventId/configure-categories",
+				params: { eventId: event.id },
+			});
 		},
 		onError: (error: unknown) => {
 			toast.error(getErrorMessage(error));

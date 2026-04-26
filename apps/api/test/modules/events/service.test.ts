@@ -1,9 +1,10 @@
 import type { Database } from "@repo/db";
-import { slugRedirects } from "@repo/db/schema";
+import { eventCategories, slugRedirects } from "@repo/db/schema";
 import { EVENT_SLUG_MAX_LENGTH } from "@repo/shared/utils";
 import { describe, expect, it, vi } from "vitest";
 import {
 	ConflictError,
+	ForbiddenError,
 	NotFoundError,
 	ValidationError,
 } from "../../../src/lib/errors.js";
@@ -11,12 +12,17 @@ import {
 	createDraftEvent,
 	type EventSlugStore,
 	type EventSlugTransactionalStore,
+	listEventCategories,
 	recordEventSlugRedirect,
+	replaceEventCategories,
 	reserveUniqueEventSlug,
 	updateEventSlug,
 } from "../../../src/modules/events/service.js";
 
 const EVENT_ID = "11111111-1111-4111-8111-111111111111";
+const CATEGORY_5K_ID = "22222222-2222-4222-8222-222222222222";
+const CATEGORY_10K_ID = "33333333-3333-4333-8333-333333333333";
+const OTHER_ORGANIZER_ID = "770e8400-e29b-41d4-a716-446655440002";
 
 type SelectRows = Record<string, unknown>[];
 
@@ -24,12 +30,14 @@ function createSelectQuery(rows: SelectRows) {
 	const query = {
 		from: vi.fn(),
 		limit: vi.fn(),
+		orderBy: vi.fn(),
 		where: vi.fn(),
 	};
 
 	query.from.mockReturnValue(query);
 	query.where.mockReturnValue(query);
 	query.limit.mockResolvedValue(rows);
+	query.orderBy.mockResolvedValue(rows);
 
 	return query;
 }
@@ -160,6 +168,37 @@ function buildEventRow(overrides: Record<string, unknown> = {}) {
 		isPaid: true,
 		currency: "INR",
 		status: "draft",
+		createdAt: new Date("2026-04-26T12:00:00.000Z"),
+		updatedAt: new Date("2026-04-26T12:00:00.000Z"),
+		...overrides,
+	};
+}
+
+const validEventCategoriesInput = {
+	categories: [
+		{
+			name: "10K",
+			slug: "10k",
+			distanceMeters: 10_000,
+			sortOrder: 1,
+		},
+		{
+			name: " 5K ",
+			slug: "5k",
+			distanceMeters: 5_000,
+			sortOrder: 0,
+		},
+	],
+};
+
+function buildEventCategoryRow(overrides: Record<string, unknown> = {}) {
+	return {
+		id: CATEGORY_5K_ID,
+		eventId: EVENT_ID,
+		name: "5K",
+		slug: "5k",
+		distanceMeters: 5_000,
+		sortOrder: 0,
 		createdAt: new Date("2026-04-26T12:00:00.000Z"),
 		updatedAt: new Date("2026-04-26T12:00:00.000Z"),
 		...overrides,
@@ -430,5 +469,200 @@ describe("createDraftEvent", () => {
 			expect.objectContaining({ slug: "coimbatore-city-10k-2" }),
 		);
 		expect(select).toHaveBeenCalledTimes(4);
+	});
+});
+
+describe("event category service", () => {
+	it("lists categories for an existing event ordered by sort order", async () => {
+		const categoryRows = [
+			buildEventCategoryRow(),
+			buildEventCategoryRow({
+				id: CATEGORY_10K_ID,
+				name: "10K",
+				slug: "10k",
+				distanceMeters: 10_000,
+				sortOrder: 1,
+			}),
+		];
+		const { db } = createMockSlugStore([[{ id: EVENT_ID }], categoryRows]);
+
+		const result = await listEventCategories(db, EVENT_ID);
+
+		expect(result.map((category) => category.slug)).toEqual(["5k", "10k"]);
+		expect(result[0]).toMatchObject({
+			id: CATEGORY_5K_ID,
+			eventId: EVENT_ID,
+			name: "5K",
+			distanceMeters: 5_000,
+			sortOrder: 0,
+		});
+	});
+
+	it("returns 404 when listing categories for a missing event", async () => {
+		const { db } = createMockSlugStore([[]]);
+
+		await expect(listEventCategories(db, EVENT_ID)).rejects.toThrow(
+			NotFoundError,
+		);
+	});
+
+	it("replaces all categories atomically for an organizer-owned draft event", async () => {
+		const categoryRows = [
+			buildEventCategoryRow(),
+			buildEventCategoryRow({
+				id: CATEGORY_10K_ID,
+				name: "10K",
+				slug: "10k",
+				distanceMeters: 10_000,
+				sortOrder: 1,
+			}),
+		];
+		const { db, deleteFn, insertValues, transaction } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow()],
+			categoryRows,
+		]);
+		const log = { info: vi.fn() };
+
+		const result = await replaceEventCategories(
+			{ db, log },
+			TEST_USER_ID,
+			EVENT_ID,
+			validEventCategoriesInput,
+		);
+
+		expect(transaction).toHaveBeenCalledOnce();
+		expect(deleteFn).toHaveBeenCalledWith(eventCategories);
+		expect(insertValues).toHaveBeenCalledWith([
+			{
+				eventId: EVENT_ID,
+				name: "5K",
+				slug: "5k",
+				distanceMeters: 5_000,
+				sortOrder: 0,
+			},
+			{
+				eventId: EVENT_ID,
+				name: "10K",
+				slug: "10k",
+				distanceMeters: 10_000,
+				sortOrder: 1,
+			},
+		]);
+		expect(result.map((category) => category.slug)).toEqual(["5k", "10k"]);
+		expect(log.info).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventId: EVENT_ID,
+				organizerId: TEST_ORGANIZER_ID,
+				userId: TEST_USER_ID,
+				categoryCount: 2,
+			}),
+			"Event categories replaced",
+		);
+	});
+
+	it("returns 404 when replacing categories without an organizer profile", async () => {
+		const { db, deleteFn, insert } = createMockSlugStore([[]]);
+
+		await expect(
+			replaceEventCategories(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validEventCategoriesInput,
+			),
+		).rejects.toThrow(NotFoundError);
+		expect(deleteFn).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when replacing categories for another organizer's event", async () => {
+		const { db, deleteFn, insert } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ organizerId: OTHER_ORGANIZER_ID })],
+		]);
+
+		await expect(
+			replaceEventCategories(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validEventCategoriesInput,
+			),
+		).rejects.toThrow(ForbiddenError);
+		expect(deleteFn).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when replacing categories for a non-draft event", async () => {
+		const { db, deleteFn, insert } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ status: "published" })],
+		]);
+
+		await expect(
+			replaceEventCategories(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validEventCategoriesInput,
+			),
+		).rejects.toThrow(ConflictError);
+		expect(deleteFn).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		[
+			"empty category array",
+			{
+				categories: [],
+			},
+		],
+		[
+			"duplicate slugs",
+			{
+				categories: [
+					{
+						name: "5K",
+						slug: "5k",
+						distanceMeters: 5_000,
+						sortOrder: 0,
+					},
+					{
+						name: "Five Kilometres",
+						slug: "5k",
+						distanceMeters: 5_000,
+						sortOrder: 1,
+					},
+				],
+			},
+		],
+		[
+			"invalid distance",
+			{
+				categories: [
+					{
+						name: "5K",
+						slug: "5k",
+						distanceMeters: 0,
+						sortOrder: 0,
+					},
+				],
+			},
+		],
+	])("rejects %s before touching the database", async (_name, input) => {
+		const { db, select, insert } = createMockSlugStore();
+
+		await expect(
+			replaceEventCategories(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				input,
+			),
+		).rejects.toThrow(ValidationError);
+		expect(select).not.toHaveBeenCalled();
+		expect(insert).not.toHaveBeenCalled();
 	});
 });

@@ -1,16 +1,24 @@
 import { and, type Database, eq, ne } from "@repo/db";
-import { events, slugRedirects } from "@repo/db/schema";
+import { eventCategories, events, slugRedirects } from "@repo/db/schema";
 import { DEFAULT_EVENT_STATUS } from "@repo/shared/constants";
-import type { Event, EventSlug } from "@repo/shared/schemas";
+import type {
+	Event,
+	EventCategoryRecord,
+	EventSlug,
+} from "@repo/shared/schemas";
 import {
 	createEventInputSchema,
+	eventCategoriesConfigSchema,
+	eventCategoryRecordSchema,
 	eventSchema,
 	eventSlugSchema,
+	uuidSchema,
 } from "@repo/shared/schemas";
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
 import type { FastifyBaseLogger } from "fastify";
 import {
 	ConflictError,
+	ForbiddenError,
 	NotFoundError,
 	ValidationError,
 } from "../../lib/errors.js";
@@ -61,6 +69,18 @@ export interface CreateDraftEventDeps {
 }
 
 type EventRow = typeof events.$inferSelect;
+type EventCategoryRow = typeof eventCategories.$inferSelect;
+
+export type EventCategoryStore = Pick<Database, "delete" | "insert" | "select">;
+
+export interface EventCategoryTransactionalStore extends EventCategoryStore {
+	transaction: Database["transaction"];
+}
+
+export interface EventCategoryDeps {
+	db: EventCategoryTransactionalStore;
+	log: Pick<FastifyBaseLogger, "info">;
+}
 
 function isUniqueViolation(error: unknown): boolean {
 	return (
@@ -102,6 +122,31 @@ function toEventResponse(row: EventRow): Event {
 	});
 }
 
+function parseUuid(value: string, fieldName: string): string {
+	const parsed = uuidSchema.safeParse(value);
+	if (!parsed.success) {
+		throw new ValidationError(
+			`Invalid ${fieldName}`,
+			toValidationDetails(parsed.error),
+		);
+	}
+
+	return parsed.data;
+}
+
+function toEventCategoryResponse(row: EventCategoryRow): EventCategoryRecord {
+	return eventCategoryRecordSchema.parse({
+		id: row.id,
+		eventId: row.eventId,
+		name: row.name,
+		slug: row.slug,
+		distanceMeters: row.distanceMeters,
+		sortOrder: row.sortOrder,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+	});
+}
+
 function toValidationDetails(error: {
 	issues: Array<{ path: PropertyKey[]; message: string; code: string }>;
 }) {
@@ -112,6 +157,40 @@ function toValidationDetails(error: {
 			path: issue.path.map(String),
 		})),
 	};
+}
+
+async function selectEventForCategories(
+	db: EventCategoryStore,
+	eventId: string,
+) {
+	const [event] = await db
+		.select({
+			id: events.id,
+			organizerId: events.organizerId,
+			status: events.status,
+		})
+		.from(events)
+		.where(eq(events.id, eventId))
+		.limit(1);
+
+	if (!event) {
+		throw new NotFoundError("Event not found");
+	}
+
+	return event;
+}
+
+async function selectEventCategories(
+	db: EventCategoryStore,
+	eventId: string,
+): Promise<EventCategoryRecord[]> {
+	const rows = await db
+		.select()
+		.from(eventCategories)
+		.where(eq(eventCategories.eventId, eventId))
+		.orderBy(eventCategories.sortOrder);
+
+	return rows.map((row) => toEventCategoryResponse(row));
 }
 
 export async function createDraftEvent(
@@ -199,6 +278,86 @@ export async function createDraftEvent(
 	}
 
 	throw new ConflictError("Unable to reserve a unique event slug");
+}
+
+export async function listEventCategories(
+	db: EventCategoryStore,
+	eventId: string,
+): Promise<EventCategoryRecord[]> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	await selectEventForCategories(db, parsedEventId);
+
+	return selectEventCategories(db, parsedEventId);
+}
+
+export async function replaceEventCategories(
+	deps: EventCategoryDeps,
+	userId: string,
+	eventId: string,
+	input: unknown,
+): Promise<EventCategoryRecord[]> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const parsed = eventCategoriesConfigSchema.safeParse(input);
+	if (!parsed.success) {
+		throw new ValidationError(
+			"Invalid event category configuration",
+			toValidationDetails(parsed.error),
+		);
+	}
+
+	const organizer = await getOrganizerByUserId(deps.db as Database, userId);
+
+	if (!organizer) {
+		throw new NotFoundError(
+			"Organizer profile not found. Please register first.",
+		);
+	}
+
+	const sortedCategories = [...parsed.data.categories].sort(
+		(left, right) => left.sortOrder - right.sortOrder,
+	);
+
+	const categories = await deps.db.transaction(async (tx) => {
+		const event = await selectEventForCategories(tx, parsedEventId);
+
+		if (event.organizerId !== organizer.id) {
+			throw new ForbiddenError("You do not have access to this event");
+		}
+
+		if (event.status !== DEFAULT_EVENT_STATUS) {
+			throw new ConflictError(
+				"Event categories can only be updated while the event is in draft status",
+			);
+		}
+
+		await tx
+			.delete(eventCategories)
+			.where(eq(eventCategories.eventId, parsedEventId));
+
+		await tx.insert(eventCategories).values(
+			sortedCategories.map((category) => ({
+				eventId: parsedEventId,
+				name: category.name,
+				slug: category.slug,
+				distanceMeters: category.distanceMeters,
+				sortOrder: category.sortOrder,
+			})),
+		);
+
+		return selectEventCategories(tx, parsedEventId);
+	});
+
+	deps.log.info(
+		{
+			eventId: parsedEventId,
+			organizerId: organizer.id,
+			userId,
+			categoryCount: categories.length,
+		},
+		"Event categories replaced",
+	);
+
+	return categories;
 }
 
 function parseEventSlug(slug: string): EventSlug {

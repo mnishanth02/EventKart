@@ -1,17 +1,4 @@
 import {
-	boolean,
-	check,
-	index,
-	pgEnum,
-	pgTable,
-	text,
-	timestamp,
-	uniqueIndex,
-	uuid,
-	varchar,
-} from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
-import {
 	EVENT_CATEGORIES,
 	EVENT_CURRENCIES,
 	EVENT_SPORTS,
@@ -27,6 +14,19 @@ import {
 	V1_EVENT_TIMEZONE,
 	V1_EVENT_TYPE,
 } from "@repo/shared/constants";
+import { sql } from "drizzle-orm";
+import {
+	boolean,
+	check,
+	index,
+	pgEnum,
+	pgTable,
+	text,
+	timestamp,
+	uniqueIndex,
+	uuid,
+	varchar,
+} from "drizzle-orm/pg-core";
 import { organizers } from "./organizers.js";
 
 export const eventStatusEnum = pgEnum("event_status", EVENT_STATUSES);
