@@ -101,6 +101,20 @@ async function assertWritableEvent(
 	return { event, organizer };
 }
 
+async function rejectInvalidUploadedObject(
+	deps: EventImageServiceDeps,
+	image: EventImageRow,
+	message: string,
+): Promise<never> {
+	await deps.storage.deleteObject(image.storageKey);
+	await deps.db
+		.update(eventImages)
+		.set({ status: "deleted", updatedAt: new Date() })
+		.where(eq(eventImages.id, image.id));
+
+	throw new ValidationError(message);
+}
+
 async function assertEventReadable(
 	db: Database,
 	eventId: string,
@@ -251,20 +265,42 @@ export async function confirmEventImageUpload(
 		);
 	}
 
-	const maxSize = MAX_FILE_SIZES["event-image"];
-	if (metadata.contentLength == null) {
-		throw new ValidationError("Upload metadata is missing file size");
+	const contentType = metadata.contentType;
+	if (!contentType) {
+		return rejectInvalidUploadedObject(
+			deps,
+			image,
+			"Upload metadata is missing content type",
+		);
 	}
 
-	if (metadata.contentLength > maxSize) {
-		await deps.storage.deleteObject(image.storageKey);
-		await deps.db
-			.update(eventImages)
-			.set({ status: "deleted", updatedAt: new Date() })
-			.where(eq(eventImages.id, imageId));
+	if (contentType !== image.contentType) {
+		return rejectInvalidUploadedObject(
+			deps,
+			image,
+			"Uploaded content type does not match the requested image content type",
+		);
+	}
 
-		throw new ValidationError(
-			`File size ${Math.round((metadata.contentLength / 1024 / 1024) * 10) / 10}MB exceeds maximum of ${maxSize / 1024 / 1024}MB`,
+	const maxSize = MAX_FILE_SIZES["event-image"];
+	const contentLength = metadata.contentLength;
+	if (contentLength == null) {
+		return rejectInvalidUploadedObject(
+			deps,
+			image,
+			"Upload metadata is missing file size",
+		);
+	}
+
+	if (contentLength < 1) {
+		return rejectInvalidUploadedObject(deps, image, "Uploaded file is empty");
+	}
+
+	if (contentLength > maxSize) {
+		return rejectInvalidUploadedObject(
+			deps,
+			image,
+			`File size ${Math.round((contentLength / 1024 / 1024) * 10) / 10}MB exceeds maximum of ${maxSize / 1024 / 1024}MB`,
 		);
 	}
 
@@ -286,7 +322,7 @@ export async function confirmEventImageUpload(
 			.update(eventImages)
 			.set({
 				status: "uploaded",
-				sizeBytes: metadata.contentLength,
+				sizeBytes: contentLength,
 				updatedAt: new Date(),
 			})
 			.where(eq(eventImages.id, imageId))
@@ -304,7 +340,7 @@ export async function confirmEventImageUpload(
 			eventId,
 			imageId,
 			kind: image.kind,
-			fileSize: metadata.contentLength,
+			fileSize: contentLength,
 			organizerId: organizer.id,
 		},
 		"Event image upload confirmed",
@@ -320,7 +356,7 @@ export async function confirmEventImageUpload(
 			imageId,
 			kind: image.kind,
 			storageKey: image.storageKey,
-			fileSize: metadata.contentLength,
+			fileSize: contentLength,
 		},
 		ipAddress,
 	});
@@ -399,14 +435,7 @@ export async function deleteEventImage(
 		throw new NotFoundError("Event image not found");
 	}
 
-	try {
-		await deps.storage.deleteObject(image.storageKey);
-	} catch (err) {
-		deps.log.warn(
-			{ err, eventId, imageId, storageKey: image.storageKey },
-			"Failed to delete event image object from storage",
-		);
-	}
+	await deps.storage.deleteObject(image.storageKey);
 
 	await deps.db
 		.update(eventImages)

@@ -290,6 +290,9 @@ describe("confirmEventImageUpload", () => {
 
 		expect(result.status).toBe("uploaded");
 		expect(result.sizeBytes).toBe(2_048_000);
+		expect(deps.storage.headObject).toHaveBeenCalledWith(
+			`events/images/${EVENT_ID}/hero.jpg`,
+		);
 		expect(mockDb.transaction).toHaveBeenCalledOnce();
 		expect(mockDb.updateSets).toEqual([
 			expect.objectContaining({ status: "replaced" }),
@@ -320,6 +323,63 @@ describe("confirmEventImageUpload", () => {
 			),
 		).rejects.toThrow(ValidationError);
 		expect(mockDb.update).not.toHaveBeenCalled();
+	});
+
+	it("rejects and deletes an object when the uploaded content type does not match", async () => {
+		const mockDb = createMockDb({
+			selectRows: [[buildOrganizerRow()], [buildEventRow()], [buildImageRow()]],
+		});
+		const storage = createStorage({
+			headObject: vi.fn().mockResolvedValue({
+				contentType: "image/png",
+				contentLength: 1_024_000,
+				lastModified: UPDATED_AT,
+			}),
+		});
+
+		await expect(
+			confirmEventImageUpload(
+				createDeps(mockDb.db, storage),
+				USER_ID,
+				EVENT_ID,
+				IMAGE_ID,
+			),
+		).rejects.toThrow(ValidationError);
+		expect(storage.deleteObject).toHaveBeenCalledWith(
+			`events/images/${EVENT_ID}/hero.jpg`,
+		);
+		expect(mockDb.updateSets).toEqual([
+			expect.objectContaining({ status: "deleted" }),
+		]);
+		expect(mockDb.transaction).not.toHaveBeenCalled();
+	});
+
+	it("rejects and deletes an object when the uploaded file is empty", async () => {
+		const mockDb = createMockDb({
+			selectRows: [[buildOrganizerRow()], [buildEventRow()], [buildImageRow()]],
+		});
+		const storage = createStorage({
+			headObject: vi.fn().mockResolvedValue({
+				contentType: "image/jpeg",
+				contentLength: 0,
+				lastModified: UPDATED_AT,
+			}),
+		});
+
+		await expect(
+			confirmEventImageUpload(
+				createDeps(mockDb.db, storage),
+				USER_ID,
+				EVENT_ID,
+				IMAGE_ID,
+			),
+		).rejects.toThrow(ValidationError);
+		expect(storage.deleteObject).toHaveBeenCalledWith(
+			`events/images/${EVENT_ID}/hero.jpg`,
+		);
+		expect(mockDb.updateSets).toEqual([
+			expect.objectContaining({ status: "deleted" }),
+		]);
 	});
 
 	it("deletes and marks the row deleted when the uploaded object is too large", async () => {
@@ -426,6 +486,22 @@ describe("deleteEventImage", () => {
 				resourceId: EVENT_ID,
 			}),
 		);
+	});
+
+	it("does not mark the image deleted when storage deletion fails", async () => {
+		const mockDb = createMockDb({
+			selectRows: [[buildOrganizerRow()], [buildEventRow()], [buildImageRow()]],
+		});
+		const storage = createStorage({
+			deleteObject: vi.fn().mockRejectedValue(new Error("storage unavailable")),
+		});
+		const deps = createDeps(mockDb.db, storage);
+
+		await expect(
+			deleteEventImage(deps, USER_ID, EVENT_ID, IMAGE_ID),
+		).rejects.toThrow("storage unavailable");
+		expect(mockDb.update).not.toHaveBeenCalled();
+		expect(deps.auditLogger.log).not.toHaveBeenCalled();
 	});
 
 	it("rejects when the organizer does not own the event", async () => {

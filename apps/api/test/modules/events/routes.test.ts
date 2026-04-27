@@ -1263,6 +1263,24 @@ describe("POST /api/v1/events/:eventId/images/upload-url", () => {
 		expect(mockRequestEventImageUpload).not.toHaveBeenCalled();
 	});
 
+	it("returns 403 without CSRF token", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			payload: validImageUploadBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockRequestEventImageUpload).not.toHaveBeenCalled();
+	});
+
 	it("returns 403 for participant sessions", async () => {
 		setupParticipantSession(app);
 		const csrf = buildCsrfHeaders();
@@ -1373,6 +1391,23 @@ describe("POST /api/v1/events/:eventId/images/:imageId/confirm", () => {
 			TEST_IMAGE_ID,
 			expect.any(String),
 		);
+	});
+
+	it("returns 403 without CSRF token", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/${TEST_IMAGE_ID}/confirm`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockConfirmEventImageUpload).not.toHaveBeenCalled();
 	});
 
 	it("returns 400 for invalid image id", async () => {
