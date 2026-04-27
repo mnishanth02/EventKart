@@ -43,6 +43,23 @@ export {
 	updateEventInputSchema,
 } from "./event.js";
 export type {
+	EventPublishTransition,
+	PublishEventResponse,
+	PublishReadiness,
+	PublishReadinessCheck,
+	PublishReadinessItem,
+	UnpublishEventResponse,
+} from "./event-publish.js";
+export {
+	eventPublishTransitionSchema,
+	publishEventResponseSchema,
+	publishReadinessCheckSchema,
+	publishReadinessItemSchema,
+	publishReadinessResponseSchema,
+	publishReadinessSchema,
+	unpublishEventResponseSchema,
+} from "./event-publish.js";
+export type {
 	EventCategoriesConfig,
 	EventCategoriesConfigInput,
 	EventCategoryConfig,

@@ -7,6 +7,7 @@ import {
 import { eventPricingConfigSchema } from "@repo/shared/schemas";
 import { EVENT_SLUG_MAX_LENGTH } from "@repo/shared/utils";
 import { describe, expect, it, vi } from "vitest";
+import type { AuditLogger } from "../../../src/lib/audit.js";
 import {
 	ConflictError,
 	ForbiddenError,
@@ -14,6 +15,8 @@ import {
 	ValidationError,
 } from "../../../src/lib/errors.js";
 import {
+	adminApproveEvent,
+	adminRejectEvent,
 	createDraftEvent,
 	type EventSlugStore,
 	type EventSlugTransactionalStore,
@@ -22,10 +25,12 @@ import {
 	getEventPolicies,
 	listEventCategories,
 	listEventPricing,
+	publishEvent,
 	recordEventSlugRedirect,
 	replaceEventCategories,
 	replaceEventPricing,
 	reserveUniqueEventSlug,
+	unpublishEvent,
 	updateDraftEvent,
 	updateEventPolicies,
 	updateEventSlug,
@@ -169,6 +174,13 @@ const organizerRow = {
 	updatedAt: new Date("2026-04-24T00:00:00.000Z"),
 };
 
+const verifiedOrganizerRow = {
+	...organizerRow,
+	verificationStatus: "approved",
+	isVerified: true,
+	razorpayAccountStatus: "active",
+};
+
 function buildEventRow(overrides: Record<string, unknown> = {}) {
 	return {
 		id: EVENT_ID,
@@ -246,6 +258,40 @@ function buildEventPricingTierRow(overrides: Record<string, unknown> = {}) {
 		createdAt: new Date("2026-04-26T12:00:00.000Z"),
 		updatedAt: new Date("2026-04-26T12:00:00.000Z"),
 		...overrides,
+	};
+}
+
+function buildHeroImageRow(overrides: Record<string, unknown> = {}) {
+	return {
+		id: "12121212-1212-4121-8121-121212121212",
+		eventId: EVENT_ID,
+		kind: "hero",
+		fileName: "hero.jpg",
+		contentType: "image/jpeg",
+		sizeBytes: 1_024_000,
+		storageKey: `events/images/${EVENT_ID}/hero.jpg`,
+		status: "uploaded",
+		uploadedBy: TEST_USER_ID,
+		createdAt: new Date("2026-04-26T12:00:00.000Z"),
+		updatedAt: new Date("2026-04-26T12:00:00.000Z"),
+		...overrides,
+	};
+}
+
+function createAuditLogger(): AuditLogger {
+	return {
+		log: vi.fn().mockResolvedValue(undefined),
+		logBatch: vi.fn().mockResolvedValue(undefined),
+	};
+}
+
+function createPublishDeps(db: unknown, auditLogger = createAuditLogger()) {
+	return {
+		db: db as Database,
+		auditLogger,
+		log: {
+			info: vi.fn(),
+		},
 	};
 }
 
@@ -824,7 +870,13 @@ describe("event category service", () => {
 	it("allows an organizer to list categories for their own non-public event", async () => {
 		const categoryRows = [buildEventCategoryRow()];
 		const { db } = createMockSlugStore([
-			[buildEventRow({ status: "under_review" })],
+			[
+				buildEventRow({
+					status: "under_review",
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
 			[organizerRow],
 			categoryRows,
 		]);
@@ -1172,6 +1224,740 @@ describe("event policy service", () => {
 		).rejects.toThrow(ValidationError);
 		expect(select).not.toHaveBeenCalled();
 		expect(update).not.toHaveBeenCalled();
+	});
+});
+
+describe("event publish state machine", () => {
+	const categoryRows = [buildEventCategoryRow()];
+	const pricingRows = [buildEventPricingTierRow()];
+
+	it("rejects unpublishing a never-published draft instead of treating it as idempotent", async () => {
+		const { db, update } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[
+				buildEventRow({
+					status: "draft",
+					publishedAt: null,
+					submittedForReviewAt: null,
+				}),
+			],
+		]);
+
+		await expect(
+			unpublishEvent(createPublishDeps(db), TEST_USER_ID, EVENT_ID),
+		).rejects.toMatchObject({
+			code: "EVENT_NOT_UNPUBLISHABLE",
+			statusCode: 400,
+		});
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("publishes a ready draft event directly and records publish-request plus publish audit entries", async () => {
+		const publishedAt = new Date("2026-04-26T12:15:00.000Z");
+		const auditLogger = createAuditLogger();
+		const { db, transaction, updateSet } = createMockSlugStore(
+			[
+				[verifiedOrganizerRow],
+				[
+					buildEventRow({
+						status: "draft",
+						refundPolicy: validEventPoliciesInput.refundPolicy,
+						cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+					}),
+				],
+				categoryRows,
+				pricingRows,
+				[buildHeroImageRow()],
+				[],
+				[],
+			],
+			[
+				buildEventRow({
+					status: "published",
+					publishedAt,
+					submittedForReviewAt: null,
+				}),
+			],
+		);
+
+		const result = await publishEvent(
+			createPublishDeps(db, auditLogger),
+			TEST_USER_ID,
+			EVENT_ID,
+			"127.0.0.1",
+		);
+
+		expect(transaction).toHaveBeenCalledOnce();
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				status: "published",
+				publishedAt: expect.any(Date),
+				submittedForReviewAt: null,
+				updatedAt: expect.any(Date),
+			}),
+		);
+		expect(result).toMatchObject({
+			transition: "draft_to_published",
+			event: {
+				status: "published",
+				publishedAt: "2026-04-26T12:15:00.000Z",
+			},
+			readiness: {
+				ready: true,
+				wouldRequireAdminReview: false,
+			},
+		});
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.publish_requested",
+				actorRole: "organizer",
+				metadata: {
+					organizerId: TEST_ORGANIZER_ID,
+					from: "draft",
+				},
+			}),
+		);
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.publish",
+				actorRole: "organizer",
+				metadata: {
+					organizerId: TEST_ORGANIZER_ID,
+					transition: "draft_to_published",
+				},
+			}),
+		);
+	});
+
+	it("submits a ready paid draft for review when the admin-review policy requires it", async () => {
+		const submittedForReviewAt = new Date("2026-04-26T12:18:00.000Z");
+		const auditLogger = createAuditLogger();
+		const requiresAdminReview = vi.fn().mockResolvedValue(true);
+		const { db, updateSet } = createMockSlugStore(
+			[
+				[verifiedOrganizerRow],
+				[
+					buildEventRow({
+						status: "draft",
+						refundPolicy: validEventPoliciesInput.refundPolicy,
+						cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+					}),
+				],
+				categoryRows,
+				pricingRows,
+				[buildHeroImageRow()],
+				[],
+				[],
+			],
+			[
+				buildEventRow({
+					status: "under_review",
+					publishedAt: null,
+					submittedForReviewAt,
+				}),
+			],
+		);
+
+		const result = await publishEvent(
+			{
+				...createPublishDeps(db, auditLogger),
+				requiresAdminReview,
+			},
+			TEST_USER_ID,
+			EVENT_ID,
+		);
+
+		expect(requiresAdminReview).toHaveBeenCalledWith(TEST_ORGANIZER_ID);
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				status: "under_review",
+				publishedAt: null,
+				submittedForReviewAt: expect.any(Date),
+			}),
+		);
+		expect(result).toMatchObject({
+			transition: "draft_to_under_review",
+			event: {
+				status: "under_review",
+				submittedForReviewAt: "2026-04-26T12:18:00.000Z",
+			},
+			readiness: {
+				ready: true,
+				wouldRequireAdminReview: true,
+			},
+		});
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.submit_for_review",
+				metadata: {
+					organizerId: TEST_ORGANIZER_ID,
+					transition: "draft_to_under_review",
+				},
+			}),
+		);
+	});
+
+	it("returns a same-owner no-op when publishing an already published event", async () => {
+		const { db, update } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[
+				buildEventRow({
+					status: "published",
+					publishedAt: new Date("2026-04-26T12:00:00.000Z"),
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			categoryRows,
+			pricingRows,
+			[buildHeroImageRow()],
+			[],
+			[],
+		]);
+
+		const result = await publishEvent(
+			createPublishDeps(db),
+			TEST_USER_ID,
+			EVENT_ID,
+		);
+
+		expect(result.transition).toBe("noop_already_published");
+		expect(result.event.status).toBe("published");
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("returns a same-owner no-op when publishing an event already under review", async () => {
+		const { db, update } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[
+				buildEventRow({
+					status: "under_review",
+					submittedForReviewAt: new Date("2026-04-26T12:00:00.000Z"),
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			categoryRows,
+			pricingRows,
+			[buildHeroImageRow()],
+			[],
+			[],
+		]);
+
+		const result = await publishEvent(
+			createPublishDeps(db),
+			TEST_USER_ID,
+			EVENT_ID,
+		);
+
+		expect(result.transition).toBe("noop_already_under_review");
+		expect(result.event.status).toBe("under_review");
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		"completed",
+		"cancelled",
+	] as const)("rejects publish attempts for %s events", async (status) => {
+		const { db, update } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[
+				buildEventRow({
+					status,
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			categoryRows,
+			pricingRows,
+			[buildHeroImageRow()],
+			[],
+			[],
+		]);
+
+		await expect(
+			publishEvent(createPublishDeps(db), TEST_USER_ID, EVENT_ID),
+		).rejects.toThrow(ConflictError);
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("does not write a transition audit when a concurrent publish wins first", async () => {
+		const auditLogger = createAuditLogger();
+		const { db } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[
+				buildEventRow({
+					status: "draft",
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			categoryRows,
+			pricingRows,
+			[buildHeroImageRow()],
+			[],
+			[],
+		]);
+
+		await expect(
+			publishEvent(createPublishDeps(db, auditLogger), TEST_USER_ID, EVENT_ID),
+		).rejects.toThrow(ConflictError);
+
+		const auditActions = vi
+			.mocked(auditLogger.log)
+			.mock.calls.map(([entry]) => entry.action);
+		expect(auditActions).toEqual(["event.publish_requested"]);
+		expect(auditActions).not.toContain("event.publish");
+		expect(auditActions).not.toContain("event.submit_for_review");
+	});
+
+	it("rejects publish attempts for events owned by a different organizer", async () => {
+		const { db, update } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[buildEventRow({ organizerId: OTHER_ORGANIZER_ID })],
+		]);
+
+		await expect(
+			publishEvent(createPublishDeps(db), TEST_USER_ID, EVENT_ID),
+		).rejects.toThrow(ForbiddenError);
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("unpublishes a published event and records safe audit metadata", async () => {
+		const publishedAt = new Date("2026-04-26T12:05:00.000Z");
+		const updatedAt = new Date("2026-04-26T12:10:00.000Z");
+		const auditLogger = createAuditLogger();
+		const { db, transaction, updateSet } = createMockSlugStore(
+			[
+				[verifiedOrganizerRow],
+				[
+					buildEventRow({
+						status: "published",
+						publishedAt,
+					}),
+				],
+			],
+			[
+				buildEventRow({
+					status: "draft",
+					publishedAt: null,
+					updatedAt,
+				}),
+			],
+		);
+
+		const result = await unpublishEvent(
+			createPublishDeps(db, auditLogger),
+			TEST_USER_ID,
+			EVENT_ID,
+			"127.0.0.1",
+		);
+
+		expect(transaction).toHaveBeenCalledOnce();
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				status: "draft",
+				publishedAt: null,
+				updatedAt: expect.any(Date),
+			}),
+		);
+		expect(result).toMatchObject({
+			transition: "published_to_draft",
+			event: {
+				id: EVENT_ID,
+				status: "draft",
+				publishedAt: null,
+			},
+		});
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.unpublish",
+				actorRole: "organizer",
+				metadata: {
+					organizerId: TEST_ORGANIZER_ID,
+					transition: "published_to_draft",
+				},
+			}),
+		);
+	});
+
+	it("blocks publishing when categories and dependent pricing are missing", async () => {
+		const auditLogger = createAuditLogger();
+		const { db, update } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[
+				buildEventRow({
+					status: "draft",
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			[],
+			[],
+			[buildHeroImageRow()],
+			[],
+			[],
+		]);
+
+		await expect(
+			publishEvent(createPublishDeps(db, auditLogger), TEST_USER_ID, EVENT_ID),
+		).rejects.toMatchObject({
+			code: "EVENT_PRICING_INACTIVE",
+			statusCode: 400,
+		});
+		expect(update).not.toHaveBeenCalled();
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.publish_denied",
+				metadata: expect.objectContaining({
+					denialCodes: expect.arrayContaining([
+						"categories_configured",
+						"pricing_configured",
+						"active_pricing",
+					]),
+				}),
+			}),
+		);
+	});
+
+	it("blocks publishing when configured categories have no active pricing tiers", async () => {
+		const { db, update } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[
+				buildEventRow({
+					status: "draft",
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			categoryRows,
+			[],
+			[buildHeroImageRow()],
+			[],
+			[],
+		]);
+
+		await expect(
+			publishEvent(createPublishDeps(db), TEST_USER_ID, EVENT_ID),
+		).rejects.toMatchObject({
+			code: "EVENT_PRICING_INACTIVE",
+			statusCode: 400,
+		});
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("blocks publishing when the event start date is no longer in the future", async () => {
+		const { db, update } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[
+				buildEventRow({
+					status: "draft",
+					startAt: new Date("2020-01-01T00:00:00.000Z"),
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			categoryRows,
+			pricingRows,
+			[buildHeroImageRow()],
+			[],
+			[],
+		]);
+
+		await expect(
+			publishEvent(createPublishDeps(db), TEST_USER_ID, EVENT_ID),
+		).rejects.toMatchObject({
+			code: "EVENT_DATE_IN_PAST",
+			statusCode: 400,
+		});
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("blocks publishing when a stale slug conflict is detected", async () => {
+		const { db, update } = createMockSlugStore([
+			[verifiedOrganizerRow],
+			[
+				buildEventRow({
+					status: "draft",
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			categoryRows,
+			pricingRows,
+			[buildHeroImageRow()],
+			[{ id: "99999999-9999-4999-8999-999999999999" }],
+			[],
+		]);
+
+		await expect(
+			publishEvent(createPublishDeps(db), TEST_USER_ID, EVENT_ID),
+		).rejects.toMatchObject({
+			code: "EVENT_SLUG_CONFLICT",
+			statusCode: 409,
+		});
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("audits denied publish attempts with denial codes only", async () => {
+		const auditLogger = createAuditLogger();
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[
+				buildEventRow({
+					status: "draft",
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			categoryRows,
+			pricingRows,
+			[buildHeroImageRow()],
+			[],
+			[],
+		]);
+
+		await expect(
+			publishEvent(
+				createPublishDeps(db, auditLogger),
+				TEST_USER_ID,
+				EVENT_ID,
+				"127.0.0.1",
+			),
+		).rejects.toMatchObject({
+			code: "ORGANIZER_NOT_VERIFIED",
+			statusCode: 403,
+		});
+
+		expect(update).not.toHaveBeenCalled();
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.publish_denied",
+				actorRole: "organizer",
+				metadata: {
+					organizerId: TEST_ORGANIZER_ID,
+					denialCodes: ["organizer_verified", "razorpay_linked"],
+				},
+			}),
+		);
+	});
+
+	it("admin approval re-checks real organizer readiness and blocks stale Razorpay failures", async () => {
+		const auditLogger = createAuditLogger();
+		const { db, update } = createMockSlugStore([
+			[
+				buildEventRow({
+					status: "under_review",
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			[
+				{
+					id: TEST_ORGANIZER_ID,
+					isVerified: true,
+					razorpayAccountStatus: "not_started",
+				},
+			],
+			categoryRows,
+			pricingRows,
+			[buildHeroImageRow()],
+			[],
+			[],
+		]);
+
+		await expect(
+			adminApproveEvent(
+				createPublishDeps(db, auditLogger),
+				EVENT_ID,
+				"99999999-9999-4999-8999-999999999999",
+				"127.0.0.1",
+			),
+		).rejects.toMatchObject({
+			code: "RAZORPAY_NOT_LINKED",
+			statusCode: 403,
+		});
+
+		expect(update).not.toHaveBeenCalled();
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.publish_denied",
+				actorRole: "admin",
+				metadata: {
+					organizerId: TEST_ORGANIZER_ID,
+					source: "admin_review",
+					denialCodes: ["razorpay_linked"],
+				},
+			}),
+		);
+	});
+
+	it("admin approval re-checks completeness before publishing under-review events", async () => {
+		const auditLogger = createAuditLogger();
+		const { db, update } = createMockSlugStore([
+			[
+				buildEventRow({
+					status: "under_review",
+					refundPolicy: validEventPoliciesInput.refundPolicy,
+					cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+				}),
+			],
+			[
+				{
+					id: TEST_ORGANIZER_ID,
+					isVerified: true,
+					razorpayAccountStatus: "active",
+				},
+			],
+			categoryRows,
+			pricingRows,
+			[],
+			[],
+			[],
+		]);
+
+		await expect(
+			adminApproveEvent(
+				createPublishDeps(db, auditLogger),
+				EVENT_ID,
+				"99999999-9999-4999-8999-999999999999",
+			),
+		).rejects.toMatchObject({
+			code: "EVENT_INCOMPLETE",
+			statusCode: 400,
+		});
+
+		expect(update).not.toHaveBeenCalled();
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.publish_denied",
+				actorRole: "admin",
+				metadata: expect.objectContaining({
+					source: "admin_review",
+					denialCodes: ["hero_image_uploaded"],
+				}),
+			}),
+		);
+	});
+
+	it("admin approval publishes only after current real readiness passes", async () => {
+		const publishedAt = new Date("2026-04-26T12:20:00.000Z");
+		const auditLogger = createAuditLogger();
+		const { db, transaction, updateSet } = createMockSlugStore(
+			[
+				[
+					buildEventRow({
+						status: "under_review",
+						refundPolicy: validEventPoliciesInput.refundPolicy,
+						cancellationPolicy: validEventPoliciesInput.cancellationPolicy,
+					}),
+				],
+				[
+					{
+						id: TEST_ORGANIZER_ID,
+						isVerified: true,
+						razorpayAccountStatus: "active",
+					},
+				],
+				categoryRows,
+				pricingRows,
+				[buildHeroImageRow()],
+				[],
+				[],
+			],
+			[
+				buildEventRow({
+					status: "published",
+					publishedAt,
+				}),
+			],
+		);
+
+		const result = await adminApproveEvent(
+			createPublishDeps(db, auditLogger),
+			EVENT_ID,
+			"99999999-9999-4999-8999-999999999999",
+		);
+
+		expect(transaction).toHaveBeenCalledOnce();
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				status: "published",
+				publishedAt: expect.any(Date),
+				updatedAt: expect.any(Date),
+			}),
+		);
+		expect(result).toMatchObject({
+			transition: "under_review_to_published",
+			event: {
+				status: "published",
+				publishedAt: "2026-04-26T12:20:00.000Z",
+			},
+			readiness: {
+				ready: true,
+				items: expect.arrayContaining([
+					expect.objectContaining({
+						check: "organizer_verified",
+						passed: true,
+					}),
+					expect.objectContaining({
+						check: "razorpay_linked",
+						passed: true,
+					}),
+				]),
+			},
+		});
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.publish",
+				actorRole: "admin",
+				metadata: {
+					organizerId: TEST_ORGANIZER_ID,
+					source: "admin_review",
+					transition: "under_review_to_published",
+				},
+			}),
+		);
+	});
+
+	it("admin rejection returns an under-review event to draft and audits the review transition", async () => {
+		const auditLogger = createAuditLogger();
+		const { db, updateSet } = createMockSlugStore(
+			[[buildEventRow({ status: "under_review" })]],
+			[
+				buildEventRow({
+					status: "draft",
+					publishedAt: null,
+				}),
+			],
+		);
+
+		const result = await adminRejectEvent(
+			createPublishDeps(db, auditLogger),
+			EVENT_ID,
+			"99999999-9999-4999-8999-999999999999",
+			"Not ready",
+		);
+
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				status: "draft",
+				publishedAt: null,
+				updatedAt: expect.any(Date),
+			}),
+		);
+		expect(result.transition).toBe("under_review_to_draft");
+		expect(auditLogger.log).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "event.publish_rejected",
+				actorRole: "admin",
+				metadata: {
+					organizerId: TEST_ORGANIZER_ID,
+					source: "admin_review",
+					transition: "under_review_to_draft",
+				},
+			}),
+		);
 	});
 });
 

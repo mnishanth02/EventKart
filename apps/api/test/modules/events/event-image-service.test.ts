@@ -2,7 +2,11 @@ import type { Database } from "@repo/db";
 import { AUDIT_ACTIONS } from "@repo/shared/constants";
 import { describe, expect, it, vi } from "vitest";
 import type { AuditLogger } from "../../../src/lib/audit.js";
-import { ForbiddenError, ValidationError } from "../../../src/lib/errors.js";
+import {
+	ConflictError,
+	ForbiddenError,
+	ValidationError,
+} from "../../../src/lib/errors.js";
 import type { StorageClient } from "../../../src/lib/storage.js";
 import { MAX_FILE_SIZES } from "../../../src/lib/storage.js";
 import {
@@ -24,12 +28,14 @@ type SelectRows = Record<string, unknown>[];
 
 function createSelectQuery(rows: SelectRows) {
 	const query = {
+		for: vi.fn(),
 		from: vi.fn(),
 		limit: vi.fn(),
 		orderBy: vi.fn(),
 		where: vi.fn(),
 	};
 
+	query.for.mockReturnValue(query);
 	query.from.mockReturnValue(query);
 	query.where.mockReturnValue(query);
 	query.limit.mockResolvedValue(rows);
@@ -219,6 +225,8 @@ describe("requestEventImageUpload", () => {
 			method: "PUT",
 			key: `events/images/${EVENT_ID}/generated.jpg`,
 		});
+		expect(mockDb.transaction).toHaveBeenCalledOnce();
+		expect(mockDb.selectQueries[1]?.for).toHaveBeenCalledWith("update");
 		expect(deps.storage.getUploadUrl).toHaveBeenCalledWith({
 			category: "event-image",
 			ownerId: EVENT_ID,
@@ -237,6 +245,10 @@ describe("requestEventImageUpload", () => {
 			expect.objectContaining({
 				action: AUDIT_ACTIONS.EVENT_IMAGE_UPLOAD_REQUEST,
 				resourceId: EVENT_ID,
+				metadata: {
+					imageId: IMAGE_ID,
+					kind: "hero",
+				},
 			}),
 		);
 	});
@@ -256,6 +268,38 @@ describe("requestEventImageUpload", () => {
 		).rejects.toThrow(ValidationError);
 		expect(storage.getUploadUrl).not.toHaveBeenCalled();
 		expect(mockDb.select).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		"published",
+		"under_review",
+	] as const)("rejects hero upload-url requests for %s events before storage, DB insert, or audit", async (status) => {
+		const mockDb = createMockDb({
+			selectRows: [[buildOrganizerRow()], [buildEventRow({ status })]],
+		});
+		const storage = createStorage();
+		const deps = createDeps(mockDb.db, storage);
+
+		await expect(
+			requestEventImageUpload(
+				deps,
+				USER_ID,
+				EVENT_ID,
+				{
+					kind: "hero",
+					fileName: "hero.jpg",
+					contentType: "image/jpeg",
+					sizeBytes: 1_024_000,
+				},
+				"127.0.0.1",
+			),
+		).rejects.toThrow(ConflictError);
+
+		expect(storage.getUploadUrl).not.toHaveBeenCalled();
+		expect(mockDb.transaction).toHaveBeenCalledOnce();
+		expect(mockDb.selectQueries[1]?.for).toHaveBeenCalledWith("update");
+		expect(mockDb.insertValues).not.toHaveBeenCalled();
+		expect(deps.auditLogger.log).not.toHaveBeenCalled();
 	});
 });
 
@@ -294,6 +338,7 @@ describe("confirmEventImageUpload", () => {
 			`events/images/${EVENT_ID}/hero.jpg`,
 		);
 		expect(mockDb.transaction).toHaveBeenCalledOnce();
+		expect(mockDb.selectQueries[1]?.for).toHaveBeenCalledWith("update");
 		expect(mockDb.updateSets).toEqual([
 			expect.objectContaining({ status: "replaced" }),
 			expect.objectContaining({ status: "uploaded", sizeBytes: 2_048_000 }),
@@ -302,6 +347,11 @@ describe("confirmEventImageUpload", () => {
 			expect.objectContaining({
 				action: AUDIT_ACTIONS.EVENT_IMAGE_UPLOAD_CONFIRM,
 				resourceId: EVENT_ID,
+				metadata: {
+					imageId: IMAGE_ID,
+					kind: "hero",
+					fileSize: 2_048_000,
+				},
 			}),
 		);
 	});
@@ -322,6 +372,30 @@ describe("confirmEventImageUpload", () => {
 				IMAGE_ID,
 			),
 		).rejects.toThrow(ValidationError);
+		expect(mockDb.update).not.toHaveBeenCalled();
+	});
+
+	it("rejects replacing a hero image after the event is published", async () => {
+		const mockDb = createMockDb({
+			selectRows: [
+				[buildOrganizerRow()],
+				[buildEventRow({ status: "published" })],
+				[buildImageRow({ kind: "hero" })],
+			],
+		});
+		const storage = createStorage();
+
+		await expect(
+			confirmEventImageUpload(
+				createDeps(mockDb.db, storage),
+				USER_ID,
+				EVENT_ID,
+				IMAGE_ID,
+			),
+		).rejects.toThrow(ConflictError);
+		expect(storage.headObject).not.toHaveBeenCalled();
+		expect(mockDb.transaction).toHaveBeenCalledOnce();
+		expect(mockDb.selectQueries[1]?.for).toHaveBeenCalledWith("update");
 		expect(mockDb.update).not.toHaveBeenCalled();
 	});
 
@@ -351,7 +425,7 @@ describe("confirmEventImageUpload", () => {
 		expect(mockDb.updateSets).toEqual([
 			expect.objectContaining({ status: "deleted" }),
 		]);
-		expect(mockDb.transaction).not.toHaveBeenCalled();
+		expect(mockDb.transaction).toHaveBeenCalledOnce();
 	});
 
 	it("rejects and deletes an object when the uploaded file is empty", async () => {
@@ -474,6 +548,8 @@ describe("deleteEventImage", () => {
 		const result = await deleteEventImage(deps, USER_ID, EVENT_ID, IMAGE_ID);
 
 		expect(result).toEqual({ deleted: true, imageId: IMAGE_ID, kind: "hero" });
+		expect(mockDb.transaction).toHaveBeenCalledOnce();
+		expect(mockDb.selectQueries[1]?.for).toHaveBeenCalledWith("update");
 		expect(deps.storage.deleteObject).toHaveBeenCalledWith(
 			`events/images/${EVENT_ID}/hero.jpg`,
 		);
@@ -484,6 +560,10 @@ describe("deleteEventImage", () => {
 			expect.objectContaining({
 				action: AUDIT_ACTIONS.EVENT_IMAGE_DELETE,
 				resourceId: EVENT_ID,
+				metadata: {
+					imageId: IMAGE_ID,
+					kind: "hero",
+				},
 			}),
 		);
 	});
@@ -500,6 +580,25 @@ describe("deleteEventImage", () => {
 		await expect(
 			deleteEventImage(deps, USER_ID, EVENT_ID, IMAGE_ID),
 		).rejects.toThrow("storage unavailable");
+		expect(mockDb.update).not.toHaveBeenCalled();
+		expect(deps.auditLogger.log).not.toHaveBeenCalled();
+	});
+
+	it("rejects deleting a hero image after the event is published", async () => {
+		const mockDb = createMockDb({
+			selectRows: [
+				[buildOrganizerRow()],
+				[buildEventRow({ status: "published" })],
+				[buildImageRow({ status: "uploaded", kind: "hero" })],
+			],
+		});
+		const storage = createStorage();
+		const deps = createDeps(mockDb.db, storage);
+
+		await expect(
+			deleteEventImage(deps, USER_ID, EVENT_ID, IMAGE_ID),
+		).rejects.toThrow(ConflictError);
+		expect(storage.deleteObject).not.toHaveBeenCalled();
 		expect(mockDb.update).not.toHaveBeenCalled();
 		expect(deps.auditLogger.log).not.toHaveBeenCalled();
 	});

@@ -21,6 +21,9 @@ const mockRequestEventImageUpload = vi.fn();
 const mockConfirmEventImageUpload = vi.fn();
 const mockListEventImages = vi.fn();
 const mockDeleteEventImage = vi.fn();
+const mockGetPublishReadiness = vi.fn();
+const mockPublishEvent = vi.fn();
+const mockUnpublishEvent = vi.fn();
 
 vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	const actual =
@@ -33,6 +36,10 @@ vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 		getEvent: (...args: unknown[]) => mockGetEvent(...args),
 		updateDraftEvent: (...args: unknown[]) => mockUpdateDraftEvent(...args),
 		getEventPolicies: (...args: unknown[]) => mockGetEventPolicies(...args),
+		getPublishReadiness: (...args: unknown[]) =>
+			mockGetPublishReadiness(...args),
+		publishEvent: (...args: unknown[]) => mockPublishEvent(...args),
+		unpublishEvent: (...args: unknown[]) => mockUnpublishEvent(...args),
 		listEventPricing: (...args: unknown[]) => mockListEventPricing(...args),
 		listEventCategories: (...args: unknown[]) =>
 			mockListEventCategories(...args),
@@ -127,6 +134,8 @@ const mockEvent = {
 	routeDetails: "Single-loop 10K route through Race Course Road.",
 	refundPolicy: null,
 	cancellationPolicy: null,
+	publishedAt: null,
+	submittedForReviewAt: null,
 	isPaid: true,
 	currency: "INR",
 	status: "draft",
@@ -258,6 +267,22 @@ const mockPricingTiers = [
 		category: mockCategories[1],
 	},
 ];
+
+const mockPublishReadiness = {
+	ready: true,
+	eventStatus: "draft",
+	isPaid: true,
+	requiresRazorpay: true,
+	wouldRequireAdminReview: false,
+	items: [
+		{
+			check: "organizer_verified",
+			passed: true,
+			message: "Organizer verified",
+			severity: "error",
+		},
+	],
+};
 
 function getSessionRedisMock(app: FastifyInstance) {
 	return app.redis.session.get as ReturnType<typeof vi.fn>;
@@ -568,6 +593,137 @@ describe("GET /api/v1/events/:eventId", () => {
 
 		expect(response.statusCode).toBe(400);
 		expect(mockGetEvent).not.toHaveBeenCalled();
+	});
+});
+
+describe("event publish workflow routes", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockGetPublishReadiness.mockReset();
+		mockPublishEvent.mockReset();
+		mockUnpublishEvent.mockReset();
+	});
+
+	it("returns publish readiness for an authenticated organizer without CSRF", async () => {
+		setupOrganizerSession(app);
+		mockGetPublishReadiness.mockResolvedValue(mockPublishReadiness);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/publish-readiness`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: mockPublishReadiness,
+		});
+		expect(mockGetPublishReadiness).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_USER_ID,
+			TEST_EVENT_ID,
+		);
+	});
+
+	it("publishes an event when CSRF token is present", async () => {
+		setupOrganizerSession(app);
+		const publishedEvent = {
+			...mockEvent,
+			status: "published",
+			publishedAt: "2026-04-26T12:05:00.000Z",
+		};
+		mockPublishEvent.mockResolvedValue({
+			event: publishedEvent,
+			transition: "draft_to_published",
+			readiness: mockPublishReadiness,
+		});
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/publish`,
+			...csrf,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			success: true,
+			data: {
+				event: publishedEvent,
+				transition: "draft_to_published",
+			},
+		});
+		expect(mockPublishEvent).toHaveBeenCalledOnce();
+	});
+
+	it("requires CSRF for publish", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/publish`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockPublishEvent).not.toHaveBeenCalled();
+	});
+
+	it("unpublishes an event when CSRF token is present", async () => {
+		setupOrganizerSession(app);
+		mockUnpublishEvent.mockResolvedValue({
+			event: mockEvent,
+			transition: "published_to_draft",
+		});
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/unpublish`,
+			...csrf,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			success: true,
+			data: {
+				event: mockEvent,
+				transition: "published_to_draft",
+			},
+		});
+		expect(mockUnpublishEvent).toHaveBeenCalledOnce();
+	});
+
+	it("requires CSRF for unpublish", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/unpublish`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockUnpublishEvent).not.toHaveBeenCalled();
 	});
 });
 
@@ -1605,6 +1761,41 @@ describe("POST /api/v1/events/:eventId/images/upload-url", () => {
 		expect(response.statusCode).toBe(400);
 		expect(mockRequestEventImageUpload).not.toHaveBeenCalled();
 	});
+
+	it.each(["published", "under_review"] as const)(
+		"returns 409 when the service rejects hero upload-url requests for %s events",
+		async (status) => {
+			setupOrganizerSession(app);
+			mockRequestEventImageUpload.mockRejectedValue(
+				new ConflictError(
+					"Hero images can only be changed while the event is in draft status",
+				),
+			);
+			const csrf = buildCsrfHeaders();
+
+			const response = await app.inject({
+				method: "POST",
+				url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
+				...csrf,
+				payload: { ...validImageUploadBody, kind: "hero" },
+			});
+
+			expect(response.statusCode).toBe(409);
+			expect(response.json()).toMatchObject({
+				success: false,
+				error: {
+					code: "CONFLICT",
+					message:
+						"Hero images can only be changed while the event is in draft status",
+				},
+			});
+			expect(mockRequestEventImageUpload).toHaveBeenCalledOnce();
+			const [_deps, _userId, _eventId, body] = mockRequestEventImageUpload.mock
+				.calls[0] as [unknown, string, string, Record<string, unknown>];
+			expect(body).toEqual({ ...validImageUploadBody, kind: "hero" });
+			expect(status).toMatch(/published|under_review/);
+		},
+	);
 });
 
 describe("event image routes with disabled storage", () => {

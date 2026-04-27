@@ -11,9 +11,12 @@ import {
 	eventImageUploadUrlResponseSchema,
 	eventPoliciesConfigSchema,
 	eventPoliciesRecordSchema,
+	publishEventResponseSchema,
+	publishReadinessResponseSchema,
 	eventPricingConfigSchema,
 	eventPricingTierWithCategorySchema,
 	eventSchema,
+	unpublishEventResponseSchema,
 	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
@@ -37,6 +40,12 @@ export const createEventResponseSchema = z.object({
 });
 
 export const updateEventResponseSchema = createEventResponseSchema;
+
+export {
+	publishEventResponseSchema,
+	publishReadinessResponseSchema,
+	unpublishEventResponseSchema,
+};
 
 export const eventCategoriesBodySchema = eventCategoriesConfigSchema;
 

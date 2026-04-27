@@ -29,6 +29,9 @@ import type {
 	EventPoliciesResponse,
 	EventPricingResponse,
 	EventResponse,
+	PublishEventResponse,
+	PublishReadinessResponse,
+	UnpublishEventResponse,
 } from "./types";
 
 export async function createEventOnServer(
@@ -48,6 +51,41 @@ export async function getEventOnServer(
 ): Promise<EventResponse> {
 	const headers = getForwardedAuthHeaders();
 	return serverApiClient<EventResponse>(`/events/${eventId}`, { headers });
+}
+
+export async function getPublishReadinessOnServer(
+	eventId: string,
+): Promise<PublishReadinessResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<PublishReadinessResponse>(
+		`/events/${eventId}/publish-readiness`,
+		{ headers },
+	);
+}
+
+export async function publishEventOnServer(
+	eventId: string,
+): Promise<PublishEventResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<PublishEventResponse>(`/events/${eventId}/publish`, {
+		method: "POST",
+		headers,
+	});
+}
+
+export async function unpublishEventOnServer(
+	eventId: string,
+): Promise<UnpublishEventResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<UnpublishEventResponse>(
+		`/events/${eventId}/unpublish`,
+		{
+			method: "POST",
+			headers,
+		},
+	);
 }
 
 export async function updateEventOnServer(

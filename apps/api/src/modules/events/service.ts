@@ -1,11 +1,13 @@
 import { and, type Database, eq, ne } from "@repo/db";
 import {
 	eventCategories,
+	eventImages,
 	eventPricingTiers,
 	events,
+	organizers,
 	slugRedirects,
 } from "@repo/db/schema";
-import { DEFAULT_EVENT_STATUS } from "@repo/shared/constants";
+import { AUDIT_ACTIONS, DEFAULT_EVENT_STATUS } from "@repo/shared/constants";
 import type {
 	Event,
 	EventCategoryRecord,
@@ -13,7 +15,11 @@ import type {
 	EventPoliciesRecord,
 	EventPricingConfig,
 	EventPricingTierWithCategory,
+	EventPublishTransition,
 	EventSlug,
+	PublishReadiness,
+	PublishReadinessCheck,
+	PublishReadinessItem,
 	UpdateEvent,
 } from "@repo/shared/schemas";
 import {
@@ -31,7 +37,9 @@ import {
 } from "@repo/shared/schemas";
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
 import type { FastifyBaseLogger } from "fastify";
+import type { AuditLogger } from "../../lib/audit.js";
 import {
+	AppError,
 	ConflictError,
 	ForbiddenError,
 	NotFoundError,
@@ -88,10 +96,22 @@ export interface UpdateDraftEventDeps {
 	log: Pick<FastifyBaseLogger, "info">;
 }
 
+export interface EventPublishDeps {
+	db: Database;
+	log: Pick<FastifyBaseLogger, "info">;
+	auditLogger: AuditLogger;
+	requiresAdminReview?: (organizerId: string) => Promise<boolean>;
+}
+
 type EventRow = typeof events.$inferSelect;
 type EventCategoryRow = typeof eventCategories.$inferSelect;
 type EventPricingTierRow = typeof eventPricingTiers.$inferSelect;
 type EventStatusValue = EventRow["status"];
+interface OrganizerPublishReadinessRow {
+	id: string;
+	isVerified: boolean;
+	razorpayAccountStatus: string;
+}
 
 export type EventCategoryStore = Pick<Database, "delete" | "insert" | "select">;
 type EventLookupStore = Pick<Database, "select">;
@@ -121,6 +141,17 @@ export interface ApplicableEventPrice {
 	earlyBirdDeadline: string | null;
 	isEarlyBird: boolean;
 	asOf: string;
+}
+
+export interface PublishEventResult {
+	event: Event;
+	transition: EventPublishTransition;
+	readiness: PublishReadiness;
+}
+
+export interface UnpublishEventResult {
+	event: Event;
+	transition: EventPublishTransition;
 }
 
 export interface EventCategoryTransactionalStore extends EventCategoryStore {
@@ -181,11 +212,311 @@ function toEventResponse(row: EventRow): Event {
 		routeDetails: row.routeDetails,
 		refundPolicy: row.refundPolicy ?? null,
 		cancellationPolicy: row.cancellationPolicy ?? null,
+		publishedAt: row.publishedAt?.toISOString() ?? null,
+		submittedForReviewAt: row.submittedForReviewAt?.toISOString() ?? null,
 		isPaid: row.isPaid,
 		currency: row.currency,
 		status: row.status,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
+	});
+}
+
+function createReadinessItem(
+	check: PublishReadinessCheck,
+	passed: boolean,
+	message: string,
+): PublishReadinessItem {
+	return {
+		check,
+		passed,
+		message,
+		severity: "error",
+	};
+}
+
+function getEffectiveTierPrice(
+	tier: EventPricingTierWithCategory,
+	asOf: Date,
+): number {
+	if (
+		tier.earlyBirdPrice != null &&
+		tier.earlyBirdDeadline != null &&
+		asOf.getTime() <= new Date(tier.earlyBirdDeadline).getTime()
+	) {
+		return tier.earlyBirdPrice;
+	}
+
+	return tier.basePrice;
+}
+
+function getDenialCodes(readiness: PublishReadiness): string[] {
+	return readiness.items
+		.filter((item) => !item.passed)
+		.map((item) => item.check);
+}
+
+async function selectUploadedHeroImageExists(
+	db: Pick<Database, "select">,
+	eventId: string,
+): Promise<boolean> {
+	const rows = await db
+		.select({ id: eventImages.id })
+		.from(eventImages)
+		.where(
+			and(
+				eq(eventImages.eventId, eventId),
+				eq(eventImages.kind, "hero"),
+				eq(eventImages.status, "uploaded"),
+			),
+		)
+		.limit(1);
+
+	return rows.length > 0;
+}
+
+async function defaultRequiresAdminReview(
+	_organizerId: string,
+): Promise<boolean> {
+	// TODO(I-1.2.7): Implement first-N paid events policy and admin review queue.
+	return false;
+}
+
+function invalidateEventCache(_event: Event): void {
+	// TODO(I-2.4.2): Purge CDN/public-event cache on publish and unpublish.
+}
+
+async function buildPublishReadinessForEvent(
+	db: Database,
+	event: EventRow,
+	organizer: OrganizerPublishReadinessRow,
+	now: Date,
+	adminReviewPolicy = defaultRequiresAdminReview,
+): Promise<PublishReadiness> {
+	const categories = await selectEventCategories(db, event.id);
+	const tiers = await selectEventPricingTiers(db, event.id, categories);
+	const hasHeroImage = await selectUploadedHeroImageExists(db, event.id);
+	const effectivePrices = tiers.map((tier) => getEffectiveTierPrice(tier, now));
+	const hasPositiveTier = effectivePrices.some((price) => price > 0);
+	const isPaid = event.isPaid || hasPositiveTier;
+	const requiresRazorpay = isPaid;
+	const tierCategoryIds = new Set(tiers.map((tier) => tier.eventCategoryId));
+	const pricingCoversEveryCategory =
+		categories.length > 0 &&
+		tiers.length === categories.length &&
+		categories.every((category) => tierCategoryIds.has(category.id));
+	const activePricing = tiers.length > 0 && (!isPaid || hasPositiveTier);
+	const slugAvailable = !(await slugExists(db, parseEventSlug(event.slug), {
+		excludeEventId: event.id,
+	}));
+	const wouldRequireAdminReview =
+		isPaid && (await adminReviewPolicy(organizer.id));
+
+	const items: PublishReadinessItem[] = [
+		createReadinessItem(
+			"organizer_verified",
+			organizer.isVerified,
+			organizer.isVerified
+				? "Organizer verified"
+				: "Organizer verification is required before publishing",
+		),
+		createReadinessItem(
+			"razorpay_linked",
+			!requiresRazorpay || organizer.razorpayAccountStatus === "active",
+			!requiresRazorpay || organizer.razorpayAccountStatus === "active"
+				? "Razorpay linked account is active"
+				: "Paid events require an active Razorpay linked account",
+		),
+		createReadinessItem(
+			"categories_configured",
+			categories.length > 0,
+			categories.length > 0
+				? "Event categories are configured"
+				: "Add at least one event category",
+		),
+		createReadinessItem(
+			"pricing_configured",
+			pricingCoversEveryCategory,
+			pricingCoversEveryCategory
+				? "Pricing is configured for every category"
+				: "Configure pricing for every event category",
+		),
+		createReadinessItem(
+			"active_pricing",
+			activePricing,
+			activePricing
+				? "At least one active pricing tier is available"
+				: "Add at least one active paid pricing tier",
+		),
+		createReadinessItem(
+			"hero_image_uploaded",
+			hasHeroImage,
+			hasHeroImage ? "Hero image uploaded" : "Upload a hero image",
+		),
+		createReadinessItem(
+			"refund_policy_configured",
+			Boolean(event.refundPolicy?.trim()),
+			event.refundPolicy?.trim()
+				? "Refund policy configured"
+				: "Add a refund policy",
+		),
+		createReadinessItem(
+			"cancellation_policy_configured",
+			Boolean(event.cancellationPolicy?.trim()),
+			event.cancellationPolicy?.trim()
+				? "Cancellation policy configured"
+				: "Add a cancellation policy",
+		),
+		createReadinessItem(
+			"event_starts_in_future",
+			event.startAt.getTime() > now.getTime(),
+			event.startAt.getTime() > now.getTime()
+				? "Event start time is in the future"
+				: "Event start time must be in the future",
+		),
+		createReadinessItem(
+			"event_ends_in_future",
+			event.endAt.getTime() > now.getTime(),
+			event.endAt.getTime() > now.getTime()
+				? "Event end time is in the future"
+				: "Event end time must be in the future",
+		),
+		createReadinessItem(
+			"slug_available",
+			slugAvailable,
+			slugAvailable
+				? "Event slug is available"
+				: "Event slug is no longer available",
+		),
+	];
+
+	return {
+		ready: items.every((item) => item.passed),
+		eventStatus: event.status,
+		isPaid,
+		requiresRazorpay,
+		wouldRequireAdminReview,
+		items,
+	};
+}
+
+async function selectOrganizerForPublishReadiness(
+	db: Pick<Database, "select">,
+	organizerId: string,
+): Promise<OrganizerPublishReadinessRow> {
+	const [organizer] = await db
+		.select({
+			id: organizers.id,
+			isVerified: organizers.isVerified,
+			razorpayAccountStatus: organizers.razorpayAccountStatus,
+		})
+		.from(organizers)
+		.where(eq(organizers.id, organizerId))
+		.limit(1);
+
+	if (!organizer) {
+		throw new NotFoundError("Organizer profile not found");
+	}
+
+	return organizer;
+}
+
+function throwPublishReadinessError(readiness: PublishReadiness): never {
+	const denialCodes = getDenialCodes(readiness);
+	if (denialCodes.includes("organizer_verified")) {
+		throw new AppError(
+			"Organizer verification is required before publishing",
+			403,
+			"ORGANIZER_NOT_VERIFIED",
+			{ readiness },
+		);
+	}
+	if (denialCodes.includes("razorpay_linked")) {
+		throw new AppError(
+			"Paid events require an active Razorpay linked account",
+			403,
+			"RAZORPAY_NOT_LINKED",
+			{ readiness },
+		);
+	}
+	if (denialCodes.includes("slug_available")) {
+		throw new AppError(
+			"Event slug is no longer available",
+			409,
+			"EVENT_SLUG_CONFLICT",
+			{ readiness },
+		);
+	}
+	if (
+		denialCodes.includes("event_starts_in_future") ||
+		denialCodes.includes("event_ends_in_future")
+	) {
+		throw new AppError(
+			"Event dates must be in the future before publishing",
+			400,
+			"EVENT_DATE_IN_PAST",
+			{ readiness },
+		);
+	}
+	if (denialCodes.includes("active_pricing")) {
+		throw new AppError(
+			"Event pricing must include an active paid tier",
+			400,
+			"EVENT_PRICING_INACTIVE",
+			{ readiness },
+		);
+	}
+	throw new AppError(
+		"Event is incomplete and cannot be published",
+		400,
+		"EVENT_INCOMPLETE",
+		{ readiness },
+	);
+}
+
+async function getOwnedEventAndOrganizer(
+	db: Database,
+	userId: string,
+	eventId: string,
+	options: { forUpdate?: boolean } = {},
+) {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const organizer = await getOrganizerByUserId(db, userId);
+	if (!organizer) {
+		throw new NotFoundError(
+			"Organizer profile not found. Please register first.",
+		);
+	}
+
+	const event = await selectEventForCategories(db, parsedEventId, options);
+	if (event.organizerId !== organizer.id) {
+		throw new ForbiddenError("You do not have access to this event");
+	}
+
+	return { event, organizer };
+}
+
+async function auditPublishDenied(
+	deps: EventPublishDeps,
+	input: {
+		userId: string;
+		organizerId: string;
+		eventId: string;
+		readiness: PublishReadiness;
+		ipAddress?: string;
+	},
+) {
+	await deps.auditLogger.log({
+		actorId: input.userId,
+		actorRole: "organizer",
+		action: AUDIT_ACTIONS.EVENT_PUBLISH_DENIED,
+		resourceType: "event",
+		resourceId: input.eventId,
+		ipAddress: input.ipAddress,
+		metadata: {
+			organizerId: input.organizerId,
+			denialCodes: getDenialCodes(input.readiness),
+		},
 	});
 }
 
@@ -935,6 +1266,373 @@ export async function replaceEventPricing(
 	);
 
 	return tiers;
+}
+
+export async function getPublishReadiness(
+	db: Database,
+	userId: string,
+	eventId: string,
+): Promise<PublishReadiness> {
+	const { event, organizer } = await getOwnedEventAndOrganizer(
+		db,
+		userId,
+		eventId,
+	);
+
+	return buildPublishReadinessForEvent(db, event, organizer, new Date());
+}
+
+export async function publishEvent(
+	deps: EventPublishDeps,
+	userId: string,
+	eventId: string,
+	ipAddress?: string,
+): Promise<PublishEventResult> {
+	const result = await deps.db.transaction(async (tx) => {
+		const { event, organizer } = await getOwnedEventAndOrganizer(
+			tx as unknown as Database,
+			userId,
+			eventId,
+			{ forUpdate: true },
+		);
+
+		const readiness = await buildPublishReadinessForEvent(
+			tx as unknown as Database,
+			event,
+			organizer,
+			new Date(),
+			deps.requiresAdminReview,
+		);
+
+		if (event.status === "published") {
+			return {
+				event: toEventResponse(event),
+				transition: "noop_already_published" as const,
+				readiness,
+			};
+		}
+
+		if (event.status === "under_review") {
+			return {
+				event: toEventResponse(event),
+				transition: "noop_already_under_review" as const,
+				readiness,
+			};
+		}
+
+		if (event.status === "completed" || event.status === "cancelled") {
+			await auditPublishDenied(deps, {
+				userId,
+				organizerId: organizer.id,
+				eventId: event.id,
+				readiness,
+				ipAddress,
+			});
+			throw new ConflictError(
+				"Event cannot be published from its current state",
+			);
+		}
+
+		if (event.status !== DEFAULT_EVENT_STATUS) {
+			await auditPublishDenied(deps, {
+				userId,
+				organizerId: organizer.id,
+				eventId: event.id,
+				readiness,
+				ipAddress,
+			});
+			throw new AppError(
+				"Event can only be published from draft status",
+				400,
+				"EVENT_NOT_PUBLISHABLE",
+				{ readiness },
+			);
+		}
+
+		if (!readiness.ready) {
+			await auditPublishDenied(deps, {
+				userId,
+				organizerId: organizer.id,
+				eventId: event.id,
+				readiness,
+				ipAddress,
+			});
+			throwPublishReadinessError(readiness);
+		}
+
+		await deps.auditLogger.log({
+			actorId: userId,
+			actorRole: "organizer",
+			action: AUDIT_ACTIONS.EVENT_PUBLISH_REQUESTED,
+			resourceType: "event",
+			resourceId: event.id,
+			ipAddress,
+			metadata: {
+				organizerId: organizer.id,
+				from: event.status,
+			},
+		});
+
+		const now = new Date();
+		const transition: EventPublishTransition =
+			readiness.wouldRequireAdminReview === true
+				? "draft_to_under_review"
+				: "draft_to_published";
+		const [updated] = await tx
+			.update(events)
+			.set({
+				status:
+					transition === "draft_to_under_review" ? "under_review" : "published",
+				publishedAt: transition === "draft_to_published" ? now : null,
+				submittedForReviewAt:
+					transition === "draft_to_under_review" ? now : null,
+				updatedAt: now,
+			})
+			.where(
+				and(eq(events.id, event.id), eq(events.status, DEFAULT_EVENT_STATUS)),
+			)
+			.returning();
+
+		if (!updated) {
+			throw new ConflictError("Event publish status changed. Please retry.");
+		}
+
+		await deps.auditLogger.log({
+			actorId: userId,
+			actorRole: "organizer",
+			action:
+				transition === "draft_to_under_review"
+					? AUDIT_ACTIONS.EVENT_SUBMIT_FOR_REVIEW
+					: AUDIT_ACTIONS.EVENT_PUBLISH,
+			resourceType: "event",
+			resourceId: event.id,
+			ipAddress,
+			metadata: {
+				organizerId: organizer.id,
+				transition,
+			},
+		});
+
+		const responseEvent = toEventResponse(updated);
+		invalidateEventCache(responseEvent);
+		return { event: responseEvent, transition, readiness };
+	});
+
+	deps.log.info(
+		{
+			eventId,
+			userId,
+			transition: result.transition,
+		},
+		"Event publish workflow completed",
+	);
+
+	return result;
+}
+
+export async function unpublishEvent(
+	deps: EventPublishDeps,
+	userId: string,
+	eventId: string,
+	ipAddress?: string,
+): Promise<UnpublishEventResult> {
+	const result = await deps.db.transaction(async (tx) => {
+		const { event, organizer } = await getOwnedEventAndOrganizer(
+			tx as unknown as Database,
+			userId,
+			eventId,
+			{ forUpdate: true },
+		);
+
+		if (event.status !== "published") {
+			if (event.status === "completed" || event.status === "cancelled") {
+				throw new ConflictError("Event cannot be unpublished from this state");
+			}
+			throw new AppError(
+				"Only published events can be unpublished",
+				400,
+				"EVENT_NOT_UNPUBLISHABLE",
+			);
+		}
+
+		// TODO(Phase 3 bookings): block unpublish when confirmed bookings/tickets exist.
+		const now = new Date();
+		const [updated] = await tx
+			.update(events)
+			.set({
+				status: DEFAULT_EVENT_STATUS,
+				publishedAt: null,
+				updatedAt: now,
+			})
+			.where(and(eq(events.id, event.id), eq(events.status, "published")))
+			.returning();
+
+		if (!updated) {
+			throw new ConflictError("Event unpublish status changed. Please retry.");
+		}
+
+		await deps.auditLogger.log({
+			actorId: userId,
+			actorRole: "organizer",
+			action: AUDIT_ACTIONS.EVENT_UNPUBLISH,
+			resourceType: "event",
+			resourceId: event.id,
+			ipAddress,
+			metadata: {
+				organizerId: organizer.id,
+				transition: "published_to_draft",
+			},
+		});
+
+		const responseEvent = toEventResponse(updated);
+		invalidateEventCache(responseEvent);
+		return {
+			event: responseEvent,
+			transition: "published_to_draft" as const,
+		};
+	});
+
+	deps.log.info(
+		{
+			eventId,
+			userId,
+			transition: result.transition,
+		},
+		"Event unpublish workflow completed",
+	);
+
+	return result;
+}
+
+export async function adminApproveEvent(
+	deps: EventPublishDeps,
+	eventId: string,
+	adminUserId: string,
+	ipAddress?: string,
+): Promise<PublishEventResult> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const result = await deps.db.transaction(async (tx) => {
+		const event = await selectEventForCategories(tx, parsedEventId, {
+			forUpdate: true,
+		});
+		if (event.status !== "under_review") {
+			throw new ConflictError("Only events under review can be approved");
+		}
+		const organizer = await selectOrganizerForPublishReadiness(
+			tx as unknown as Database,
+			event.organizerId,
+		);
+		const now = new Date();
+		const readiness = await buildPublishReadinessForEvent(
+			tx as unknown as Database,
+			event,
+			organizer,
+			now,
+			deps.requiresAdminReview,
+		);
+		if (!readiness.ready) {
+			await deps.auditLogger.log({
+				actorId: adminUserId,
+				actorRole: "admin",
+				action: AUDIT_ACTIONS.EVENT_PUBLISH_DENIED,
+				resourceType: "event",
+				resourceId: parsedEventId,
+				ipAddress,
+				metadata: {
+					organizerId: event.organizerId,
+					source: "admin_review",
+					denialCodes: getDenialCodes(readiness),
+				},
+			});
+			throwPublishReadinessError(readiness);
+		}
+		const [updated] = await tx
+			.update(events)
+			.set({
+				status: "published",
+				publishedAt: now,
+				updatedAt: now,
+			})
+			.where(
+				and(eq(events.id, parsedEventId), eq(events.status, "under_review")),
+			)
+			.returning();
+		if (!updated) {
+			throw new ConflictError("Event review status changed. Please retry.");
+		}
+		await deps.auditLogger.log({
+			actorId: adminUserId,
+			actorRole: "admin",
+			action: AUDIT_ACTIONS.EVENT_PUBLISH,
+			resourceType: "event",
+			resourceId: parsedEventId,
+			ipAddress,
+			metadata: {
+				organizerId: event.organizerId,
+				source: "admin_review",
+				transition: "under_review_to_published",
+			},
+		});
+		const responseEvent = toEventResponse(updated);
+		invalidateEventCache(responseEvent);
+		return {
+			event: responseEvent,
+			transition: "under_review_to_published" as const,
+			readiness,
+		};
+	});
+
+	return result;
+}
+
+export async function adminRejectEvent(
+	deps: EventPublishDeps,
+	eventId: string,
+	adminUserId: string,
+	_reason?: string,
+	ipAddress?: string,
+): Promise<UnpublishEventResult> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	return deps.db.transaction(async (tx) => {
+		const event = await selectEventForCategories(tx, parsedEventId, {
+			forUpdate: true,
+		});
+		if (event.status !== "under_review") {
+			throw new ConflictError("Only events under review can be rejected");
+		}
+		const now = new Date();
+		const [updated] = await tx
+			.update(events)
+			.set({
+				status: DEFAULT_EVENT_STATUS,
+				publishedAt: null,
+				updatedAt: now,
+			})
+			.where(
+				and(eq(events.id, parsedEventId), eq(events.status, "under_review")),
+			)
+			.returning();
+		if (!updated) {
+			throw new ConflictError("Event review status changed. Please retry.");
+		}
+		await deps.auditLogger.log({
+			actorId: adminUserId,
+			actorRole: "admin",
+			action: AUDIT_ACTIONS.EVENT_PUBLISH_REJECTED,
+			resourceType: "event",
+			resourceId: parsedEventId,
+			ipAddress,
+			metadata: {
+				organizerId: event.organizerId,
+				source: "admin_review",
+				transition: "under_review_to_draft",
+			},
+		});
+		return {
+			event: toEventResponse(updated),
+			transition: "under_review_to_draft" as const,
+		};
+	});
 }
 
 function parseEventSlug(slug: string): EventSlug {

@@ -258,6 +258,8 @@ export const eventSchema = z.object({
 	routeDetails: z.string(),
 	refundPolicy: z.string().nullable(),
 	cancellationPolicy: z.string().nullable(),
+	publishedAt: eventDateTimeSchema.nullable(),
+	submittedForReviewAt: eventDateTimeSchema.nullable(),
 	isPaid: z.boolean(),
 	currency: eventCurrencySchema,
 	status: eventStatusSchema,

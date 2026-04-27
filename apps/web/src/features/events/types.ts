@@ -11,6 +11,9 @@ import type {
 	EventPoliciesRecord,
 	EventPricingConfig,
 	EventPricingTierWithCategory,
+	PublishReadiness,
+	PublishEventResponse,
+	UnpublishEventResponse,
 } from "@repo/shared/schemas";
 
 export type {
@@ -26,6 +29,9 @@ export type {
 	EventPoliciesRecord,
 	EventPricingConfig,
 	EventPricingTierWithCategory,
+	PublishEventResponse,
+	PublishReadiness,
+	UnpublishEventResponse,
 };
 
 export type EventResponse = {
@@ -76,4 +82,9 @@ export type EventImageDeleteResponse = {
 		imageId: string;
 		kind: EventImageKind;
 	};
+};
+
+export type PublishReadinessResponse = {
+	success: true;
+	data: PublishReadiness;
 };

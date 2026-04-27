@@ -28,6 +28,9 @@ import {
 	eventPoliciesResponseSchema,
 	eventPricingBodySchema,
 	eventPricingResponseSchema,
+	publishEventResponseSchema,
+	publishReadinessResponseSchema,
+	unpublishEventResponseSchema,
 	updateEventBodySchema,
 	updateEventResponseSchema,
 } from "./schemas.js";
@@ -35,10 +38,13 @@ import {
 	createDraftEvent,
 	getEvent,
 	getEventPolicies,
+	getPublishReadiness,
 	listEventCategories,
 	listEventPricing,
+	publishEvent,
 	replaceEventCategories,
 	replaceEventPricing,
+	unpublishEvent,
 	updateDraftEvent,
 	updateEventPolicies,
 } from "./service.js";
@@ -110,6 +116,105 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			);
 
 			return { success: true as const, data: event };
+		},
+	);
+
+	typedApp.get(
+		"/:eventId/publish-readiness",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				response: {
+					200: publishReadinessResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const readiness = await getPublishReadiness(
+				app.db,
+				session.userId,
+				request.params.eventId,
+			);
+
+			return { success: true as const, data: readiness };
+		},
+	);
+
+	typedApp.post(
+		"/:eventId/publish",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				response: {
+					200: publishEventResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const auditLogger = createAuditLogger(app.db, request.log);
+			const result = await publishEvent(
+				{ db: app.db, log: request.log, auditLogger },
+				session.userId,
+				request.params.eventId,
+				request.ip,
+			);
+
+			return { success: true as const, data: result };
+		},
+	);
+
+	typedApp.post(
+		"/:eventId/unpublish",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				response: {
+					200: unpublishEventResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const auditLogger = createAuditLogger(app.db, request.log);
+			const result = await unpublishEvent(
+				{ db: app.db, log: request.log, auditLogger },
+				session.userId,
+				request.params.eventId,
+				request.ip,
+			);
+
+			return { success: true as const, data: result };
 		},
 	);
 

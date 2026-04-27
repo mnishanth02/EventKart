@@ -210,6 +210,8 @@ describe("eventSchema", () => {
 			postalCode: null,
 			refundPolicy: null,
 			cancellationPolicy: null,
+			publishedAt: null,
+			submittedForReviewAt: null,
 			status: "draft",
 			createdAt: "2026-04-26T12:00:00.000Z",
 			updatedAt: "2026-04-26T12:00:00.000Z",

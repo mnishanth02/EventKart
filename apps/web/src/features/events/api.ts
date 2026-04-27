@@ -19,6 +19,9 @@ import {
 	type EventPoliciesRecord,
 	type EventPricingConfigInput,
 	type EventPricingTierWithCategory,
+	type PublishEventResponse,
+	type PublishReadiness,
+	type UnpublishEventResponse,
 	eventCategoriesConfigSchema,
 	eventImageConfirmRequestSchema,
 	eventImageDeleteRequestSchema,
@@ -123,6 +126,30 @@ export const getEvent = createServerFn({ method: "GET" })
 	.handler(async ({ data }): Promise<Event> => {
 		const { getEventOnServer } = await import("./api.server");
 		const response = await getEventOnServer(data.eventId);
+		return response.data;
+	});
+
+export const getPublishReadiness = createServerFn({ method: "GET" })
+	.inputValidator((data: GetEventInput) => eventIdInputSchema.parse(data))
+	.handler(async ({ data }): Promise<PublishReadiness> => {
+		const { getPublishReadinessOnServer } = await import("./api.server");
+		const response = await getPublishReadinessOnServer(data.eventId);
+		return response.data;
+	});
+
+export const publishEvent = createServerFn({ method: "POST" })
+	.inputValidator((data: GetEventInput) => eventIdInputSchema.parse(data))
+	.handler(async ({ data }): Promise<PublishEventResponse["data"]> => {
+		const { publishEventOnServer } = await import("./api.server");
+		const response = await publishEventOnServer(data.eventId);
+		return response.data;
+	});
+
+export const unpublishEvent = createServerFn({ method: "POST" })
+	.inputValidator((data: GetEventInput) => eventIdInputSchema.parse(data))
+	.handler(async ({ data }): Promise<UnpublishEventResponse["data"]> => {
+		const { unpublishEventOnServer } = await import("./api.server");
+		const response = await unpublishEventOnServer(data.eventId);
 		return response.data;
 	});
 

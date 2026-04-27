@@ -17,6 +17,7 @@ import {
 import type { FastifyBaseLogger } from "fastify";
 import type { AuditLogger } from "../../lib/audit.js";
 import {
+	ConflictError,
 	ForbiddenError,
 	NotFoundError,
 	ValidationError,
@@ -34,6 +35,7 @@ export interface EventImageServiceDeps {
 
 type EventImageRow = typeof eventImages.$inferSelect;
 type EventStatusValue = (typeof events.$inferSelect)["status"];
+type EventImageEventStore = Pick<Database, "select">;
 
 function contentTypeToExtension(contentType: string): string {
 	const map: Record<string, string> = {
@@ -64,6 +66,17 @@ function isPubliclyReadableEventStatus(status: EventStatusValue): boolean {
 	return status === "published" || status === "completed";
 }
 
+function assertHeroImageMutationAllowed(
+	eventStatus: EventStatusValue,
+	imageKind: EventImageRow["kind"],
+) {
+	if (imageKind === "hero" && eventStatus !== "draft") {
+		throw new ConflictError(
+			"Hero images can only be changed while the event is in draft status",
+		);
+	}
+}
+
 async function getOrganizerForUser(db: Database, userId: string) {
 	const organizer = await getOrganizerByUserId(db, userId);
 	if (!organizer) {
@@ -74,45 +87,46 @@ async function getOrganizerForUser(db: Database, userId: string) {
 	return organizer;
 }
 
-async function assertWritableEvent(
-	db: Database,
-	userId: string,
+async function assertEventWritableForOrganizer(
+	db: EventImageEventStore,
+	organizerId: string,
 	eventId: string,
+	options: { forUpdate?: boolean } = {},
 ) {
-	const organizer = await getOrganizerForUser(db, userId);
-	const [event] = await db
+	const query = db
 		.select({
 			id: events.id,
 			organizerId: events.organizerId,
 			status: events.status,
 		})
 		.from(events)
-		.where(eq(events.id, eventId))
-		.limit(1);
+		.where(eq(events.id, eventId));
+
+	const [event] = options.forUpdate
+		? await query.for("update").limit(1)
+		: await query.limit(1);
 
 	if (!event) {
 		throw new NotFoundError("Event not found");
 	}
 
-	if (event.organizerId !== organizer.id) {
+	if (event.organizerId !== organizerId) {
 		throw new ForbiddenError("You do not have access to this event");
 	}
 
-	return { event, organizer };
+	return event;
 }
 
-async function rejectInvalidUploadedObject(
+async function markInvalidUploadedObject(
 	deps: EventImageServiceDeps,
 	image: EventImageRow,
-	message: string,
-): Promise<never> {
+	db: Pick<Database, "update"> = deps.db,
+) {
 	await deps.storage.deleteObject(image.storageKey);
-	await deps.db
+	await db
 		.update(eventImages)
 		.set({ status: "deleted", updatedAt: new Date() })
 		.where(eq(eventImages.id, image.id));
-
-	throw new ValidationError(message);
 }
 
 async function assertEventReadable(
@@ -172,28 +186,46 @@ export async function requestEventImageUpload(
 		});
 	}
 
-	const { organizer } = await assertWritableEvent(deps.db, userId, eventId);
 	const data = parsed.data;
-	const uploadResult = await deps.storage.getUploadUrl({
-		category: "event-image",
-		ownerId: eventId,
-		extension: contentTypeToExtension(data.contentType),
-		contentType: data.contentType,
-	});
-
-	const [image] = await deps.db
-		.insert(eventImages)
-		.values({
+	const organizer = await getOrganizerForUser(deps.db, userId);
+	const { image, uploadResult } = await deps.db.transaction(async (tx) => {
+		const event = await assertEventWritableForOrganizer(
+			tx,
+			organizer.id,
 			eventId,
-			kind: data.kind,
-			fileName: data.fileName,
+			{
+				forUpdate: true,
+			},
+		);
+		assertHeroImageMutationAllowed(event.status, data.kind);
+
+		const uploadResult = await deps.storage.getUploadUrl({
+			category: "event-image",
+			ownerId: eventId,
+			extension: contentTypeToExtension(data.contentType),
 			contentType: data.contentType,
-			sizeBytes: data.sizeBytes,
-			storageKey: uploadResult.key,
-			status: "pending",
-			uploadedBy: userId,
-		})
-		.returning();
+		});
+
+		const [image] = await tx
+			.insert(eventImages)
+			.values({
+				eventId,
+				kind: data.kind,
+				fileName: data.fileName,
+				contentType: data.contentType,
+				sizeBytes: data.sizeBytes,
+				storageKey: uploadResult.key,
+				status: "pending",
+				uploadedBy: userId,
+			})
+			.returning();
+
+		if (!image) {
+			throw new Error("Failed to insert event image record");
+		}
+
+		return { image, uploadResult };
+	});
 
 	if (!image) {
 		throw new Error("Failed to insert event image record");
@@ -213,7 +245,6 @@ export async function requestEventImageUpload(
 		metadata: {
 			imageId: image.id,
 			kind: image.kind,
-			storageKey: image.storageKey,
 		},
 		ipAddress,
 	});
@@ -241,71 +272,76 @@ export async function confirmEventImageUpload(
 		);
 	}
 
-	const { organizer } = await assertWritableEvent(deps.db, userId, eventId);
-	const [image] = await deps.db
-		.select()
-		.from(eventImages)
-		.where(
-			and(
-				eq(eventImages.id, imageId),
-				eq(eventImages.eventId, eventId),
-				eq(eventImages.status, "pending"),
-			),
-		)
-		.limit(1);
-
-	if (!image) {
-		throw new NotFoundError("Event image not found or already confirmed");
-	}
-
-	const metadata = await deps.storage.headObject(image.storageKey);
-	if (!metadata) {
-		throw new ValidationError(
-			"Upload not found. Please try uploading the file again.",
+	const organizer = await getOrganizerForUser(deps.db, userId);
+	let image!: EventImageRow;
+	let contentLength!: number;
+	const confirmResult = await deps.db.transaction(async (tx) => {
+		const event = await assertEventWritableForOrganizer(
+			tx,
+			organizer.id,
+			eventId,
+			{
+				forUpdate: true,
+			},
 		);
-	}
+		const [pendingImage] = await tx
+			.select()
+			.from(eventImages)
+			.where(
+				and(
+					eq(eventImages.id, imageId),
+					eq(eventImages.eventId, eventId),
+					eq(eventImages.status, "pending"),
+				),
+			)
+			.limit(1);
 
-	const contentType = metadata.contentType;
-	if (!contentType) {
-		return rejectInvalidUploadedObject(
-			deps,
-			image,
-			"Upload metadata is missing content type",
-		);
-	}
+		if (!pendingImage) {
+			throw new NotFoundError("Event image not found or already confirmed");
+		}
+		image = pendingImage;
+		assertHeroImageMutationAllowed(event.status, image.kind);
 
-	if (contentType !== image.contentType) {
-		return rejectInvalidUploadedObject(
-			deps,
-			image,
-			"Uploaded content type does not match the requested image content type",
-		);
-	}
+		const metadata = await deps.storage.headObject(image.storageKey);
+		if (!metadata) {
+			throw new ValidationError(
+				"Upload not found. Please try uploading the file again.",
+			);
+		}
 
-	const maxSize = MAX_FILE_SIZES["event-image"];
-	const contentLength = metadata.contentLength;
-	if (contentLength == null) {
-		return rejectInvalidUploadedObject(
-			deps,
-			image,
-			"Upload metadata is missing file size",
-		);
-	}
+		const contentType = metadata.contentType;
+		if (!contentType) {
+			await markInvalidUploadedObject(deps, image, tx);
+			return { invalidMessage: "Upload metadata is missing content type" };
+		}
 
-	if (contentLength < 1) {
-		return rejectInvalidUploadedObject(deps, image, "Uploaded file is empty");
-	}
+		if (contentType !== image.contentType) {
+			await markInvalidUploadedObject(deps, image, tx);
+			return {
+				invalidMessage:
+					"Uploaded content type does not match the requested image content type",
+			};
+		}
 
-	if (contentLength > maxSize) {
-		return rejectInvalidUploadedObject(
-			deps,
-			image,
-			`File size ${Math.round((contentLength / 1024 / 1024) * 10) / 10}MB exceeds maximum of ${maxSize / 1024 / 1024}MB`,
-		);
-	}
+		const maxSize = MAX_FILE_SIZES["event-image"];
+		contentLength = metadata.contentLength ?? 0;
+		if (metadata.contentLength == null) {
+			await markInvalidUploadedObject(deps, image, tx);
+			return { invalidMessage: "Upload metadata is missing file size" };
+		}
 
-	let updated!: EventImageRow;
-	await deps.db.transaction(async (tx) => {
+		if (contentLength < 1) {
+			await markInvalidUploadedObject(deps, image, tx);
+			return { invalidMessage: "Uploaded file is empty" };
+		}
+
+		if (contentLength > maxSize) {
+			await markInvalidUploadedObject(deps, image, tx);
+			return {
+				invalidMessage: `File size ${Math.round((contentLength / 1024 / 1024) * 10) / 10}MB exceeds maximum of ${maxSize / 1024 / 1024}MB`,
+			};
+		}
+
 		await tx
 			.update(eventImages)
 			.set({ status: "replaced", updatedAt: new Date() })
@@ -332,8 +368,17 @@ export async function confirmEventImageUpload(
 			throw new Error("Failed to update event image status");
 		}
 
-		updated = result;
+		return { updated: result };
 	});
+
+	if (confirmResult.invalidMessage) {
+		throw new ValidationError(confirmResult.invalidMessage);
+	}
+
+	const updated = confirmResult.updated;
+	if (!updated) {
+		throw new Error("Failed to update event image status");
+	}
 
 	deps.log.info(
 		{
@@ -355,7 +400,6 @@ export async function confirmEventImageUpload(
 		metadata: {
 			imageId,
 			kind: image.kind,
-			storageKey: image.storageKey,
 			fileSize: contentLength,
 		},
 		ipAddress,
@@ -418,29 +462,42 @@ export async function deleteEventImage(
 		);
 	}
 
-	const { organizer } = await assertWritableEvent(deps.db, userId, eventId);
-	const [image] = await deps.db
-		.select()
-		.from(eventImages)
-		.where(
-			and(
-				eq(eventImages.id, imageId),
-				eq(eventImages.eventId, eventId),
-				inArray(eventImages.status, ["pending", "uploaded"]),
-			),
-		)
-		.limit(1);
+	const organizer = await getOrganizerForUser(deps.db, userId);
+	const image = await deps.db.transaction(async (tx) => {
+		const event = await assertEventWritableForOrganizer(
+			tx,
+			organizer.id,
+			eventId,
+			{
+				forUpdate: true,
+			},
+		);
+		const [image] = await tx
+			.select()
+			.from(eventImages)
+			.where(
+				and(
+					eq(eventImages.id, imageId),
+					eq(eventImages.eventId, eventId),
+					inArray(eventImages.status, ["pending", "uploaded"]),
+				),
+			)
+			.limit(1);
 
-	if (!image) {
-		throw new NotFoundError("Event image not found");
-	}
+		if (!image) {
+			throw new NotFoundError("Event image not found");
+		}
+		assertHeroImageMutationAllowed(event.status, image.kind);
 
-	await deps.storage.deleteObject(image.storageKey);
+		await deps.storage.deleteObject(image.storageKey);
 
-	await deps.db
-		.update(eventImages)
-		.set({ status: "deleted", updatedAt: new Date() })
-		.where(eq(eventImages.id, imageId));
+		await tx
+			.update(eventImages)
+			.set({ status: "deleted", updatedAt: new Date() })
+			.where(eq(eventImages.id, imageId));
+
+		return image;
+	});
 
 	deps.log.info(
 		{ eventId, imageId, kind: image.kind, organizerId: organizer.id },
@@ -456,7 +513,6 @@ export async function deleteEventImage(
 		metadata: {
 			imageId,
 			kind: image.kind,
-			storageKey: image.storageKey,
 		},
 		ipAddress,
 	});

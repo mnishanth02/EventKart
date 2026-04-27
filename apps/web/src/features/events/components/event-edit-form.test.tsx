@@ -130,6 +130,8 @@ const event = eventSchema.parse({
 	routeDetails: "Single-loop 10K route through Race Course Road.",
 	refundPolicy: null,
 	cancellationPolicy: null,
+	publishedAt: null,
+	submittedForReviewAt: null,
 	isPaid: true,
 	currency: "INR",
 	status: "draft",

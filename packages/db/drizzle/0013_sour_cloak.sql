@@ -1,0 +1,2 @@
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "published_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "submitted_for_review_at" timestamp with time zone;

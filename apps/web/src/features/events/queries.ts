@@ -5,6 +5,7 @@ import {
 	getEventImages,
 	getEventPolicies,
 	getEventPricing,
+	getPublishReadiness,
 } from "./api";
 import type { EventImageListQuery } from "./types";
 
@@ -14,6 +15,18 @@ export function eventQueryOptions(eventId: string) {
 	return queryOptions({
 		queryKey: eventQueryKey(eventId),
 		queryFn: () => getEvent({ data: { eventId } }),
+		staleTime: 30_000,
+		gcTime: 300_000,
+	});
+}
+
+export const publishReadinessQueryKey = (eventId: string) =>
+	["events", eventId, "publish-readiness"] as const;
+
+export function publishReadinessQueryOptions(eventId: string) {
+	return queryOptions({
+		queryKey: publishReadinessQueryKey(eventId),
+		queryFn: () => getPublishReadiness({ data: { eventId } }),
 		staleTime: 30_000,
 		gcTime: 300_000,
 	});

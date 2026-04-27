@@ -17,16 +17,19 @@ import {
 	getForwardedAuthHeaders,
 } from "#/lib/auth/server-fns.server";
 import {
-	createEventOnServer,
 	confirmEventImageUploadOnServer,
+	createEventOnServer,
 	deleteEventImageOnServer,
 	getEventOnServer,
-	listEventImagesOnServer,
+	getPublishReadinessOnServer,
 	listEventCategoriesOnServer,
+	listEventImagesOnServer,
 	listEventPricingOnServer,
-	requestEventImageUploadUrlOnServer,
+	publishEventOnServer,
 	replaceEventCategoriesOnServer,
 	replaceEventPricingOnServer,
+	requestEventImageUploadUrlOnServer,
+	unpublishEventOnServer,
 	updateEventOnServer,
 } from "./api.server";
 import type { EventUpdatePayload } from "./form-values";
@@ -140,6 +143,8 @@ const eventResponse = {
 	status: "draft",
 	refundPolicy: null,
 	cancellationPolicy: null,
+	publishedAt: null,
+	submittedForReviewAt: null,
 	createdAt: "2026-04-26T12:00:00.000Z",
 	updatedAt: "2026-04-26T12:00:00.000Z",
 } as const;
@@ -236,6 +241,103 @@ describe("getEventOnServer", () => {
 				"X-Request-ID": "req-1",
 			},
 		});
+	});
+});
+
+describe("publish workflow server helpers", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("gets publish readiness with forwarded auth headers and no same-origin assertion", async () => {
+		const response = {
+			success: true,
+			data: {
+				ready: false,
+				eventStatus: "draft",
+				isPaid: true,
+				requiresRazorpay: true,
+				wouldRequireAdminReview: false,
+				items: [],
+			},
+		};
+		vi.mocked(serverApiClient).mockResolvedValueOnce(response);
+
+		const result = await getPublishReadinessOnServer(eventId);
+
+		expect(result).toBe(response);
+		expect(assertSameOriginMutationRequest).not.toHaveBeenCalled();
+		expect(serverApiClient).toHaveBeenCalledWith(
+			`/events/${eventId}/publish-readiness`,
+			{
+				headers: {
+					Cookie: "session=test-session",
+					"X-Request-ID": "req-1",
+				},
+			},
+		);
+	});
+
+	it("posts publish with same-origin validation and returns parsed JSON", async () => {
+		const response = {
+			success: true,
+			data: {
+				event: { ...eventResponse, status: "published" },
+				transition: "draft_to_published",
+				readiness: {
+					ready: true,
+					eventStatus: "draft",
+					isPaid: true,
+					requiresRazorpay: true,
+					wouldRequireAdminReview: false,
+					items: [],
+				},
+			},
+		};
+		vi.mocked(serverApiClient).mockResolvedValueOnce(response);
+
+		const result = await publishEventOnServer(eventId);
+
+		expect(result).toBe(response);
+		expect(assertSameOriginMutationRequest).toHaveBeenCalledOnce();
+		expect(serverApiClient).toHaveBeenCalledWith(`/events/${eventId}/publish`, {
+			method: "POST",
+			headers: {
+				Cookie: "session=test-session",
+				"X-Request-ID": "req-1",
+			},
+		});
+	});
+
+	it("posts unpublish with same-origin validation and returns parsed JSON", async () => {
+		const response = {
+			success: true,
+			data: {
+				event: eventResponse,
+				transition: "published_to_draft",
+			},
+		};
+		vi.mocked(serverApiClient).mockResolvedValueOnce(response);
+
+		const result = await unpublishEventOnServer(eventId);
+
+		expect(result).toBe(response);
+		expect(assertSameOriginMutationRequest).toHaveBeenCalledOnce();
+		expect(serverApiClient).toHaveBeenCalledWith(
+			`/events/${eventId}/unpublish`,
+			{
+				method: "POST",
+				headers: {
+					Cookie: "session=test-session",
+					"X-Request-ID": "req-1",
+				},
+			},
+		);
 	});
 });
 
