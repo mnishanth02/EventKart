@@ -25,7 +25,13 @@ apps/web/src/
 │   ├── check-in/
 │   ├── organizer/
 │   └── admin/
-├── components/             # Shared shadcn/ui components
+├── components/             # App-level shared components (NOT shadcn primitives)
+│   ├── design-system/      # App-level DS primitives (CurrencyINR, GlassSurface,
+│   │                       #   BentoGrid, toastUndo/toastRetry). Compose shadcn,
+│   │                       #   contain no domain logic. Reuse before adding.
+│   ├── layout/             # Shell chrome: headers, sidebar, footer, mobile nav
+│   ├── loading/            # Skeletons & spinners shared across routes
+│   └── error/              # not-found, error-fallback, api-error-alert
 ├── lib/
 │   ├── auth/               # Auth middleware + helpers
 │   └── utils/
@@ -43,6 +49,34 @@ features/<domain>/
 ├── hooks.ts
 └── types.ts            # Client-safe types
 ```
+
+### Component Placement Rule
+
+**Before creating any UI file, search in this order and reuse if a match exists:**
+
+1. `packages/ui/src/components/ui/` — shadcn primitives (Button, Card, Dialog, Input, …).
+2. `packages/ui/src/components/` and `packages/ui/src/hooks/` — shared non-shadcn primitives and generic hooks.
+3. `apps/web/src/components/design-system/` — app-level DS primitives that compose shadcn (CurrencyINR, GlassSurface, BentoGrid, toastUndo, toastRetry).
+4. `apps/web/src/components/{layout,loading,error}/` — app shell chrome.
+5. `apps/web/src/features/<domain>/components/` — domain-specific composites.
+
+**Where new code goes:**
+
+| Adding…                                                     | Goes in                                                  |
+| ----------------------------------------------------------- | -------------------------------------------------------- |
+| Generic shadcn primitive (no app-specific logic)            | `packages/ui/src/components/ui/`                         |
+| Generic hook or util (no app deps, ships to any app)        | `packages/ui/src/hooks/` or `packages/ui/src/lib/`       |
+| App-level DS primitive (composes shadcn, no domain logic)   | `apps/web/src/components/design-system/`                 |
+| App chrome (header, footer, sidebar, error/loading states)  | `apps/web/src/components/{layout,error,loading}/`        |
+| Component tied to one domain (events, organizer, payments…) | `apps/web/src/features/<domain>/components/`             |
+
+**Hard rule:** `packages/ui` is for code that could plausibly ship to a second
+app. App-specific composites, route-aware components, and any code that
+imports from `@tanstack/react-router`, `@repo/db`, or `apps/web/src/features/`
+do **not** belong in `packages/ui`.
+
+When extending an existing primitive, prefer adding a prop over forking the
+file. Forks diverge.
 
 ---
 

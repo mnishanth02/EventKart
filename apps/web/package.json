@@ -17,6 +17,7 @@
 	},
 	"dependencies": {
 		"@faker-js/faker": "^10.4.0",
+		"@number-flow/react": "^0.6.0",
 		"@posthog/react": "^1.9.0",
 		"@repo/shared": "workspace:*",
 		"@repo/ui": "workspace:*",
