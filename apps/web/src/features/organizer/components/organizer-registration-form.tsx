@@ -16,6 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ApiClientError } from "#/lib/api-client.shared";
+import { toastRetry } from "@/components/design-system";
 import { registerOrganizer } from "../api";
 import { ORGANIZER_QUERY_KEY } from "../queries";
 
@@ -60,10 +61,11 @@ export function OrganizerRegistrationForm() {
 				void navigate({ to: "/org" });
 				return;
 			}
-			toast.error(
+			toastRetry(
 				error instanceof Error
 					? error.message
 					: "Failed to create organizer profile. Please try again.",
+				{ onRetry: () => form.handleSubmit() },
 			);
 		},
 	});

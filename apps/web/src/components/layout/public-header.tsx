@@ -5,6 +5,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { SearchIcon } from "lucide-react";
 import * as React from "react";
 import { useAuth, useRequireAuth } from "#/features/auth/hooks";
+import { GlassSurface } from "@/components/design-system";
 
 function PublicHeader() {
 	const [scrolled, setScrolled] = React.useState(false);
@@ -42,15 +43,15 @@ function PublicHeader() {
 
 	return (
 		<>
-			<header
-				className={cn(
-					"fixed inset-x-0 top-0 z-50 h-14 transition-all duration-300 md:h-16",
-					scrolled
-						? "border-b border-border/50 bg-background/80 backdrop-blur-xl"
-						: "bg-transparent",
+			<header className="fixed inset-x-0 top-0 z-50 h-14 transition-all duration-300 md:h-16">
+				{scrolled && (
+					<GlassSurface
+						tier={1}
+						className="absolute inset-0 rounded-none border-x-0 border-t-0"
+						aria-hidden
+					/>
 				)}
-			>
-				<div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 md:px-6 lg:px-8">
+				<div className="relative mx-auto flex h-full max-w-7xl items-center justify-between px-4 md:px-6 lg:px-8">
 					{/* Logo */}
 					<Link
 						to="/"

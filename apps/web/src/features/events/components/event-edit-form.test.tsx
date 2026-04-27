@@ -19,6 +19,7 @@ vi.mock("sonner", () => ({
 	toast: {
 		success: vi.fn(),
 		error: vi.fn(),
+		promise: vi.fn(),
 	},
 }));
 
@@ -248,7 +249,12 @@ describe("EventEditForm", () => {
 		fireEvent.click(submitButton);
 
 		await waitFor(() =>
-			expect(toast.error).toHaveBeenCalledWith("API unavailable"),
+			expect(toast.error).toHaveBeenCalledWith(
+				"API unavailable",
+				expect.objectContaining({
+					action: expect.objectContaining({ label: "Retry" }),
+				}),
+			),
 		);
 	});
 });

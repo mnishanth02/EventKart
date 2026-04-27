@@ -17,6 +17,7 @@ import { Input } from "@repo/ui/components/ui/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef } from "react";
 import { toast } from "sonner";
+import { toastRetry, toastUndo } from "@/components/design-system";
 import {
 	confirmDocumentUpload,
 	deleteDocument,
@@ -97,8 +98,10 @@ function DocumentUploadCard({
 			);
 			onUploadComplete();
 		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Failed to upload document");
+		onError: (error: Error, file: File) => {
+			toastRetry(error.message || "Failed to upload document", {
+				onRetry: () => uploadMutation.mutate(file),
+			});
 		},
 	});
 
@@ -106,14 +109,19 @@ function DocumentUploadCard({
 		mutationFn: async (documentId: string) => {
 			await deleteDocument({ data: { documentId } });
 		},
-		onSuccess: () => {
-			toast.success(
-				`${VERIFICATION_DOCUMENT_TYPE_LABELS[documentType]} deleted`,
-			);
+		onSuccess: (_data: void, documentId: string) => {
+			toastUndo(`${VERIFICATION_DOCUMENT_TYPE_LABELS[documentType]} deleted`, {
+				// Full undo would re-upload the file, but we no longer have
+				// the blob after deletion. Reload to let the user re-upload.
+				onUndo: () => window.location.reload(),
+				undoMessage: "Refreshing — please re-upload the document.",
+			});
 			onUploadComplete();
 		},
-		onError: () => {
-			toast.error("Failed to delete document");
+		onError: (_error: Error, documentId: string) => {
+			toastRetry("Failed to delete document", {
+				onRetry: () => deleteMutation.mutate(documentId),
+			});
 		},
 	});
 

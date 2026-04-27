@@ -14,6 +14,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ChangeEvent } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
+import { toastRetry, toastUndo } from "@/components/design-system";
 import {
 	confirmEventImageUpload,
 	deleteEventImage,
@@ -133,7 +134,11 @@ export function ImageUploadCard({
 		onError: (error: unknown) => {
 			const message = getErrorMessage(error);
 			setValidationError(message);
-			toast.error(message);
+			toastRetry(message, {
+				onRetry: () => {
+					if (selectedFile) uploadMutation.mutate(selectedFile);
+				},
+			});
 		},
 	});
 
@@ -145,10 +150,18 @@ export function ImageUploadCard({
 			void queryClient.invalidateQueries({
 				queryKey: eventImagesQueryKey(eventId),
 			});
-			toast.success(`${label} deleted`);
+			toastUndo(`${label} deleted`, {
+				onUndo: () => {
+					// Re-uploading a deleted image is not trivial; placeholder for future undo support
+				},
+			});
 		},
 		onError: (error: unknown) => {
-			toast.error(getErrorMessage(error));
+			toastRetry(getErrorMessage(error), {
+				onRetry: () => {
+					if (existingImage) deleteMutation.mutate(existingImage.id);
+				},
+			});
 		},
 	});
 

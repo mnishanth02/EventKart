@@ -30,6 +30,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ApiClientError } from "#/lib/api-client.shared";
+import { toastRetry } from "@/components/design-system";
 import { updateEventCategories } from "../api";
 import {
 	createBlankEventCategory,
@@ -163,7 +164,9 @@ export function EventCategoryConfigForm({
 		},
 		onError: (error: unknown) => {
 			setLastSavedAt(null);
-			toast.error(getErrorMessage(error));
+			toastRetry(getErrorMessage(error), {
+				onRetry: () => form.handleSubmit(),
+			});
 		},
 	});
 

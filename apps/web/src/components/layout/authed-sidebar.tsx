@@ -24,10 +24,10 @@ import {
 	ShieldIcon,
 	UserIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { useAuthActions } from "#/features/auth/hooks";
 import { apiClient } from "#/lib/api-client";
 import type { AuthSession } from "#/lib/auth/server-fns";
+import { toastRetry } from "@/components/design-system";
 
 // ── Navigation Config ──────────────────────────────────────────────
 
@@ -91,9 +91,9 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 			// API failed — clear local cache so UI reflects logged-out state,
 			// but warn the user that the server session may persist.
 			clearSession();
-			toast.error(
-				"Logout may not have completed. Please close your browser if issues persist.",
-			);
+			toastRetry("Logout failed", {
+				onRetry: () => apiClient("/auth/logout", { method: "POST" }),
+			});
 		}
 		void navigate({ to: "/" });
 	}

@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { z } from "zod/v4";
 import { useAuth, useAuthActions, useRequireAuth } from "#/features/auth/hooks";
 import { ApiClientError, apiClient } from "#/lib/api-client";
+import { toastRetry } from "@/components/design-system";
 
 const tokenSchema = z
 	.string()
@@ -55,6 +56,17 @@ function VerifyEmailPage() {
 			invalidateSession();
 			toast.success("Email verified. Continue your organizer registration.");
 			void navigate({ to: "/org/register" });
+		},
+		onError: (err: unknown) => {
+			const message =
+				err instanceof Error
+					? err.message
+					: "Verification failed. Please try again.";
+			toastRetry(message, {
+				onRetry: () => {
+					if (token) mutation.mutate(token);
+				},
+			});
 		},
 	});
 

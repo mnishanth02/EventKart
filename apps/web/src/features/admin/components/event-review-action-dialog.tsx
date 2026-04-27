@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { toastRetry } from "@/components/design-system";
 import { approveEventReview, rejectEventReview } from "../api";
 import { ADMIN_EVENT_REVIEWS_QUERY_KEY } from "../queries";
 
@@ -60,7 +61,9 @@ export function EventReviewActionDialog({
 			onSuccess();
 		},
 		onError: (error: Error) => {
-			toast.error(error.message || "Failed to update event review");
+			toastRetry(error.message || "Failed to update event review", {
+				onRetry: () => mutation.mutate(),
+			});
 		},
 	});
 

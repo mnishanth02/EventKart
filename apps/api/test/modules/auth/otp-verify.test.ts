@@ -34,7 +34,8 @@ function parseCookies(setCookieHeader: string): Record<string, string> {
 	const parts = setCookieHeader.split(";").map((s) => s.trim());
 	for (const part of parts) {
 		const [key, ...rest] = part.split("=");
-		attrs[key?.toLowerCase()] = rest.join("=");
+		if (!key) continue;
+		attrs[key.toLowerCase()] = rest.join("=");
 	}
 	return attrs;
 }
@@ -114,8 +115,11 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			const setCookieRaw = response.headers["set-cookie"];
 			const sessionCookie = findCookie(setCookieRaw, "kiran_session");
 			expect(sessionCookie).toBeDefined();
+			if (!sessionCookie) {
+				throw new Error("Expected kiran_session cookie to be set");
+			}
 
-			const cookie = parseCookies(sessionCookie!);
+			const cookie = parseCookies(sessionCookie);
 			expect(cookie.kiran_session).toBe("test-session-id");
 			expect(cookie).toHaveProperty("httponly");
 			expect(cookie.samesite).toBe("Lax");
@@ -138,7 +142,12 @@ describe("POST /api/v1/auth/otp/verify", () => {
 			});
 
 			expect(mockVerifyOtpAndCreateSession).toHaveBeenCalledOnce();
-			const [_deps, phone, otp] = mockVerifyOtpAndCreateSession.mock.calls[0]!;
+			const firstCall = mockVerifyOtpAndCreateSession.mock.calls[0];
+			expect(firstCall).toBeDefined();
+			if (!firstCall) {
+				throw new Error("Expected verifyOtpAndCreateSession to be called");
+			}
+			const [_deps, phone, otp] = firstCall;
 			expect(phone).toBe("+919876543210");
 			expect(otp).toBe("654321");
 		});

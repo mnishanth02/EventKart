@@ -27,6 +27,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ApiClientError } from "#/lib/api-client.shared";
+import { toastRetry } from "@/components/design-system";
 import { createEvent } from "../api";
 import {
 	coimbatoreDateTimeLocalToIso,
@@ -114,7 +115,9 @@ export function EventCreateForm() {
 			});
 		},
 		onError: (error: unknown) => {
-			toast.error(getErrorMessage(error));
+			toastRetry(getErrorMessage(error), {
+				onRetry: () => form.handleSubmit(),
+			});
 		},
 	});
 

@@ -26,6 +26,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ApiClientError } from "#/lib/api-client.shared";
+import { CurrencyINR, toastRetry } from "@/components/design-system";
 import { updateEventPricing } from "../api";
 import { eventPricingRecordsToConfigValues } from "../pricing-config-values";
 import { eventPricingQueryKey } from "../queries";
@@ -79,11 +80,6 @@ function ValidationSummary({ value }: { value: EventPricingConfigInput }) {
 	);
 }
 
-function formatInr(value: number | null | undefined): string {
-	if (typeof value !== "number" || !Number.isFinite(value)) return "Not set";
-	return `₹${(value / 100).toLocaleString("en-IN")}`;
-}
-
 interface EventPricingConfigFormProps {
 	eventId: string;
 	categories: readonly EventCategoryRecord[];
@@ -118,7 +114,9 @@ export function EventPricingConfigForm({
 		},
 		onError: (error: unknown) => {
 			setLastSavedAt(null);
-			toast.error(getErrorMessage(error));
+			toastRetry(getErrorMessage(error), {
+				onRetry: () => form.handleSubmit(),
+			});
 		},
 	});
 
@@ -207,11 +205,12 @@ export function EventPricingConfigForm({
 														</div>
 														<div className="flex flex-wrap gap-2">
 															<Badge variant="secondary">
-																Base {formatInr(tier.basePrice)}
+																Base <CurrencyINR value={tier.basePrice ?? 0} />
 															</Badge>
 															{tier.earlyBirdPrice ? (
 																<Badge variant="default">
-																	Early {formatInr(tier.earlyBirdPrice)}
+																	Early{" "}
+																	<CurrencyINR value={tier.earlyBirdPrice} />
 																</Badge>
 															) : null}
 														</div>

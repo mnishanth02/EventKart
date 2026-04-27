@@ -33,7 +33,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toastRetry } from "@/components/design-system";
 import { getDocumentViewUrl } from "../api";
 import {
 	ADMIN_VERIFICATIONS_QUERY_KEY,
@@ -91,11 +91,16 @@ function ViewDocumentButton({
 				"noopener,noreferrer",
 			);
 			if (!openedWindow) {
-				toast.error("Document popup was blocked. Allow pop-ups and try again.");
+				toastRetry("Document popup was blocked", {
+					description: "Allow pop-ups and try again.",
+					onRetry: () => mutation.mutate(),
+				});
 			}
 		},
 		onError: (error: Error) => {
-			toast.error(error.message || "Failed to get document URL");
+			toastRetry(error.message || "Failed to get document URL", {
+				onRetry: () => mutation.mutate(),
+			});
 		},
 	});
 

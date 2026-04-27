@@ -30,6 +30,29 @@ function createMockLogger() {
 	} as unknown as FastifyBaseLogger;
 }
 
+function getFirstMockArg(mockFn: ReturnType<typeof vi.fn>): unknown {
+	const firstCall = mockFn.mock.calls[0];
+	expect(firstCall).toBeDefined();
+	if (!firstCall) {
+		throw new Error("Expected mock to have at least one call");
+	}
+
+	return firstCall[0];
+}
+
+function getFirstTwoMockArgs(
+	mockFn: ReturnType<typeof vi.fn>,
+): [unknown, unknown] {
+	const firstCall = mockFn.mock.calls[0];
+	expect(firstCall).toBeDefined();
+	expect(firstCall?.length).toBeGreaterThanOrEqual(2);
+	if (!firstCall || firstCall.length < 2) {
+		throw new Error("Expected mock call to have at least two arguments");
+	}
+
+	return [firstCall[0], firstCall[1]];
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────
 
 describe("createAuditLogger", () => {
@@ -121,10 +144,11 @@ describe("createAuditLogger", () => {
 				metadata: { sensitiveField: "should-not-be-logged" },
 			});
 
-			const errorCallArgs = (log.error as ReturnType<typeof vi.fn>).mock
-				.calls[0];
-			const context = errorCallArgs[0] as Record<string, unknown>;
-			const message = errorCallArgs[1] as string;
+			const [contextArg, messageArg] = getFirstTwoMockArgs(
+				log.error as ReturnType<typeof vi.fn>,
+			);
+			const context = contextArg as Record<string, unknown>;
+			const message = messageArg as string;
 
 			expect(message).toBe("Failed to write audit log entry");
 			expect(context).toHaveProperty("err", dbError);
@@ -162,7 +186,7 @@ describe("createAuditLogger", () => {
 				metadata: complexMetadata,
 			});
 
-			const valuesArg = mockValues.mock.calls[0][0] as Record<string, unknown>;
+			const valuesArg = getFirstMockArg(mockValues) as Record<string, unknown>;
 			expect(valuesArg.metadata).toStrictEqual(complexMetadata);
 		});
 
@@ -177,7 +201,7 @@ describe("createAuditLogger", () => {
 				resourceId: "org-55",
 			});
 
-			const valuesArg = mockValues.mock.calls[0][0] as Record<string, unknown>;
+			const valuesArg = getFirstMockArg(mockValues) as Record<string, unknown>;
 			expect(valuesArg.action).toBe("organizer.approve");
 			expect(valuesArg.resourceType).toBe("organizer");
 		});
@@ -240,7 +264,7 @@ describe("createAuditLogger", () => {
 			expect(mockInsert).toHaveBeenCalledOnce();
 			expect(mockValues).toHaveBeenCalledOnce();
 
-			const valuesArg = mockValues.mock.calls[0][0] as Record<
+			const valuesArg = getFirstMockArg(mockValues) as Record<
 				string,
 				unknown
 			>[];
@@ -316,10 +340,11 @@ describe("createAuditLogger", () => {
 				{ action: "c", resourceType: "r" },
 			]);
 
-			const errorCallArgs = (log.error as ReturnType<typeof vi.fn>).mock
-				.calls[0];
-			const context = errorCallArgs[0] as Record<string, unknown>;
-			const message = errorCallArgs[1] as string;
+			const [contextArg, messageArg] = getFirstTwoMockArgs(
+				log.error as ReturnType<typeof vi.fn>,
+			);
+			const context = contextArg as Record<string, unknown>;
+			const message = messageArg as string;
 
 			expect(message).toBe("Failed to write audit log batch");
 			expect(context).toHaveProperty("err", batchError);

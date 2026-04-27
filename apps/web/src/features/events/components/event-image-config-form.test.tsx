@@ -21,6 +21,7 @@ vi.mock("sonner", () => ({
 	toast: {
 		success: vi.fn(),
 		error: vi.fn(),
+		promise: vi.fn(),
 	},
 }));
 
@@ -240,6 +241,11 @@ describe("EventImageConfigForm", () => {
 				data: { eventId, imageId: heroImage.id },
 			}),
 		);
-		expect(toast.success).toHaveBeenCalledWith("Hero image deleted");
+		expect(toast.success).toHaveBeenCalledWith(
+			"Hero image deleted",
+			expect.objectContaining({
+				action: expect.objectContaining({ label: "Undo" }),
+			}),
+		);
 	});
 });

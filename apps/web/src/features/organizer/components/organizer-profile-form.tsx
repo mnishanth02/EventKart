@@ -14,6 +14,7 @@ import { VerifiedBadge } from "@repo/ui/components/verified-badge";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastRetry } from "@/components/design-system";
 import { updateOrganizerProfile } from "../api";
 import { ORGANIZER_QUERY_KEY } from "../queries";
 import type { OrganizerProfile } from "../types";
@@ -89,10 +90,11 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 			toast.success("Profile updated successfully");
 		},
 		onError: (error: unknown) => {
-			toast.error(
+			toastRetry(
 				error instanceof Error
 					? error.message
 					: "Failed to update profile. Please try again.",
+				{ onRetry: () => form.handleSubmit() },
 			);
 		},
 	});

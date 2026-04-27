@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { OrganizerRegistrationForm } from "#/features/organizer/components/organizer-registration-form";
 import { organizerProfileQueryOptions } from "#/features/organizer/queries";
 import { ApiClientError, apiClient } from "#/lib/api-client";
+import { toastRetry } from "@/components/design-system";
 
 export const Route = createFileRoute("/_authed/org/register")({
 	component: OrganizerRegisterPage,
@@ -126,7 +127,9 @@ function OrganizerEmailVerificationGate() {
 					? err.message
 					: "Failed to send verification email. Please try again.";
 			setError(message);
-			toast.error(message);
+			toastRetry(message, {
+				onRetry: () => mutation.mutate(email),
+			});
 		},
 	});
 

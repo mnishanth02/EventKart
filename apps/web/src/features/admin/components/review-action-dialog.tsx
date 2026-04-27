@@ -12,6 +12,7 @@ import { Textarea } from "@repo/ui/components/ui/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useId, useState } from "react";
 import { toast } from "sonner";
+import { toastRetry } from "@/components/design-system";
 import { approveOrganizer, rejectOrganizer } from "../api";
 import { ADMIN_VERIFICATIONS_QUERY_KEY } from "../queries";
 
@@ -68,7 +69,9 @@ export function ReviewActionDialog({
 			onSuccess();
 		},
 		onError: (error: Error) => {
-			toast.error(error.message || `Failed to ${type} organizer`);
+			toastRetry(error.message || `Failed to ${type} organizer`, {
+				onRetry: () => mutation.mutate(),
+			});
 		},
 	});
 

@@ -18,6 +18,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ApiClientError } from "#/lib/api-client.shared";
+import { toastRetry } from "@/components/design-system";
 import { acceptOrganizerPolicies } from "../api";
 import {
 	POLICY_STATUS_QUERY_KEY,
@@ -53,12 +54,13 @@ export function PolicyAcceptanceForm() {
 			toast.success("Policies accepted successfully!");
 		},
 		onError: (error: unknown) => {
-			toast.error(
+			toastRetry(
 				error instanceof ApiClientError
 					? error.message
 					: error instanceof Error
 						? error.message
 						: "Failed to accept policies. Please try again.",
+				{ onRetry: handleAccept },
 			);
 		},
 	});
