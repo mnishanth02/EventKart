@@ -13,7 +13,7 @@ This file covers **repo-wide** rules only.
 
 ## Planned Feature Workflow
 
-For feature implementation from `docs\impl-plan\` or `docs\v1-implementation-plan.md`, use the existing Anvil agent/autopilot workflow with the single prompt at `.github\prompts\eventkart-dev-workflow.prompt.md`.
+For feature implementation from `docs/impl-plan/` or `docs/v1-implementation-plan.md`, use the existing Anvil agent/autopilot workflow with the single prompt at `.github/prompts/eventkart-dev-workflow.prompt.md`.
 
 
 ## Package Boundaries
