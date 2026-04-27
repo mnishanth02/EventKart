@@ -55,7 +55,8 @@
 | 43  | I-1.2.9 — Event Image Upload                                                      | [impl-plan](docs/impl-plan/feature-1.2-I-1.2.9.md)         | ✅ Complete    | 2026-04-27 | 2026-04-27   |
 | 44  | I-1.2.8 — Event Edit & Update Capabilities                                        | [impl-plan](docs/impl-plan/feature-1.2-I-1.2.8.md)         | ✅ Complete    | 2026-04-27 | 2026-04-27   |
 | 45  | I-1.2.6 — Event Publish Workflow                                                  | [impl-plan](docs/impl-plan/feature-1.2-I-1.2.6.md)         | ✅ Complete    | 2026-04-27 | 2026-04-27   |
-| 46  | Agent Workflow Setup (prompt deletion deferred pending runtime verification)      | [impl-plan](docs/impl-plan/agent-workflow-setup.md)        | 🟡 In Progress | 2026-04-27 | 2026-04-27   |
+| 46  | I-1.2.7 — Admin Event Review Interface                                            | [impl-plan](docs/impl-plan/feature-1.2-I-1.2.7.md)         | ✅ Complete    | 2026-04-27 | 2026-04-27   |
+| 47  | Agent Workflow Setup (prompt deletion deferred pending runtime verification)      | [impl-plan](docs/impl-plan/agent-workflow-setup.md)        | 🟡 In Progress | 2026-04-27 | 2026-04-27   |
 
 ## Completed Implementation Plans
 
@@ -74,7 +75,7 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 | Phase 0 | 0.3 — Design System & App Shell                     | ✅ Complete    | All features complete: I-0.3.1 through I-0.3.6, plus I-0.2.9 and I-0.2.7.                                                                                                                                                                                                                                                                   |
 | Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | ✅ Complete    | All features complete: I-0.4.1 (Sentry), I-0.4.2 (Pino/OTEL), I-0.4.3 (Health checks), I-0.4.4 (Audit log), I-0.4.5 (Production metrics), I-0.4.6 (BullMQ observability). 403 API tests passing.                                                                                                                                            |
 | Phase 1 | 1.1 — Organizer Signup & Verification               | ✅ Complete    | All 8 features (I-1.1.1 through I-1.1.8) complete. Includes registration, document upload, policy acceptance, verification tracking, admin review, verification badge, Razorpay linked-account creation, profile management. 528 API tests, 76 web tests passing.                                                                           |
-| Phase 1 | 1.2 — Event Creation & Management                   | 🟡 In Progress | I-1.2.10 event slug generation API service, I-1.2.1 event creation form, I-1.2.2 category/distance configuration (DB/shared/API/web), I-1.2.3 pricing configuration API + web UI, I-1.2.8 event edit/update capabilities, I-1.2.9 event image upload, and I-1.2.6 event publish workflow complete. Registration form, refund policy, and admin review work remain. |
+| Phase 1 | 1.2 — Event Creation & Management                   | 🟡 In Progress | I-1.2.10 event slug generation API service, I-1.2.1 event creation form, I-1.2.2 category/distance configuration (DB/shared/API/web), I-1.2.3 pricing configuration API + web UI, I-1.2.8 event edit/update capabilities, I-1.2.9 event image upload, I-1.2.6 event publish workflow, and I-1.2.7 admin event review complete. Remaining module work depends on downstream booking/public listing slices. |
 
 ## Foundation (Pre-Phase 0) — Completed
 

@@ -6,6 +6,9 @@
 
 import {
 	adminApproveBodySchema,
+	adminEventApproveBodySchema,
+	adminEventRejectBodySchema,
+	adminEventReviewListParamsSchema,
 	adminRejectBodySchema,
 	adminVerificationListParamsSchema,
 	type OffsetPaginationMeta,
@@ -15,6 +18,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod/v4";
 import type {
 	AdminReviewActionResponse,
+	AdminEventReviewActionResponse,
+	AdminEventReviewDetail,
+	AdminEventReviewListItem,
 	AdminVerificationDetail,
 	AdminVerificationListItem,
 	DocumentViewUrl,
@@ -22,6 +28,10 @@ import type {
 
 const organizerIdInputSchema = z.object({
 	organizerId: uuidSchema,
+});
+
+const eventIdInputSchema = z.object({
+	eventId: uuidSchema,
 });
 
 const documentViewUrlInputSchema = organizerIdInputSchema.extend({
@@ -36,6 +46,16 @@ const approveOrganizerInputSchema = z.object({
 const rejectOrganizerInputSchema = z.object({
 	organizerId: uuidSchema,
 	body: adminRejectBodySchema,
+});
+
+const approveEventReviewInputSchema = z.object({
+	eventId: uuidSchema,
+	body: adminEventApproveBodySchema,
+});
+
+const rejectEventReviewInputSchema = z.object({
+	eventId: uuidSchema,
+	body: adminEventRejectBodySchema,
 });
 
 // ── List Verifications ─────────────────────────────────────────────
@@ -54,6 +74,33 @@ export const getAdminVerifications = createServerFn({ method: "GET" })
 			return { items: response.data, meta: response.meta };
 		},
 	);
+
+// ── List Event Reviews ─────────────────────────────────────────────
+
+export const getAdminEventReviews = createServerFn({ method: "GET" })
+	.inputValidator((data) => adminEventReviewListParamsSchema.parse(data ?? {}))
+	.handler(
+		async ({
+			data,
+		}): Promise<{
+			items: AdminEventReviewListItem[];
+			meta: OffsetPaginationMeta;
+		}> => {
+			const { fetchAdminEventReviews } = await import("./api.server");
+			const response = await fetchAdminEventReviews(data);
+			return { items: response.data, meta: response.meta };
+		},
+	);
+
+// ── Event Review Detail ────────────────────────────────────────────
+
+export const getAdminEventReviewDetail = createServerFn({ method: "GET" })
+	.inputValidator((data) => eventIdInputSchema.parse(data))
+	.handler(async ({ data }): Promise<AdminEventReviewDetail> => {
+		const { fetchAdminEventReviewDetail } = await import("./api.server");
+		const response = await fetchAdminEventReviewDetail(data.eventId);
+		return response.data;
+	});
 
 // ── Verification Detail ────────────────────────────────────────────
 
@@ -98,5 +145,25 @@ export const rejectOrganizer = createServerFn({ method: "POST" })
 	.handler(async ({ data }): Promise<AdminReviewActionResponse> => {
 		const { rejectOrganizerOnServer } = await import("./api.server");
 		const response = await rejectOrganizerOnServer(data.organizerId, data.body);
+		return response.data;
+	});
+
+// ── Approve Event Review ───────────────────────────────────────────
+
+export const approveEventReview = createServerFn({ method: "POST" })
+	.inputValidator((data) => approveEventReviewInputSchema.parse(data))
+	.handler(async ({ data }): Promise<AdminEventReviewActionResponse> => {
+		const { approveEventReviewOnServer } = await import("./api.server");
+		const response = await approveEventReviewOnServer(data.eventId, data.body);
+		return response.data;
+	});
+
+// ── Reject Event Review ────────────────────────────────────────────
+
+export const rejectEventReview = createServerFn({ method: "POST" })
+	.inputValidator((data) => rejectEventReviewInputSchema.parse(data))
+	.handler(async ({ data }): Promise<AdminEventReviewActionResponse> => {
+		const { rejectEventReviewOnServer } = await import("./api.server");
+		const response = await rejectEventReviewOnServer(data.eventId, data.body);
 		return response.data;
 	});

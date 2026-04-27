@@ -29,6 +29,7 @@ import {
 	recordEventSlugRedirect,
 	replaceEventCategories,
 	replaceEventPricing,
+	requiresAdminReview,
 	reserveUniqueEventSlug,
 	unpublishEvent,
 	updateDraftEvent,
@@ -292,6 +293,7 @@ function createPublishDeps(db: unknown, auditLogger = createAuditLogger()) {
 		log: {
 			info: vi.fn(),
 		},
+		requiresAdminReview: vi.fn().mockResolvedValue(false),
 	};
 }
 
@@ -472,6 +474,24 @@ describe("event slug service", () => {
 			"Unable to reserve a unique event slug after 3 attempts",
 		);
 		expect(select).toHaveBeenCalledTimes(3);
+	});
+});
+
+describe("requiresAdminReview", () => {
+	it("requires review while organizer has fewer than 3 published paid events", async () => {
+		const { db } = createMockSlugStore([[{ total: 2 }]]);
+
+		await expect(
+			requiresAdminReview(asDatabase(db), TEST_ORGANIZER_ID),
+		).resolves.toBe(true);
+	});
+
+	it("does not require review once organizer has 3 published paid events", async () => {
+		const { db } = createMockSlugStore([[{ total: 3 }]]);
+
+		await expect(
+			requiresAdminReview(asDatabase(db), TEST_ORGANIZER_ID),
+		).resolves.toBe(false);
 	});
 });
 
@@ -1951,11 +1971,12 @@ describe("event publish state machine", () => {
 			expect.objectContaining({
 				action: "event.publish_rejected",
 				actorRole: "admin",
-				metadata: {
+				metadata: expect.objectContaining({
 					organizerId: TEST_ORGANIZER_ID,
+					reason: "Not ready",
 					source: "admin_review",
 					transition: "under_review_to_draft",
-				},
+				}),
 			}),
 		);
 	});

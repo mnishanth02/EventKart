@@ -6,11 +6,22 @@
  * in `./api.ts` createServerFn handlers.
  */
 
-import type { AdminApproveBody, AdminRejectBody } from "@repo/shared/schemas";
+import type {
+	AdminApproveBody,
+	AdminEventApproveBody,
+	AdminEventRejectBody,
+	AdminRejectBody,
+} from "@repo/shared/schemas";
 import { serverApiClient } from "#/lib/api-client.server";
-import { getForwardedAuthHeaders } from "#/lib/auth/server-fns.server";
+import {
+	assertSameOriginMutationRequest,
+	getForwardedAuthHeaders,
+} from "#/lib/auth/server-fns.server";
 import type {
 	AdminReviewActionApiResponse,
+	AdminEventReviewActionApiResponse,
+	AdminEventReviewDetailResponse,
+	AdminEventReviewListResponse,
 	AdminVerificationDetailResponse,
 	AdminVerificationListResponse,
 	DocumentViewUrlResponse,
@@ -36,6 +47,42 @@ export async function fetchAdminVerifications(params: {
 	const path = `/admin/verifications${qs ? `?${qs}` : ""}`;
 
 	return serverApiClient<AdminVerificationListResponse>(path, { headers });
+}
+
+/**
+ * Fetches the paginated admin event review list.
+ * GET /api/v1/admin/event-reviews?page=&limit=&status=
+ */
+export async function fetchAdminEventReviews(params: {
+	page?: number;
+	limit?: number;
+	status?: string;
+}): Promise<AdminEventReviewListResponse> {
+	const headers = getForwardedAuthHeaders();
+	const searchParams = new URLSearchParams();
+
+	if (params.page != null) searchParams.set("page", String(params.page));
+	if (params.limit != null) searchParams.set("limit", String(params.limit));
+	if (params.status) searchParams.set("status", params.status);
+
+	const qs = searchParams.toString();
+	const path = `/admin/event-reviews${qs ? `?${qs}` : ""}`;
+
+	return serverApiClient<AdminEventReviewListResponse>(path, { headers });
+}
+
+/**
+ * Fetches the admin event review detail for a specific event.
+ * GET /api/v1/admin/event-reviews/:eventId
+ */
+export async function fetchAdminEventReviewDetail(
+	eventId: string,
+): Promise<AdminEventReviewDetailResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<AdminEventReviewDetailResponse>(
+		`/admin/event-reviews/${eventId}`,
+		{ headers },
+	);
 }
 
 /**
@@ -93,6 +140,38 @@ export async function rejectOrganizerOnServer(
 	const headers = getForwardedAuthHeaders();
 	return serverApiClient<AdminReviewActionApiResponse>(
 		`/admin/verifications/${organizerId}/reject`,
+		{ method: "POST", body, headers },
+	);
+}
+
+/**
+ * Approves an event review.
+ * POST /api/v1/admin/event-reviews/:eventId/approve
+ */
+export async function approveEventReviewOnServer(
+	eventId: string,
+	body: AdminEventApproveBody,
+): Promise<AdminEventReviewActionApiResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<AdminEventReviewActionApiResponse>(
+		`/admin/event-reviews/${eventId}/approve`,
+		{ method: "POST", body, headers },
+	);
+}
+
+/**
+ * Rejects an event review.
+ * POST /api/v1/admin/event-reviews/:eventId/reject
+ */
+export async function rejectEventReviewOnServer(
+	eventId: string,
+	body: AdminEventRejectBody,
+): Promise<AdminEventReviewActionApiResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<AdminEventReviewActionApiResponse>(
+		`/admin/event-reviews/${eventId}/reject`,
 		{ method: "POST", body, headers },
 	);
 }

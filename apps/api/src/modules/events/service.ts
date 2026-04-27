@@ -1,4 +1,4 @@
-import { and, type Database, eq, ne } from "@repo/db";
+import { and, type Database, eq, ne, sql } from "@repo/db";
 import {
 	eventCategories,
 	eventImages,
@@ -275,11 +275,34 @@ async function selectUploadedHeroImageExists(
 	return rows.length > 0;
 }
 
-async function defaultRequiresAdminReview(
-	_organizerId: string,
+export async function getPublishedPaidEventCount(
+	db: Pick<Database, "select">,
+	organizerId: string,
+): Promise<number> {
+	const [row] = await db
+		.select({ total: sql<number>`count(*)` })
+		.from(events)
+		.where(
+			and(
+				eq(events.organizerId, organizerId),
+				eq(events.status, "published"),
+				eq(events.isPaid, true),
+			),
+		)
+		.limit(1);
+
+	return Number(row?.total ?? 0);
+}
+
+export async function requiresAdminReview(
+	db: Pick<Database, "select">,
+	organizerId: string,
 ): Promise<boolean> {
-	// TODO(I-1.2.7): Implement first-N paid events policy and admin review queue.
-	return false;
+	const publishedPaidEventCount = await getPublishedPaidEventCount(
+		db,
+		organizerId,
+	);
+	return publishedPaidEventCount < 3;
 }
 
 function invalidateEventCache(_event: Event): void {
@@ -291,7 +314,7 @@ async function buildPublishReadinessForEvent(
 	event: EventRow,
 	organizer: OrganizerPublishReadinessRow,
 	now: Date,
-	adminReviewPolicy = defaultRequiresAdminReview,
+	adminReviewPolicy?: (organizerId: string) => Promise<boolean>,
 ): Promise<PublishReadiness> {
 	const categories = await selectEventCategories(db, event.id);
 	const tiers = await selectEventPricingTiers(db, event.id, categories);
@@ -310,7 +333,10 @@ async function buildPublishReadinessForEvent(
 		excludeEventId: event.id,
 	}));
 	const wouldRequireAdminReview =
-		isPaid && (await adminReviewPolicy(organizer.id));
+		isPaid &&
+		(await (adminReviewPolicy ?? ((id) => requiresAdminReview(db, id)))(
+			organizer.id,
+		));
 
 	const items: PublishReadinessItem[] = [
 		createReadinessItem(
@@ -1509,6 +1535,7 @@ export async function adminApproveEvent(
 	eventId: string,
 	adminUserId: string,
 	ipAddress?: string,
+	notes?: string,
 ): Promise<PublishEventResult> {
 	const parsedEventId = parseUuid(eventId, "event id");
 	const result = await deps.db.transaction(async (tx) => {
@@ -1571,6 +1598,7 @@ export async function adminApproveEvent(
 				organizerId: event.organizerId,
 				source: "admin_review",
 				transition: "under_review_to_published",
+				...(notes ? { notes } : {}),
 			},
 		});
 		const responseEvent = toEventResponse(updated);
@@ -1589,7 +1617,7 @@ export async function adminRejectEvent(
 	deps: EventPublishDeps,
 	eventId: string,
 	adminUserId: string,
-	_reason?: string,
+	reason?: string,
 	ipAddress?: string,
 ): Promise<UnpublishEventResult> {
 	const parsedEventId = parseUuid(eventId, "event id");
@@ -1626,6 +1654,7 @@ export async function adminRejectEvent(
 				organizerId: event.organizerId,
 				source: "admin_review",
 				transition: "under_review_to_draft",
+				...(reason ? { reason } : {}),
 			},
 		});
 		return {

@@ -18,6 +18,24 @@ export {
 	adminVerificationListParamsSchema,
 	documentViewUrlSchema,
 } from "./admin-verification.js";
+export type {
+	AdminEventApproveBody,
+	AdminEventRejectBody,
+	AdminEventReviewActionResponse,
+	AdminEventReviewDetail,
+	AdminEventReviewListItem,
+	AdminEventReviewListParams,
+	AdminEventReviewOrganizer,
+} from "./admin-event-review.js";
+export {
+	adminEventApproveBodySchema,
+	adminEventRejectBodySchema,
+	adminEventReviewActionResponseSchema,
+	adminEventReviewDetailSchema,
+	adminEventReviewListItemSchema,
+	adminEventReviewListParamsSchema,
+	adminEventReviewOrganizerSchema,
+} from "./admin-event-review.js";
 export type { ErrorResponse } from "./api-response.js";
 export {
 	cursorPaginatedResponseSchema,

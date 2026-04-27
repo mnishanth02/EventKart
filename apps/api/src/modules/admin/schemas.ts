@@ -1,4 +1,10 @@
 import {
+	adminEventApproveBodySchema,
+	adminEventRejectBodySchema,
+	adminEventReviewActionResponseSchema,
+	adminEventReviewDetailSchema,
+	adminEventReviewListItemSchema,
+	adminEventReviewListParamsSchema,
 	adminApproveBodySchema,
 	adminRejectBodySchema,
 	adminRetryRazorpayResponseSchema,
@@ -14,9 +20,14 @@ import { z } from "zod/v4";
 // ── Request schemas ─────────────────────────────────────────────────
 
 export const listVerificationsQuerySchema = adminVerificationListParamsSchema;
+export const listEventReviewsQuerySchema = adminEventReviewListParamsSchema;
 
 export const organizerIdParamsSchema = z.object({
 	organizerId: z.string().uuid(),
+});
+
+export const eventReviewIdParamsSchema = z.object({
+	eventId: z.string().uuid(),
 });
 
 export const documentViewParamsSchema = z.object({
@@ -26,6 +37,8 @@ export const documentViewParamsSchema = z.object({
 
 export const approveBodySchema = adminApproveBodySchema;
 export const rejectBodySchema = adminRejectBodySchema;
+export const approveEventReviewBodySchema = adminEventApproveBodySchema;
+export const rejectEventReviewBodySchema = adminEventRejectBodySchema;
 
 // ── Response schemas ────────────────────────────────────────────────
 
@@ -35,9 +48,20 @@ export const listVerificationsResponseSchema = z.object({
 	meta: offsetPaginationMetaSchema,
 });
 
+export const listEventReviewsResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.array(adminEventReviewListItemSchema),
+	meta: offsetPaginationMetaSchema,
+});
+
 export const verificationDetailResponseSchema = z.object({
 	success: z.literal(true),
 	data: adminVerificationDetailSchema,
+});
+
+export const eventReviewDetailResponseSchema = z.object({
+	success: z.literal(true),
+	data: adminEventReviewDetailSchema,
 });
 
 export const documentViewUrlResponseSchema = z.object({
@@ -48,6 +72,11 @@ export const documentViewUrlResponseSchema = z.object({
 export const reviewActionResponseSchema = z.object({
 	success: z.literal(true),
 	data: adminReviewActionResponseSchema,
+});
+
+export const eventReviewActionResponseSchema = z.object({
+	success: z.literal(true),
+	data: adminEventReviewActionResponseSchema,
 });
 
 export const adminErrorResponseSchema = z.object({

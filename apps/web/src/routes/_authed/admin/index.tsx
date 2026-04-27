@@ -33,6 +33,19 @@ function AdminDashboard() {
 					</Button>
 				</CardContent>
 			</Card>
+			<Card className="max-w-xl">
+				<CardHeader>
+					<CardTitle>Event Review Queue</CardTitle>
+					<CardDescription>
+						Review paid event publish requests from new organizers.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<Button asChild>
+						<Link to="/admin/event-reviews">Open Event Review Queue</Link>
+					</Button>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }
