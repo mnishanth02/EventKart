@@ -478,7 +478,7 @@ describe("event slug service", () => {
 });
 
 describe("requiresAdminReview", () => {
-	it("requires review while organizer has fewer than 3 published paid events", async () => {
+	it("requires review while organizer has fewer than 3 historically published paid events", async () => {
 		const { db } = createMockSlugStore([[{ total: 2 }]]);
 
 		await expect(
@@ -486,7 +486,7 @@ describe("requiresAdminReview", () => {
 		).resolves.toBe(true);
 	});
 
-	it("does not require review once organizer has 3 published paid events", async () => {
+	it("does not require review once organizer has 3 historically published paid events", async () => {
 		const { db } = createMockSlugStore([[{ total: 3 }]]);
 
 		await expect(

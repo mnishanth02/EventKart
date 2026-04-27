@@ -1,4 +1,4 @@
-import { and, type Database, eq, ne, sql } from "@repo/db";
+import { and, type Database, eq, inArray, ne, sql } from "@repo/db";
 import {
 	eventCategories,
 	eventImages,
@@ -283,11 +283,11 @@ export async function getPublishedPaidEventCount(
 		.select({ total: sql<number>`count(*)` })
 		.from(events)
 		.where(
-			and(
-				eq(events.organizerId, organizerId),
-				eq(events.status, "published"),
-				eq(events.isPaid, true),
-			),
+				and(
+					eq(events.organizerId, organizerId),
+					inArray(events.status, ["published", "completed"]),
+					eq(events.isPaid, true),
+				),
 		)
 		.limit(1);
 
