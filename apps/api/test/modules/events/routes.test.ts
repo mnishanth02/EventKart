@@ -9,6 +9,8 @@ import {
 } from "vitest";
 
 const mockCreateDraftEvent = vi.fn();
+const mockGetEvent = vi.fn();
+const mockUpdateDraftEvent = vi.fn();
 const mockListEventPricing = vi.fn();
 const mockListEventCategories = vi.fn();
 const mockGetEventPolicies = vi.fn();
@@ -28,6 +30,8 @@ vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	return {
 		...actual,
 		createDraftEvent: (...args: unknown[]) => mockCreateDraftEvent(...args),
+		getEvent: (...args: unknown[]) => mockGetEvent(...args),
+		updateDraftEvent: (...args: unknown[]) => mockUpdateDraftEvent(...args),
 		getEventPolicies: (...args: unknown[]) => mockGetEventPolicies(...args),
 		listEventPricing: (...args: unknown[]) => mockListEventPricing(...args),
 		listEventCategories: (...args: unknown[]) =>
@@ -84,6 +88,18 @@ const validCreateEventBody = {
 	registrationOpensAt: "2026-07-01T03:30:00.000Z",
 	registrationClosesAt: "2026-08-14T12:30:00.000Z",
 	routeDetails: "Single-loop 10K route through Race Course Road.",
+};
+
+const validUpdateEventBody = {
+	...validCreateEventBody,
+	title: "Updated Coimbatore City 10K",
+	description:
+		"Updated paid running event for Coimbatore runners with clearer route and venue details.",
+	venueName: "VOC Park Grounds",
+	addressLine1: "VOC Park, Gopalapuram",
+	addressLine2: "Gate 2",
+	postalCode: "641018",
+	routeDetails: "Updated single-loop 10K route through Race Course Road.",
 };
 
 const mockEvent = {
@@ -475,6 +491,279 @@ describe("POST /api/v1/events", () => {
 			error: { code: "CSRF_VALIDATION_FAILED" },
 		});
 		expect(mockCreateDraftEvent).not.toHaveBeenCalled();
+	});
+});
+
+describe("GET /api/v1/events/:eventId", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockGetEvent.mockReset();
+	});
+
+	it("returns a publicly readable event without requiring auth", async () => {
+		mockGetEvent.mockResolvedValue(mockEvent);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({ success: true, data: mockEvent });
+		expect(mockGetEvent).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+			undefined,
+		);
+	});
+
+	it("passes organizer user id so draft events owned by the organizer are readable", async () => {
+		setupOrganizerSession(app);
+		mockGetEvent.mockResolvedValue(mockEvent);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(mockGetEvent).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+			TEST_USER_ID,
+		);
+	});
+
+	it("returns 404 when the event is not readable", async () => {
+		mockGetEvent.mockRejectedValue(new NotFoundError("Event not found"));
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+		});
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "NOT_FOUND" },
+		});
+	});
+
+	it("returns 400 for an invalid event id", async () => {
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/not-a-uuid`,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(mockGetEvent).not.toHaveBeenCalled();
+	});
+});
+
+describe("PUT /api/v1/events/:eventId", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockUpdateDraftEvent.mockReset();
+	});
+
+	it("updates draft event details for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		mockUpdateDraftEvent.mockResolvedValue({
+			...mockEvent,
+			...validUpdateEventBody,
+			slug: "updated-coimbatore-city-10k",
+			updatedAt: "2026-04-27T12:00:00.000Z",
+		});
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+			...csrf,
+			payload: validUpdateEventBody,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			success: true,
+			data: {
+				id: TEST_EVENT_ID,
+				title: "Updated Coimbatore City 10K",
+				slug: "updated-coimbatore-city-10k",
+			},
+		});
+		expect(mockUpdateDraftEvent).toHaveBeenCalledOnce();
+		const [_deps, userId, eventId, body] = mockUpdateDraftEvent.mock
+			.calls[0] as [unknown, string, string, Record<string, unknown>];
+		expect(userId).toBe(TEST_USER_ID);
+		expect(eventId).toBe(TEST_EVENT_ID);
+		expect(body).toEqual(validUpdateEventBody);
+	});
+
+	it("returns 401 when no session cookie is provided", async () => {
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+			payload: validUpdateEventBody,
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "UNAUTHORIZED" },
+		});
+		expect(mockUpdateDraftEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when an authenticated participant updates an event", async () => {
+		setupParticipantSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+			...csrf,
+			payload: validUpdateEventBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "INSUFFICIENT_ROLE" },
+		});
+		expect(mockUpdateDraftEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 and does not call service when CSRF token is missing", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			payload: validUpdateEventBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockUpdateDraftEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when the organizer does not own the event", async () => {
+		setupOrganizerSession(app);
+		mockUpdateDraftEvent.mockRejectedValue(
+			new ForbiddenError("You do not have access to this event"),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+			...csrf,
+			payload: validUpdateEventBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "FORBIDDEN" },
+		});
+	});
+
+	it("returns 409 when the event is not draft", async () => {
+		setupOrganizerSession(app);
+		mockUpdateDraftEvent.mockRejectedValue(
+			new ConflictError(
+				"Event details can only be updated while the event is in draft status",
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+			...csrf,
+			payload: validUpdateEventBody,
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CONFLICT" },
+		});
+	});
+
+	it.each([
+		[
+			"invalid date order",
+			{
+				startAt: "2026-08-15T03:30:00.000Z",
+				endAt: "2026-08-15T00:30:00.000Z",
+			},
+		],
+		["immutable field", { city: "Coimbatore" }],
+		["missing title", { title: undefined }],
+	])("returns 400 for %s", async (_name, override) => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+		const payload = { ...validUpdateEventBody, ...override };
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+			...csrf,
+			payload,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "VALIDATION_ERROR" },
+		});
+		expect(mockUpdateDraftEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 400 for an empty update payload", async () => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}`,
+			...csrf,
+			payload: {},
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "VALIDATION_ERROR" },
+		});
+		expect(mockUpdateDraftEvent).not.toHaveBeenCalled();
 	});
 });
 

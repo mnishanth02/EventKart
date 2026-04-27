@@ -16,6 +16,7 @@ import {
 	eventCategoriesBodySchema,
 	eventCategoriesResponseSchema,
 	eventErrorResponseSchema,
+	eventIdParamsSchema,
 	eventImageConfirmResponseSchema,
 	eventImageDeleteResponseSchema,
 	eventImageIdParamsSchema,
@@ -23,19 +24,22 @@ import {
 	eventImagesQuerySchema,
 	eventImageUploadBodySchema,
 	eventImageUploadResponseSchema,
-	eventIdParamsSchema,
 	eventPoliciesBodySchema,
 	eventPoliciesResponseSchema,
 	eventPricingBodySchema,
 	eventPricingResponseSchema,
+	updateEventBodySchema,
+	updateEventResponseSchema,
 } from "./schemas.js";
 import {
 	createDraftEvent,
+	getEvent,
 	getEventPolicies,
 	listEventCategories,
 	listEventPricing,
 	replaceEventCategories,
 	replaceEventPricing,
+	updateDraftEvent,
 	updateEventPolicies,
 } from "./service.js";
 
@@ -71,6 +75,65 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			);
 
 			reply.code(201);
+			return { success: true as const, data: event };
+		},
+	);
+
+	typedApp.put(
+		"/:eventId",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				body: updateEventBodySchema,
+				response: {
+					200: updateEventResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const event = await updateDraftEvent(
+				{ db: app.db, log: request.log },
+				session.userId,
+				request.params.eventId,
+				request.body,
+			);
+
+			return { success: true as const, data: event };
+		},
+	);
+
+	typedApp.get(
+		"/:eventId",
+		{
+			schema: {
+				params: eventIdParamsSchema,
+				response: {
+					200: createEventResponseSchema,
+					400: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const event = await getEvent(
+				app.db,
+				request.params.eventId,
+				request.session?.role === "organizer"
+					? request.session.userId
+					: undefined,
+			);
+
 			return { success: true as const, data: event };
 		},
 	);

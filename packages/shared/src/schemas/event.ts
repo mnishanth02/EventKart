@@ -30,6 +30,20 @@ const eventDateTimeSchema = z
 
 const eventOptionalDateTimeSchema = eventDateTimeSchema.optional();
 
+const editableEventFields = {
+	title: true,
+	description: true,
+	venueName: true,
+	addressLine1: true,
+	addressLine2: true,
+	postalCode: true,
+	startAt: true,
+	endAt: true,
+	registrationOpensAt: true,
+	registrationClosesAt: true,
+	routeDetails: true,
+} as const;
+
 function parseDateTime(value: string): Date {
 	return new Date(value);
 }
@@ -146,64 +160,79 @@ export const createEventBaseSchema = z.object({
 	currency: eventCurrencySchema.default(V1_EVENT_CURRENCY),
 });
 
-export const createEventInputSchema = createEventBaseSchema.superRefine(
-	(input, ctx) => {
-		const startAt = parseDateTime(input.startAt);
-		const endAt = parseDateTime(input.endAt);
-
-		if (startAt >= endAt) {
-			ctx.addIssue({
-				code: "custom",
-				message: "Event end time must be after the start time",
-				path: ["endAt"],
-			});
-		}
-
-		if (
-			getCoimbatoreDateKey(input.startAt) !== getCoimbatoreDateKey(input.endAt)
-		) {
-			ctx.addIssue({
-				code: "custom",
-				message: "V1 events must start and end on the same day",
-				path: ["endAt"],
-			});
-		}
-
-		const hasRegistrationOpensAt = input.registrationOpensAt !== undefined;
-		const hasRegistrationClosesAt = input.registrationClosesAt !== undefined;
-
-		if (hasRegistrationOpensAt !== hasRegistrationClosesAt) {
-			ctx.addIssue({
-				code: "custom",
-				message: "Provide both registration open and close times",
-				path: hasRegistrationOpensAt
-					? ["registrationClosesAt"]
-					: ["registrationOpensAt"],
-			});
-		}
-
-		if (input.registrationOpensAt && input.registrationClosesAt) {
-			const registrationOpensAt = parseDateTime(input.registrationOpensAt);
-			const registrationClosesAt = parseDateTime(input.registrationClosesAt);
-
-			if (registrationOpensAt >= registrationClosesAt) {
-				ctx.addIssue({
-					code: "custom",
-					message: "Registration close time must be after the open time",
-					path: ["registrationClosesAt"],
-				});
-			}
-
-			if (registrationClosesAt > startAt) {
-				ctx.addIssue({
-					code: "custom",
-					message: "Registration must close before the event starts",
-					path: ["registrationClosesAt"],
-				});
-			}
-		}
+function validateEventSchedule(
+	input: {
+		startAt: string;
+		endAt: string;
+		registrationOpensAt?: string;
+		registrationClosesAt?: string;
 	},
+	ctx: z.RefinementCtx,
+) {
+	const startAt = parseDateTime(input.startAt);
+	const endAt = parseDateTime(input.endAt);
+
+	if (startAt >= endAt) {
+		ctx.addIssue({
+			code: "custom",
+			message: "Event end time must be after the start time",
+			path: ["endAt"],
+		});
+	}
+
+	if (
+		getCoimbatoreDateKey(input.startAt) !== getCoimbatoreDateKey(input.endAt)
+	) {
+		ctx.addIssue({
+			code: "custom",
+			message: "V1 events must start and end on the same day",
+			path: ["endAt"],
+		});
+	}
+
+	const hasRegistrationOpensAt = input.registrationOpensAt !== undefined;
+	const hasRegistrationClosesAt = input.registrationClosesAt !== undefined;
+
+	if (hasRegistrationOpensAt !== hasRegistrationClosesAt) {
+		ctx.addIssue({
+			code: "custom",
+			message: "Provide both registration open and close times",
+			path: hasRegistrationOpensAt
+				? ["registrationClosesAt"]
+				: ["registrationOpensAt"],
+		});
+	}
+
+	if (input.registrationOpensAt && input.registrationClosesAt) {
+		const registrationOpensAt = parseDateTime(input.registrationOpensAt);
+		const registrationClosesAt = parseDateTime(input.registrationClosesAt);
+
+		if (registrationOpensAt >= registrationClosesAt) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Registration close time must be after the open time",
+				path: ["registrationClosesAt"],
+			});
+		}
+
+		if (registrationClosesAt > startAt) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Registration must close before the event starts",
+				path: ["registrationClosesAt"],
+			});
+		}
+	}
+}
+
+export const createEventInputSchema = createEventBaseSchema.superRefine(
+	validateEventSchedule,
 );
+
+export const updateEventInputSchema = createEventBaseSchema
+	.pick(editableEventFields)
+	.strict()
+	.superRefine(validateEventSchedule);
 
 export const eventSchema = z.object({
 	id: z.string().uuid(),
@@ -238,4 +267,6 @@ export const eventSchema = z.object({
 
 export type CreateEventInput = z.input<typeof createEventInputSchema>;
 export type CreateEvent = z.output<typeof createEventInputSchema>;
+export type UpdateEventInput = z.input<typeof updateEventInputSchema>;
+export type UpdateEvent = z.output<typeof updateEventInputSchema>;
 export type Event = z.infer<typeof eventSchema>;

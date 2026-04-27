@@ -1,11 +1,23 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { EventImageListQuery } from "./types";
 import {
+	getEvent,
 	getEventCategories,
 	getEventImages,
 	getEventPolicies,
 	getEventPricing,
 } from "./api";
+import type { EventImageListQuery } from "./types";
+
+export const eventQueryKey = (eventId: string) => ["events", eventId] as const;
+
+export function eventQueryOptions(eventId: string) {
+	return queryOptions({
+		queryKey: eventQueryKey(eventId),
+		queryFn: () => getEvent({ data: { eventId } }),
+		staleTime: 30_000,
+		gcTime: 300_000,
+	});
+}
 
 export const eventCategoriesQueryKey = (eventId: string) =>
 	["events", eventId, "categories"] as const;

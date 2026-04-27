@@ -4,7 +4,11 @@ import {
 	V1_EVENT_CITY,
 	V1_EVENT_TIMEZONE,
 } from "../../src/constants/event";
-import { createEventInputSchema, eventSchema } from "../../src/schemas/event";
+import {
+	createEventInputSchema,
+	eventSchema,
+	updateEventInputSchema,
+} from "../../src/schemas/event";
 
 const validCreateEventInput = {
 	title: "Coimbatore City 10K",
@@ -104,6 +108,88 @@ describe("createEventInputSchema", () => {
 				expect.arrayContaining([
 					expect.objectContaining({
 						message: "Registration must close before the event starts",
+						path: ["registrationClosesAt"],
+					}),
+				]),
+			);
+		}
+	});
+});
+
+describe("updateEventInputSchema", () => {
+	it("accepts the editable core event fields", () => {
+		const result = updateEventInputSchema.parse({
+			...validCreateEventInput,
+			title: "  Updated Coimbatore City 10K  ",
+			addressLine2: "  Near main gate  ",
+			postalCode: " 641018 ",
+		});
+
+		expect(result).toMatchObject({
+			title: "Updated Coimbatore City 10K",
+			addressLine2: "Near main gate",
+			postalCode: "641018",
+		});
+	});
+
+	it("rejects immutable V1 fields", () => {
+		const result = updateEventInputSchema.safeParse({
+			...validCreateEventInput,
+			city: "Coimbatore",
+			eventType: "race",
+			isPaid: true,
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						code: "unrecognized_keys",
+					}),
+				]),
+			);
+		}
+	});
+
+	it("rejects empty update payloads", () => {
+		const result = updateEventInputSchema.safeParse({});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("keeps create-equivalent event date validation", () => {
+		const result = updateEventInputSchema.safeParse({
+			...validCreateEventInput,
+			startAt: "2026-08-15T03:30:00.000Z",
+			endAt: "2026-08-15T00:30:00.000Z",
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						message: "Event end time must be after the start time",
+						path: ["endAt"],
+					}),
+				]),
+			);
+		}
+	});
+
+	it("requires a complete registration window on update", () => {
+		const result = updateEventInputSchema.safeParse({
+			...validCreateEventInput,
+			registrationClosesAt: undefined,
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						message: "Provide both registration open and close times",
 						path: ["registrationClosesAt"],
 					}),
 				]),

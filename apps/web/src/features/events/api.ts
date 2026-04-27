@@ -15,24 +15,30 @@ import {
 	type EventImageListQuery,
 	type EventImageUploadUrlRequest,
 	type EventImageUploadUrlResponse,
-	eventImageConfirmRequestSchema,
-	eventImageDeleteRequestSchema,
-	eventImageListQuerySchema,
-	eventImageUploadUrlRequestSchema,
 	type EventPoliciesConfigInput,
 	type EventPoliciesRecord,
 	type EventPricingConfigInput,
 	type EventPricingTierWithCategory,
 	eventCategoriesConfigSchema,
+	eventImageConfirmRequestSchema,
+	eventImageDeleteRequestSchema,
+	eventImageListQuerySchema,
+	eventImageUploadUrlRequestSchema,
 	eventPoliciesConfigSchema,
 	eventPricingConfigSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod/v4";
+import { type EventUpdatePayload, eventEditValuesSchema } from "./form-values";
 
 const eventIdInputSchema = z.object({
 	eventId: uuidSchema,
+});
+
+const updateEventInputSchema = z.object({
+	eventId: uuidSchema,
+	event: eventEditValuesSchema,
 });
 
 const updateEventCategoriesInputSchema = z.object({
@@ -95,6 +101,13 @@ export type DeleteEventImageResult = {
 	imageId: string;
 	kind: EventImageKind;
 };
+
+export type GetEventInput = z.input<typeof eventIdInputSchema>;
+export type UpdateEventInput = {
+	eventId: string;
+	event: EventUpdatePayload;
+};
+
 export const createEvent = createServerFn({ method: "POST" })
 	.inputValidator((data: CreateEventInput) =>
 		createEventInputSchema.parse(data),
@@ -102,6 +115,24 @@ export const createEvent = createServerFn({ method: "POST" })
 	.handler(async ({ data }): Promise<Event> => {
 		const { createEventOnServer } = await import("./api.server");
 		const response = await createEventOnServer(data);
+		return response.data;
+	});
+
+export const getEvent = createServerFn({ method: "GET" })
+	.inputValidator((data: GetEventInput) => eventIdInputSchema.parse(data))
+	.handler(async ({ data }): Promise<Event> => {
+		const { getEventOnServer } = await import("./api.server");
+		const response = await getEventOnServer(data.eventId);
+		return response.data;
+	});
+
+export const updateEvent = createServerFn({ method: "POST" })
+	.inputValidator((data: UpdateEventInput) =>
+		updateEventInputSchema.parse(data),
+	)
+	.handler(async ({ data }): Promise<Event> => {
+		const { updateEventOnServer } = await import("./api.server");
+		const response = await updateEventOnServer(data.eventId, data.event);
 		return response.data;
 	});
 

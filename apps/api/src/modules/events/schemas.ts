@@ -14,11 +14,14 @@ import {
 	eventPricingConfigSchema,
 	eventPricingTierWithCategorySchema,
 	eventSchema,
+	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
 import { z } from "zod/v4";
 
 export const createEventBodySchema = createEventBaseSchema;
+
+export const updateEventBodySchema = updateEventInputSchema;
 
 export const eventIdParamsSchema = z.object({
 	eventId: uuidSchema,
@@ -32,6 +35,8 @@ export const createEventResponseSchema = z.object({
 	success: z.literal(true),
 	data: eventSchema,
 });
+
+export const updateEventResponseSchema = createEventResponseSchema;
 
 export const eventCategoriesBodySchema = eventCategoriesConfigSchema;
 

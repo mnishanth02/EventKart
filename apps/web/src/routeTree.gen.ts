@@ -28,6 +28,7 @@ import { Route as AuthedOrgPoliciesRouteImport } from './routes/_authed/org/poli
 import { Route as AuthedAdminVerificationsIndexRouteImport } from './routes/_authed/admin/verifications/index'
 import { Route as AuthedOrgEventsNewRouteImport } from './routes/_authed/org/events/new'
 import { Route as AuthedAdminVerificationsOrganizerIdRouteImport } from './routes/_authed/admin/verifications/$organizerId'
+import { Route as AuthedOrgEventsEventIdEditRouteImport } from './routes/_authed/org/events/$eventId/edit'
 import { Route as AuthedOrgEventsEventIdConfigurePricingRouteImport } from './routes/_authed/org/events/$eventId/configure-pricing'
 import { Route as AuthedOrgEventsEventIdConfigurePoliciesRouteImport } from './routes/_authed/org/events/$eventId/configure-policies'
 import { Route as AuthedOrgEventsEventIdConfigureImagesRouteImport } from './routes/_authed/org/events/$eventId/configure-images'
@@ -128,6 +129,12 @@ const AuthedAdminVerificationsOrganizerIdRoute =
     path: '/verifications/$organizerId',
     getParentRoute: () => AuthedAdminRoute,
   } as any)
+const AuthedOrgEventsEventIdEditRoute =
+  AuthedOrgEventsEventIdEditRouteImport.update({
+    id: '/events/$eventId/edit',
+    path: '/events/$eventId/edit',
+    getParentRoute: () => AuthedOrgRoute,
+  } as any)
 const AuthedOrgEventsEventIdConfigurePricingRoute =
   AuthedOrgEventsEventIdConfigurePricingRouteImport.update({
     id: '/events/$eventId/configure-pricing',
@@ -175,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
   '/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   '/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  '/org/events/$eventId/edit': typeof AuthedOrgEventsEventIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
@@ -195,6 +203,7 @@ export interface FileRoutesByTo {
   '/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
   '/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   '/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  '/org/events/$eventId/edit': typeof AuthedOrgEventsEventIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -221,6 +230,7 @@ export interface FileRoutesById {
   '/_authed/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
   '/_authed/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   '/_authed/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  '/_authed/org/events/$eventId/edit': typeof AuthedOrgEventsEventIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/org/events/$eventId/configure-images'
     | '/org/events/$eventId/configure-policies'
     | '/org/events/$eventId/configure-pricing'
+    | '/org/events/$eventId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/org/events/$eventId/configure-images'
     | '/org/events/$eventId/configure-policies'
     | '/org/events/$eventId/configure-pricing'
+    | '/org/events/$eventId/edit'
   id:
     | '__root__'
     | '/_authed'
@@ -291,6 +303,7 @@ export interface FileRouteTypes {
     | '/_authed/org/events/$eventId/configure-images'
     | '/_authed/org/events/$eventId/configure-policies'
     | '/_authed/org/events/$eventId/configure-pricing'
+    | '/_authed/org/events/$eventId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAdminVerificationsOrganizerIdRouteImport
       parentRoute: typeof AuthedAdminRoute
     }
+    '/_authed/org/events/$eventId/edit': {
+      id: '/_authed/org/events/$eventId/edit'
+      path: '/events/$eventId/edit'
+      fullPath: '/org/events/$eventId/edit'
+      preLoaderRoute: typeof AuthedOrgEventsEventIdEditRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
     '/_authed/org/events/$eventId/configure-pricing': {
       id: '/_authed/org/events/$eventId/configure-pricing'
       path: '/events/$eventId/configure-pricing'
@@ -506,6 +526,7 @@ interface AuthedOrgRouteChildren {
   AuthedOrgEventsEventIdConfigureImagesRoute: typeof AuthedOrgEventsEventIdConfigureImagesRoute
   AuthedOrgEventsEventIdConfigurePoliciesRoute: typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   AuthedOrgEventsEventIdConfigurePricingRoute: typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  AuthedOrgEventsEventIdEditRoute: typeof AuthedOrgEventsEventIdEditRoute
 }
 
 const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
@@ -523,6 +544,7 @@ const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
     AuthedOrgEventsEventIdConfigurePoliciesRoute,
   AuthedOrgEventsEventIdConfigurePricingRoute:
     AuthedOrgEventsEventIdConfigurePricingRoute,
+  AuthedOrgEventsEventIdEditRoute: AuthedOrgEventsEventIdEditRoute,
 }
 
 const AuthedOrgRouteWithChildren = AuthedOrgRoute._addFileChildren(

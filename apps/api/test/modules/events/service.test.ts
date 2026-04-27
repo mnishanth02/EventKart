@@ -18,6 +18,7 @@ import {
 	type EventSlugStore,
 	type EventSlugTransactionalStore,
 	getApplicableEventPrice,
+	getEvent,
 	getEventPolicies,
 	listEventCategories,
 	listEventPricing,
@@ -25,6 +26,7 @@ import {
 	replaceEventCategories,
 	replaceEventPricing,
 	reserveUniqueEventSlug,
+	updateDraftEvent,
 	updateEventPolicies,
 	updateEventSlug,
 } from "../../../src/modules/events/service.js";
@@ -132,6 +134,18 @@ const validCreateEventInput = {
 	registrationOpensAt: "2026-07-01T03:30:00.000Z",
 	registrationClosesAt: "2026-08-14T12:30:00.000Z",
 	routeDetails: "Single-loop 10K route through Race Course Road.",
+};
+
+const validUpdateEventInput = {
+	...validCreateEventInput,
+	title: "Updated Coimbatore City 10K",
+	description:
+		"Updated paid running event for Coimbatore runners with clearer route and venue details.",
+	venueName: "VOC Park Grounds",
+	addressLine1: "VOC Park, Gopalapuram",
+	addressLine2: "Gate 2",
+	postalCode: "641018",
+	routeDetails: "Updated single-loop 10K route through Race Course Road.",
 };
 
 const organizerRow = {
@@ -523,6 +537,258 @@ describe("createDraftEvent", () => {
 			expect.objectContaining({ slug: "coimbatore-city-10k-2" }),
 		);
 		expect(select).toHaveBeenCalledTimes(4);
+	});
+});
+
+describe("updateDraftEvent", () => {
+	it("updates editable details for an organizer-owned draft event", async () => {
+		const updatedAt = new Date("2026-04-27T12:00:00.000Z");
+		const nonSlugUpdateInput = {
+			...validUpdateEventInput,
+			title: validCreateEventInput.title,
+		};
+		const { db, selectQueries, transaction, updateSet } = createMockSlugStore(
+			[[organizerRow], [buildEventRow()]],
+			[
+				buildEventRow({
+					...nonSlugUpdateInput,
+					slug: "coimbatore-city-10k",
+					startAt: new Date(nonSlugUpdateInput.startAt),
+					endAt: new Date(nonSlugUpdateInput.endAt),
+					registrationOpensAt: new Date(nonSlugUpdateInput.registrationOpensAt),
+					registrationClosesAt: new Date(
+						nonSlugUpdateInput.registrationClosesAt,
+					),
+					updatedAt,
+				}),
+			],
+		);
+		const log = { info: vi.fn() };
+
+		const result = await updateDraftEvent(
+			{ db: asDatabase(db), log },
+			TEST_USER_ID,
+			EVENT_ID,
+			{
+				...nonSlugUpdateInput,
+				title: `  ${nonSlugUpdateInput.title}  `,
+				addressLine2: `  ${nonSlugUpdateInput.addressLine2}  `,
+			},
+		);
+
+		expect(transaction).toHaveBeenCalledOnce();
+		expect(selectQueries[1]?.for).toHaveBeenCalledWith("update");
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				title: nonSlugUpdateInput.title,
+				description: nonSlugUpdateInput.description,
+				venueName: nonSlugUpdateInput.venueName,
+				addressLine1: nonSlugUpdateInput.addressLine1,
+				addressLine2: nonSlugUpdateInput.addressLine2,
+				postalCode: nonSlugUpdateInput.postalCode,
+				slug: "coimbatore-city-10k",
+				startAt: new Date(nonSlugUpdateInput.startAt),
+				endAt: new Date(nonSlugUpdateInput.endAt),
+				routeDetails: nonSlugUpdateInput.routeDetails,
+				updatedAt: expect.any(Date),
+			}),
+		);
+		expect(result).toMatchObject({
+			id: EVENT_ID,
+			title: nonSlugUpdateInput.title,
+			venueName: nonSlugUpdateInput.venueName,
+			addressLine2: nonSlugUpdateInput.addressLine2,
+			postalCode: nonSlugUpdateInput.postalCode,
+			updatedAt: "2026-04-27T12:00:00.000Z",
+		});
+		expect(log.info).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventId: EVENT_ID,
+				organizerId: TEST_ORGANIZER_ID,
+				userId: TEST_USER_ID,
+			}),
+			"Draft event updated",
+		);
+	});
+
+	it("updates the slug and records a redirect when the title changes", async () => {
+		const { db, insertValues, select, updateSet } = createMockSlugStore(
+			[[organizerRow], [buildEventRow()], [], []],
+			[
+				buildEventRow({
+					...validUpdateEventInput,
+					slug: "updated-coimbatore-city-10k",
+					startAt: new Date(validUpdateEventInput.startAt),
+					endAt: new Date(validUpdateEventInput.endAt),
+					registrationOpensAt: new Date(
+						validUpdateEventInput.registrationOpensAt,
+					),
+					registrationClosesAt: new Date(
+						validUpdateEventInput.registrationClosesAt,
+					),
+				}),
+			],
+		);
+
+		const result = await updateDraftEvent(
+			{ db: asDatabase(db), log: { info: vi.fn() } },
+			TEST_USER_ID,
+			EVENT_ID,
+			validUpdateEventInput,
+		);
+
+		expect(result.slug).toBe("updated-coimbatore-city-10k");
+		expect(select).toHaveBeenCalledTimes(4);
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				title: "Updated Coimbatore City 10K",
+				slug: "updated-coimbatore-city-10k",
+			}),
+		);
+		expect(insertValues).toHaveBeenCalledWith({
+			oldSlug: "coimbatore-city-10k",
+			newSlug: "updated-coimbatore-city-10k",
+			resourceType: "event",
+			resourceId: EVENT_ID,
+		});
+	});
+
+	it("does not record a slug redirect when the normalized title is unchanged", async () => {
+		const { db, insert, select, updateSet } = createMockSlugStore(
+			[[organizerRow], [buildEventRow()]],
+			[buildEventRow()],
+		);
+
+		const result = await updateDraftEvent(
+			{ db: asDatabase(db), log: { info: vi.fn() } },
+			TEST_USER_ID,
+			EVENT_ID,
+			validCreateEventInput,
+		);
+
+		expect(result.slug).toBe("coimbatore-city-10k");
+		expect(select).toHaveBeenCalledTimes(2);
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({ slug: "coimbatore-city-10k" }),
+		);
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it("returns 404 when the authenticated organizer profile does not exist", async () => {
+		const { db, update } = createMockSlugStore([[]]);
+
+		await expect(
+			updateDraftEvent(
+				{ db: asDatabase(db), log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validUpdateEventInput,
+			),
+		).rejects.toThrow(NotFoundError);
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when updating another organizer's event", async () => {
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ organizerId: OTHER_ORGANIZER_ID })],
+		]);
+
+		await expect(
+			updateDraftEvent(
+				{ db: asDatabase(db), log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validUpdateEventInput,
+			),
+		).rejects.toThrow(ForbiddenError);
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when updating a non-draft event", async () => {
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ status: "published" })],
+		]);
+
+		await expect(
+			updateDraftEvent(
+				{ db: asDatabase(db), log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validUpdateEventInput,
+			),
+		).rejects.toThrow(ConflictError);
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		[
+			"immutable city",
+			{
+				city: "Coimbatore",
+			},
+		],
+		[
+			"date order",
+			{
+				startAt: "2026-08-15T03:30:00.000Z",
+				endAt: "2026-08-15T00:30:00.000Z",
+			},
+		],
+	])("rejects invalid update payloads for %s before touching the database", async (_name, override) => {
+		const { db, select, update } = createMockSlugStore();
+
+		await expect(
+			updateDraftEvent(
+				{ db: asDatabase(db), log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				{ ...validUpdateEventInput, ...override },
+			),
+		).rejects.toThrow(ValidationError);
+		expect(select).not.toHaveBeenCalled();
+		expect(update).not.toHaveBeenCalled();
+	});
+});
+
+describe("getEvent", () => {
+	it("returns a publicly readable event", async () => {
+		const { db } = createMockSlugStore([
+			[buildEventRow({ status: "published" })],
+		]);
+
+		const result = await getEvent(db, EVENT_ID);
+
+		expect(result).toMatchObject({
+			id: EVENT_ID,
+			slug: "coimbatore-city-10k",
+			status: "published",
+		});
+	});
+
+	it("returns an organizer-owned draft event when the requester owns it", async () => {
+		const { db } = createMockSlugStore([[buildEventRow()], [organizerRow]]);
+
+		const result = await getEvent(db, EVENT_ID, TEST_USER_ID);
+
+		expect(result).toMatchObject({
+			id: EVENT_ID,
+			organizerId: TEST_ORGANIZER_ID,
+			status: "draft",
+		});
+	});
+
+	it("does not expose draft events without organizer ownership", async () => {
+		const { db } = createMockSlugStore([[buildEventRow()]]);
+
+		await expect(getEvent(db, EVENT_ID)).rejects.toThrow(NotFoundError);
+	});
+
+	it("returns 404 for a missing event", async () => {
+		const { db } = createMockSlugStore([[]]);
+
+		await expect(getEvent(db, EVENT_ID)).rejects.toThrow(NotFoundError);
 	});
 });
 

@@ -19,6 +19,7 @@ import {
 	assertSameOriginMutationRequest,
 	getForwardedAuthHeaders,
 } from "#/lib/auth/server-fns.server";
+import type { EventUpdatePayload } from "./form-values";
 import type {
 	EventCategoriesResponse,
 	EventImageConfirmResponse,
@@ -37,6 +38,26 @@ export async function createEventOnServer(
 	const headers = getForwardedAuthHeaders();
 	return serverApiClient<EventResponse>("/events", {
 		method: "POST",
+		body: data,
+		headers,
+	});
+}
+
+export async function getEventOnServer(
+	eventId: string,
+): Promise<EventResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventResponse>(`/events/${eventId}`, { headers });
+}
+
+export async function updateEventOnServer(
+	eventId: string,
+	data: EventUpdatePayload,
+): Promise<EventResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventResponse>(`/events/${eventId}`, {
+		method: "PUT",
 		body: data,
 		headers,
 	});

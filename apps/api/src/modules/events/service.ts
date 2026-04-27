@@ -14,6 +14,7 @@ import type {
 	EventPricingConfig,
 	EventPricingTierWithCategory,
 	EventSlug,
+	UpdateEvent,
 } from "@repo/shared/schemas";
 import {
 	createEventInputSchema,
@@ -25,6 +26,7 @@ import {
 	eventPricingTierWithCategorySchema,
 	eventSchema,
 	eventSlugSchema,
+	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
@@ -77,6 +79,11 @@ export interface UpdateEventSlugResult {
 }
 
 export interface CreateDraftEventDeps {
+	db: Database;
+	log: Pick<FastifyBaseLogger, "info">;
+}
+
+export interface UpdateDraftEventDeps {
 	db: Database;
 	log: Pick<FastifyBaseLogger, "info">;
 }
@@ -255,14 +262,7 @@ async function selectEventForCategories(
 	eventId: string,
 	options: { forUpdate?: boolean } = {},
 ) {
-	const query = db
-		.select({
-			id: events.id,
-			organizerId: events.organizerId,
-			status: events.status,
-		})
-		.from(events)
-		.where(eq(events.id, eventId));
+	const query = db.select().from(events).where(eq(events.id, eventId));
 
 	const [event] = options.forUpdate
 		? await query.for("update").limit(1)
@@ -273,6 +273,17 @@ async function selectEventForCategories(
 	}
 
 	return event;
+}
+
+export async function getEvent(
+	db: EventLookupStore,
+	eventId: string,
+	userId?: string,
+): Promise<Event> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const event = await assertEventReadable(db, parsedEventId, userId);
+
+	return toEventResponse(event);
 }
 
 async function assertEventReadable(
@@ -533,6 +544,107 @@ export async function createDraftEvent(
 	}
 
 	throw new ConflictError("Unable to reserve a unique event slug");
+}
+
+export async function updateDraftEvent(
+	deps: UpdateDraftEventDeps,
+	userId: string,
+	eventId: string,
+	input: unknown,
+): Promise<Event> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const parsed = updateEventInputSchema.safeParse(input);
+	if (!parsed.success) {
+		throw new ValidationError(
+			"Invalid event details",
+			toValidationDetails(parsed.error),
+		);
+	}
+
+	const { db, log } = deps;
+	const organizer = await getOrganizerByUserId(db, userId);
+
+	if (!organizer) {
+		throw new NotFoundError(
+			"Organizer profile not found. Please register first.",
+		);
+	}
+
+	const event = await db.transaction(async (tx) => {
+		const currentEvent = await selectEventForCategories(tx, parsedEventId, {
+			forUpdate: true,
+		});
+
+		if (currentEvent.organizerId !== organizer.id) {
+			throw new ForbiddenError("You do not have access to this event");
+		}
+
+		if (currentEvent.status !== DEFAULT_EVENT_STATUS) {
+			throw new ConflictError(
+				"Event details can only be updated while the event is in draft status",
+			);
+		}
+
+		const data: UpdateEvent = parsed.data;
+		const currentSlug = parseEventSlug(currentEvent.slug);
+		let slug: EventSlug = currentSlug;
+
+		if (data.title !== currentEvent.title) {
+			slug = await reserveUniqueEventSlug(tx, data.title, {
+				excludeEventId: parsedEventId,
+			});
+		}
+
+		const [updated] = await tx
+			.update(events)
+			.set({
+				title: data.title,
+				slug,
+				description: data.description,
+				venueName: data.venueName,
+				addressLine1: data.addressLine1,
+				addressLine2: data.addressLine2 ?? null,
+				postalCode: data.postalCode ?? null,
+				startAt: new Date(data.startAt),
+				endAt: new Date(data.endAt),
+				registrationOpensAt: data.registrationOpensAt
+					? new Date(data.registrationOpensAt)
+					: null,
+				registrationClosesAt: data.registrationClosesAt
+					? new Date(data.registrationClosesAt)
+					: null,
+				routeDetails: data.routeDetails,
+				updatedAt: new Date(),
+			})
+			.where(eq(events.id, parsedEventId))
+			.returning();
+
+		if (!updated) {
+			throw new Error("Failed to update event details");
+		}
+
+		if (currentSlug !== slug) {
+			await recordEventSlugRedirect(tx, {
+				eventId: parsedEventId,
+				oldSlug: currentSlug,
+				newSlug: slug,
+			});
+		}
+
+		return toEventResponse(updated);
+	});
+
+	log.info(
+		{
+			eventId: parsedEventId,
+			organizerId: organizer.id,
+			userId,
+			slug: event.slug,
+		},
+		"Draft event updated",
+	);
+
+	return event;
 }
 
 export async function listEventCategories(

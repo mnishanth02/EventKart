@@ -20,13 +20,16 @@ import {
 	createEventOnServer,
 	confirmEventImageUploadOnServer,
 	deleteEventImageOnServer,
+	getEventOnServer,
 	listEventImagesOnServer,
 	listEventCategoriesOnServer,
 	listEventPricingOnServer,
 	requestEventImageUploadUrlOnServer,
 	replaceEventCategoriesOnServer,
 	replaceEventPricingOnServer,
+	updateEventOnServer,
 } from "./api.server";
+import type { EventUpdatePayload } from "./form-values";
 
 vi.mock("#/lib/api-client.server", () => ({
 	serverApiClient: vi.fn(),
@@ -127,6 +130,35 @@ const eventImage = {
 	updatedAt: "2026-04-26T12:00:00.000Z",
 } as const;
 
+const eventResponse = {
+	...validCreateEvent,
+	id: eventId,
+	organizerId: "22222222-2222-4222-8222-222222222222",
+	slug: "coimbatore-city-10k",
+	addressLine2: null,
+	postalCode: null,
+	status: "draft",
+	refundPolicy: null,
+	cancellationPolicy: null,
+	createdAt: "2026-04-26T12:00:00.000Z",
+	updatedAt: "2026-04-26T12:00:00.000Z",
+} as const;
+
+const validEventUpdate = {
+	title: "Coimbatore City 10K Updated",
+	description:
+		"An updated paid running event for Coimbatore runners with a clearly marked city route.",
+	venueName: "Race Course Grounds",
+	addressLine1: "Race Course Road, Gopalapuram",
+	addressLine2: "Near Arts College",
+	postalCode: "641018",
+	startAt: "2026-08-15T00:30:00.000Z",
+	endAt: "2026-08-15T03:30:00.000Z",
+	registrationOpensAt: "2026-07-01T03:30:00.000Z",
+	registrationClosesAt: "2026-08-14T12:30:00.000Z",
+	routeDetails: "Updated single-loop 10K route through Race Course Road.",
+} satisfies EventUpdatePayload;
+
 describe("createEventOnServer", () => {
 	beforeEach(() => {
 		vi.mocked(serverApiClient).mockReset();
@@ -174,6 +206,79 @@ describe("createEventOnServer", () => {
 		await expect(createEventOnServer(validCreateEvent)).rejects.toThrow(
 			"Invalid request origin",
 		);
+
+		expect(serverApiClient).not.toHaveBeenCalled();
+	});
+});
+
+describe("getEventOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("fetches an event with forwarded auth headers", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: eventResponse,
+		});
+
+		await getEventOnServer(eventId);
+
+		expect(assertSameOriginMutationRequest).not.toHaveBeenCalled();
+		expect(serverApiClient).toHaveBeenCalledWith(`/events/${eventId}`, {
+			headers: {
+				Cookie: "session=test-session",
+				"X-Request-ID": "req-1",
+			},
+		});
+	});
+});
+
+describe("updateEventOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("puts editable event fields with same-origin validation and auth headers", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: {
+				...eventResponse,
+				...validEventUpdate,
+			},
+		});
+
+		await updateEventOnServer(eventId, validEventUpdate);
+
+		expect(assertSameOriginMutationRequest).toHaveBeenCalledOnce();
+		expect(serverApiClient).toHaveBeenCalledWith(`/events/${eventId}`, {
+			method: "PUT",
+			body: validEventUpdate,
+			headers: {
+				Cookie: "session=test-session",
+				"X-Request-ID": "req-1",
+			},
+		});
+	});
+
+	it("does not forward the update when same-origin validation fails", async () => {
+		vi.mocked(assertSameOriginMutationRequest).mockImplementationOnce(() => {
+			throw new Error("Invalid request origin");
+		});
+
+		await expect(
+			updateEventOnServer(eventId, validEventUpdate),
+		).rejects.toThrow("Invalid request origin");
 
 		expect(serverApiClient).not.toHaveBeenCalled();
 	});
