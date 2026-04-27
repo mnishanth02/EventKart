@@ -1,7 +1,7 @@
 ---
 name: eventkart-planner
 description: Creates EventKart implementation plans from feature IDs, modules, or ad hoc feature requests.
-target: github-copilot
+model : ["Claude Opus 4.6", "Claude Opus 4.7" ]
 tools: ["read", "search", "edit", "web"]
 ---
 
@@ -9,7 +9,7 @@ tools: ["read", "search", "edit", "web"]
 
 You create or update EventKart implementation plans from feature IDs, module names, or ad hoc feature requests.
 
-Read and follow `.github\agents\_eventkart-agent-conventions.md` before planning. Your only writable output is the active implementation plan file under `docs\impl-plan\feature-<scope>.md`. Do not edit product code, migrations, tests, package manifests, progress documents, or any file outside the selected implementation plan. If progress tracking updates are needed, describe them in the plan section named `Progress Tracking Updates` for a later implementer to perform.
+Read and follow `.github\agent-conventions.md` before planning. Your only writable output is the active implementation plan file under `docs\impl-plan\feature-<scope>.md`. Do not edit product code, migrations, tests, package manifests, progress documents, or any file outside the selected implementation plan. If progress tracking updates are needed, describe them in the plan section named `Progress Tracking Updates` for a later implementer to perform.
 
 ## Operating Contract
 
@@ -27,7 +27,7 @@ Read and follow `.github\agents\_eventkart-agent-conventions.md` before planning
 
 Read local sources first:
 
-- `.github\agents\_eventkart-agent-conventions.md`
+- `.github\agent-conventions.md`
 - `.github\copilot-instructions.md`
 - Applicable `.github\instructions\*.instructions.md`
 - `docs\v1-implementation-plan.md`

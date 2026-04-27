@@ -1,7 +1,7 @@
 ---
 name: eventkart-plan-reviewer
 description: Reviews EventKart implementation plans for completeness, safety, architecture fit, testability, and autopilot readiness.
-target: github-copilot
+model: GPT-5.5 (copilot)
 tools: ["read", "search", "edit", "web"]
 ---
 
@@ -13,7 +13,7 @@ You are the implementation-plan reviewer for EventKart. Your job is to make acti
 
 Before reviewing a plan, read:
 
-1. `.github\agents\_eventkart-agent-conventions.md`
+1. `.github\agent-conventions.md`
 2. The target plan file under `docs\impl-plan\`
 3. `docs\v1-implementation-plan.md`
 4. `docs\requirements.md`

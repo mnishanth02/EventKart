@@ -2,19 +2,26 @@ const hookInput = await readStdin();
 const parsedInput = parseHookInput(hookInput);
 
 if (parsedInput) {
-	const toolName = String(parsedInput.toolName ?? "");
-	const toolArgs = parsedInput.toolArgs ?? {};
+	const toolName = String(parsedInput.tool_name ?? parsedInput.toolName ?? "");
+	const toolArgs =
+		parsedInput.tool_input ?? parsedInput.toolInput ?? parsedInput.toolArgs ?? {};
 	const decision = evaluateToolUse(toolName, toolArgs);
 
 	if (decision) {
 		process.stdout.write(
 			JSON.stringify({
-				permissionDecision: "deny",
-				permissionDecisionReason: decision,
+				hookSpecificOutput: {
+					hookEventName: "PreToolUse",
+					permissionDecision: "deny",
+					permissionDecisionReason: decision,
+				},
 			}),
 		);
+		process.exit(0);
 	}
 }
+
+process.stdout.write(JSON.stringify({}));
 
 function readStdin() {
 	return new Promise((resolve) => {

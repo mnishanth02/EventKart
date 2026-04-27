@@ -1,7 +1,8 @@
-import { Separator } from "@ui/components/ui/separator";
-import { cn } from "@ui/lib/utils";
-import { cva, type VariantProps } from "class-variance-authority";
-import { Slot } from "radix-ui";
+import { cva, type VariantProps } from "class-variance-authority"
+import { Slot } from "radix-ui"
+
+import { cn } from "@ui/lib/utils"
+import { Separator } from "@ui/components/ui/separator"
 
 const buttonGroupVariants = cva(
 	"flex w-fit items-stretch has-[>[data-slot=button-group]]:gap-2 [&>*]:focus-visible:relative [&>*]:focus-visible:z-10 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1",
@@ -17,8 +18,8 @@ const buttonGroupVariants = cva(
 		defaultVariants: {
 			orientation: "horizontal",
 		},
-	},
-);
+	}
+)
 
 function ButtonGroup({
 	className,
@@ -27,13 +28,12 @@ function ButtonGroup({
 }: React.ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>) {
 	return (
 		<div
-			role="group"
 			data-slot="button-group"
-			data-orientation={orientation}
-			className={cn(buttonGroupVariants({ orientation }), className)}
-			{...props}
+			data-orientation={ orientation }
+			className={ cn(buttonGroupVariants({ orientation }), className) }
+			{ ...props }
 		/>
-	);
+	)
 }
 
 function ButtonGroupText({
@@ -41,19 +41,19 @@ function ButtonGroupText({
 	asChild = false,
 	...props
 }: React.ComponentProps<"div"> & {
-	asChild?: boolean;
+	asChild?: boolean
 }) {
-	const Comp = asChild ? Slot.Root : "div";
+	const Comp = asChild ? Slot.Root : "div"
 
 	return (
 		<Comp
-			className={cn(
+			className={ cn(
 				"flex items-center gap-2 rounded-md border bg-muted px-4 text-sm font-medium shadow-xs [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
-				className,
-			)}
-			{...props}
+				className
+			) }
+			{ ...props }
 		/>
-	);
+	)
 }
 
 function ButtonGroupSeparator({
@@ -64,14 +64,14 @@ function ButtonGroupSeparator({
 	return (
 		<Separator
 			data-slot="button-group-separator"
-			orientation={orientation}
-			className={cn(
+			orientation={ orientation }
+			className={ cn(
 				"relative m-0! self-stretch bg-input data-[orientation=vertical]:h-auto",
-				className,
-			)}
-			{...props}
+				className
+			) }
+			{ ...props }
 		/>
-	);
+	)
 }
 
 export {
@@ -79,4 +79,4 @@ export {
 	ButtonGroupSeparator,
 	ButtonGroupText,
 	buttonGroupVariants,
-};
+}

@@ -1,3 +1,8 @@
+---
+description: "Use when implementing EventKart work from docs/impl-plan or docs/v1-implementation-plan. Covers progress.md, v1 status, task markers, and plan archiving."
+applyTo: "docs/impl-plan/**/*.md|docs/v1-implementation-plan.md|progress.md"
+---
+
 # Implementation Progress Tracking
 
 These rules apply whenever you implement features from `docs/impl-plan/` or `docs/v1-implementation-plan.md`.

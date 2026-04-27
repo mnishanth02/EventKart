@@ -94,5 +94,5 @@ In `apps/web`, access env through `publicEnv` (client-safe `VITE_*` values) or `
 ## Node and Package Versions
 
 - Node.js `>=22.12.0`
-- pnpm `9`
+- pnpm `10.33.2`
 - Fastify v5, Zod v4, React 19, TanStack Start RC (pin exact versions)

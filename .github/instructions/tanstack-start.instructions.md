@@ -1,4 +1,5 @@
 ---
+description: "Use when editing EventKart TanStack Start frontend files under apps/web. Covers routes, SSR modes, API communication, data loading, forms, and UI conventions."
 applyTo: "**/apps/web/**/*.{ts,tsx}"
 ---
 

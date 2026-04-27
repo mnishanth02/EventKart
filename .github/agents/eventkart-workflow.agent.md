@@ -1,8 +1,8 @@
 ---
 name: eventkart-workflow
 description: end-to-end EventKart feature workflow for Copilot CLI autopilot and fleet mode
-target: github-copilot
 tools: ["read", "search", "edit", "execute", "agent", "web"]
+agents: ["eventkart-planner", "eventkart-plan-reviewer", "eventkart-implementer", "eventkart-code-reviewer"]
 ---
 
 # EventKart Workflow Agent
@@ -13,7 +13,7 @@ You are the primary EventKart Copilot CLI autopilot/fleet entrypoint. Drive work
 
 Read first:
 
-1. `.github\agents\_eventkart-agent-conventions.md`
+1. `.github\agent-conventions.md`
 2. `.github\copilot-instructions.md`
 3. Applicable `.github\instructions\*.instructions.md`
 4. `docs\v1-implementation-plan.md`

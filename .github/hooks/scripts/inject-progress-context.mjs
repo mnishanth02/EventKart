@@ -47,5 +47,10 @@ const systemMessage = currentProgress
 	? `${rules}\n\n## Current Progress State\n\n${currentProgress}`
 	: `${rules}\n\n## Current Progress State\n\nprogress.md does not exist yet at the repo root. Create it when you start implementing features. Use the format documented in the existing progress.md template.`;
 
-const output = JSON.stringify({ systemMessage });
+const output = JSON.stringify({
+	hookSpecificOutput: {
+		hookEventName: "SessionStart",
+		additionalContext: systemMessage,
+	},
+});
 process.stdout.write(output);

@@ -1,13 +1,13 @@
 # EventKart Agent Conventions
 
-This is a shared Markdown reference for EventKart Copilot CLI agents. It is **not** an agent profile and intentionally has no YAML frontmatter.
+This is a shared Markdown reference for EventKart Copilot CLI agents. It is intentionally kept outside `.github\agents\` so Copilot does not load it as an agent profile.
 
 ## Copilot CLI Runtime
 
 - Primary autopilot entrypoint:
 
 ```sh
-copilot --experimental --agent=eventkart-workflow --mode autopilot --allow-all --no-ask-user --max-autopilot-continues 250 -p "/fleet Implement <scope> end-to-end for EventKart. Create the plan, review it, implement it, review code, fix findings, update progress docs, and stop when complete or blocked."
+copilot --experimental --agent=eventkart-workflow --mode autopilot --allow-all --max-autopilot-continues 250 --no-ask-user -p "/fleet Implement <scope> end-to-end for EventKart. Create the plan, review it, implement it, review code, fix findings, update progress docs, and stop when complete or blocked."
 ```
 
 - Interactive equivalent: start `copilot --experimental --allow-all --max-autopilot-continues 250`, select `/agent eventkart-workflow`, enable autopilot, then run the workflow prompt.

@@ -80,21 +80,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm i -g @railway/cli
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Deploy API service
-        run: railway up --service api --detach
+        run: pnpm dlx @railway/cli up --service api --detach
         env:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
       - name: Deploy Web service
-        run: railway up --service web --detach
+        run: pnpm dlx @railway/cli up --service web --detach
         env:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
       - name: Deploy Worker service
-        run: railway up --service worker --detach
+        run: pnpm dlx @railway/cli up --service worker --detach
         env:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 

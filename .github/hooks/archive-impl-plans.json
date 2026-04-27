@@ -1,12 +1,11 @@
 {
-	"version": 1,
 	"hooks": {
-		"sessionEnd": [
+		"Stop": [
 			{
 				"type": "command",
-				"bash": "node .github/hooks/scripts/check-completed-plans.mjs",
-				"powershell": "node .github/hooks/scripts/check-completed-plans.mjs",
-				"timeoutSec": 10
+				"command": "node .github/hooks/scripts/check-completed-plans.mjs",
+				"windows": "node .github\\hooks\\scripts\\check-completed-plans.mjs",
+				"timeout": 10
 			}
 		]
 	}
