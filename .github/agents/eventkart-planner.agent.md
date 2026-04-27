@@ -1,7 +1,7 @@
 ---
 name: eventkart-planner
 description: Creates EventKart implementation plans from feature IDs, modules, or ad hoc feature requests.
-model : ["Claude Opus 4.6", "Claude Opus 4.7" ]
+model: "Claude Opus 4.6"
 tools: ["read", "search", "edit", "web"]
 ---
 
