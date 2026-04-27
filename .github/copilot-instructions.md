@@ -13,11 +13,8 @@ This file covers **repo-wide** rules only.
 
 ## Planned Feature Workflow
 
-For feature implementation from `docs\impl-plan\` or `docs\v1-implementation-plan.md`, use the repository custom agent `eventkart-workflow` in Copilot CLI autopilot mode instead of duplicating the agent workflow here:
+For feature implementation from `docs\impl-plan\` or `docs\v1-implementation-plan.md`, use the existing Anvil agent/autopilot workflow with the single prompt at `.github\prompts\eventkart-dev-workflow.prompt.md`.
 
-```sh
-copilot --experimental --agent=eventkart-workflow --mode autopilot --allow-all --no-ask-user --max-autopilot-continues 250 -p "/fleet Implement <scope> end-to-end for EventKart."
-```
 
 ## Package Boundaries
 

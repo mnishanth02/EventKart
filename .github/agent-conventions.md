@@ -1,22 +1,43 @@
-# EventKart Agent Conventions
+# EventKart Workflow Conventions
 
-This is a shared Markdown reference for EventKart Copilot CLI agents. It is intentionally kept outside `.github\agents\` so Copilot does not load it as an agent profile.
+This shared Markdown reference keeps reusable EventKart development conventions in one place. It remains at `.github\agent-conventions.md` for compatibility, but it does **not** define the active workflow entrypoint.
+
+## Canonical Feature Workflow
+
+The canonical EventKart feature workflow is the single-prompt Anvil workflow:
+
+```text
+.github\prompts\eventkart-dev-workflow.prompt.md
+```
+
+Run that prompt inside the existing `anvil` agent. The workflow stays in Anvil for intake, scope resolution, planning, implementation, validation, review, fix loops, progress documentation, and final summary.
+
+Do not treat this document as an orchestration spec. It is a conventions reference for the Anvil prompt and for manual Copilot CLI runs.
 
 ## Copilot CLI Runtime
 
-- Primary autopilot entrypoint:
-
-```sh
-copilot --experimental --agent=eventkart-workflow --mode autopilot --allow-all --max-autopilot-continues 250 --no-ask-user -p "/fleet Implement <scope> end-to-end for EventKart. Create the plan, review it, implement it, review code, fix findings, update progress docs, and stop when complete or blocked."
-```
-
-- Interactive equivalent: start `copilot --experimental --allow-all --max-autopilot-continues 250`, select `/agent eventkart-workflow`, enable autopilot, then run the workflow prompt.
-- Use `/env` to verify loaded repo instructions, custom agents, hooks, skills, and MCP servers.
+- Use `/env` to verify loaded repo instructions, hooks, skills, and MCP servers.
 - Use `/skills list` to verify expected skills are available.
-- Use `/tasks` to inspect subagent/background task state.
-- Use `/fleet` only for independent research, test, or review subtasks. Avoid it for sequential migrations, shared-file edits, or conflict-prone refactors.
+- Use `/tasks` to inspect background task state when subtasks are running.
 - Use Windows paths for local file references in this repository.
-- In autopilot, agents continue with safe reversible defaults and do not wait for plan approval, fix approval, or clarification.
+- In autopilot, continue with safe reversible defaults and do not wait for plan approval, fix approval, or clarification.
+
+### `/fleet` policy
+
+Use `/fleet` only for independent work that can safely run in parallel:
+
+- Independent codebase research.
+- Independent validation or reproduction attempts.
+- Independent non-editing review passes.
+- Log or test-output analysis that does not modify shared files.
+
+Avoid `/fleet` for:
+
+- Shared-file edits.
+- Database migrations.
+- Sequential feature implementation.
+- Conflict-prone refactors.
+- Any change where ordering, shared state, or a single source of truth matters.
 
 ## Stack
 
@@ -103,6 +124,7 @@ Read the relevant local docs before coding:
 | File                                                     | Purpose                                          |
 | -------------------------------------------------------- | ------------------------------------------------ |
 | `.github\copilot-instructions.md`                        | Repo-wide rules.                                 |
+| `.github\prompts\eventkart-dev-workflow.prompt.md`      | Canonical Anvil single-prompt feature workflow.  |
 | `.github\instructions\fastify-backend.instructions.md`   | API patterns, auth, validation, testing.         |
 | `.github\instructions\tanstack-start.instructions.md`    | Web patterns, SSR modes, routing, data loading.  |
 | `.github\instructions\progress-tracking.instructions.md` | Progress tracking rules.                         |
@@ -135,23 +157,23 @@ If a skill is unavailable, continue using local instructions and current library
 
 ## Autopilot Decision Policy
 
-Replace prompt-era "No Assumptions" behavior with this autopilot-safe policy:
+Use this policy for autopilot-safe decisions:
 
-| Decision type                         | Agent behavior                                                                                                                                                                      |
+| Decision type                         | Behavior                                                                                                                                                                            |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Existing project convention covers it | Follow the convention and continue.                                                                                                                                                 |
 | Multiple reversible options exist     | Choose the smallest production-ready option that preserves package boundaries and testability; log the choice.                                                                      |
 | Missing prerequisite feature          | Include prerequisite work if required for the requested feature and feasible in the same vertical slice; otherwise create only a narrow stub when docs already define the contract. |
-| Scope is large                        | Split into sequential vertical slices and use `/fleet` only for independent research/test/review subtasks.                                                                          |
+| Scope is large                        | Split into sequential vertical slices and use `/fleet` only for independent research, validation, or review subtasks.                                                               |
 | Business behavior is ambiguous        | Implement the conservative behavior that minimizes data exposure, financial risk, and user-visible surprise; add an assumption and follow-up note.                                  |
 | New dependency is tempting            | Avoid it if existing packages or a simple local helper are sufficient. If unavoidable, install with pnpm and document why.                                                          |
 | Validation failure has multiple fixes | Prefer the fix that preserves existing behavior and narrows the change; document the reason.                                                                                        |
 | Security/privacy risk is unclear      | Choose the stricter security/privacy option and continue if reversible. Stop only when no safe implementation exists.                                                               |
-| Anvil-style pushback is triggered     | Do not request confirmation in autopilot. If reversible, choose the safer/smaller implementation and log it. If irreversible or unsafe, stop as blocked.                            |
+| Pushback is triggered                 | Do not request confirmation in autopilot. If reversible, choose the safer/smaller implementation and log it. If irreversible or unsafe, stop as blocked.                            |
 
-Every non-obvious decision must be recorded in `## Agent Run Ledger` or the active task ledger.
+Record every non-obvious decision in `## Workflow Run Ledger`, `## Verification Ledger`, or the active task ledger.
 
-## Anvil-Derived Quality Gates
+## Risk Gates
 
 Use these gates for EventKart feature work unless the task is documentation-only.
 
@@ -160,16 +182,16 @@ Use these gates for EventKart feature work unless the task is documentation-only
 | Size   | Examples                                                                                      | Required gates                                                                                      |
 | ------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | Small  | Typo, doc tweak, one-file config tweak                                                        | Quick diagnostics/format check only; adversarial review optional.                                   |
-| Medium | Bug fix, single feature slice, moderate refactor                                              | Baseline capture, verification ledger, at least one adversarial review, evidence bundle.            |
+| Medium | Bug fix, single feature slice, moderate refactor                                              | Baseline capture, verification ledger, at least one review pass, evidence bundle.                   |
 | Large  | Multi-workspace feature, auth, payments, privacy-sensitive data, schema migration, queue work | Baseline capture, verification ledger, multiple review passes or `/fleet` review, readiness checks. |
 | Red    | Auth, crypto, payments, data deletion, schema migrations, concurrency, public API surface     | Treat as Large even if the diff is small.                                                           |
 
 ### Git Hygiene
 
-Before editing Medium/Large work:
+Before editing Medium/Large/Red work:
 
 1. Check `git status --short`.
-2. Check the current branch.
+2. Check the current branch when branch or commit changes are in scope.
 3. Identify unrelated dirty files.
 4. Continue only when changes can be isolated.
 5. Avoid unrelated dirty files.
@@ -178,15 +200,15 @@ Before editing Medium/Large work:
 
 ### Session-History Recall
 
-Before planning Medium/Large work, query prior session history when available:
+Before planning Medium/Large/Red work, query prior session history when available:
 
 1. Search previous sessions touching the same files/modules.
 2. Search for prior regressions, reverted changes, failed validations, or fragile areas.
-3. Record relevant history under `## Autopilot Assumptions` or `## Agent Run Ledger`.
+3. Record relevant history under `## Autopilot Assumptions`, `## Workflow Run Ledger`, or the active task ledger.
 
 ### Baseline Capture
 
-Before changing code for Medium/Large work:
+Before changing code for Medium/Large/Red work:
 
 1. Capture diagnostics for files expected to change when IDE/LSP diagnostics are available.
 2. Run the smallest relevant existing validation command that establishes current state.
@@ -207,15 +229,15 @@ Minimum after-change signals:
 - Medium: at least 2 verification rows.
 - Large/Red: at least 3 verification rows plus review rows.
 
-### Adversarial Review
+### Review and Fix Loop
 
-Before final output for Medium/Large work:
+Before final output for Medium/Large/Red work:
 
 1. Capture the diff for review.
-2. Run at least one independent review for Medium work.
-3. Run multiple independent review passes for Large/Red work, preferably via `/fleet` or specialist agents.
+2. Run at least one review pass for Medium work.
+3. Run multiple review passes for Large/Red work; `/fleet` is acceptable only for independent, non-editing review.
 4. Fix real findings and rerun relevant verification.
-5. Stop after 2 adversarial rounds if unresolved findings remain; report blockers or known risks.
+5. Stop after 2 review/fix rounds if unresolved findings remain; report blockers or known risks.
 
 ### Operational Readiness
 
@@ -227,25 +249,25 @@ For Large/Red work, verify:
 4. Sensitive data is not logged.
 5. Rollback path is documented.
 
-## Agent Run Ledger Template
+## Workflow Run Ledger Template
 
-Add this table to active implementation plans:
+Add this table to active implementation plans when progress tracking is in scope:
 
 ```markdown
-## Agent Run Ledger
+## Workflow Run Ledger
 
-| Phase          | Agent                   | Status  | Size/Risk | Decisions / assumptions | Evidence |
-| -------------- | ----------------------- | ------- | --------- | ----------------------- | -------- |
-| Intake         | eventkart-workflow      | Pending |           |                         |          |
-| Git hygiene    | eventkart-workflow      | Pending |           |                         |          |
-| Baseline       | eventkart-workflow      | Pending |           |                         |          |
-| Plan           | eventkart-planner       | Pending |           |                         |          |
-| Plan review    | eventkart-plan-reviewer | Pending |           |                         |          |
-| Implementation | eventkart-implementer   | Pending |           |                         |          |
-| Verification   | eventkart-implementer   | Pending |           |                         |          |
-| Code review    | eventkart-code-reviewer | Pending |           |                         |          |
-| Fix loop       | eventkart-implementer   | Pending |           |                         |          |
-| Final evidence | eventkart-workflow      | Pending |           |                         |          |
+| Phase          | Owner | Status  | Size/Risk | Decisions / assumptions | Evidence |
+| -------------- | ----- | ------- | --------- | ----------------------- | -------- |
+| Intake         | Anvil | Pending |           |                         |          |
+| Git hygiene    | Anvil | Pending |           |                         |          |
+| Baseline       | Anvil | Pending |           |                         |          |
+| Plan           | Anvil | Pending |           |                         |          |
+| Plan review    | Anvil | Pending |           |                         |          |
+| Implementation | Anvil | Pending |           |                         |          |
+| Verification   | Anvil | Pending |           |                         |          |
+| Review         | Anvil | Pending |           |                         |          |
+| Fix loop       | Anvil | Pending |           |                         |          |
+| Final evidence | Anvil | Pending |           |                         |          |
 ```
 
 ## Verification Ledger
@@ -253,7 +275,7 @@ Add this table to active implementation plans:
 Record verification as evidence, not prose. Prefer a session SQL table when available; otherwise mirror the rows in the active implementation plan under `## Verification Ledger`.
 
 ```sql
-CREATE TABLE IF NOT EXISTS eventkart_agent_checks (
+CREATE TABLE IF NOT EXISTS eventkart_workflow_checks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id TEXT NOT NULL,
     phase TEXT NOT NULL CHECK(phase IN ('baseline', 'after', 'review', 'readiness')),
@@ -291,7 +313,7 @@ Do not update progress documents for small discussions, exploratory work, or unr
 
 ## Final Evidence Bundle
 
-Final responses for Medium/Large work should include:
+Final responses for Medium/Large/Red work should include:
 
 1. Task ID, task size, and risk level.
 2. What changed.
@@ -319,6 +341,6 @@ Never silently run high-risk destructive operations in autopilot, including `git
 ## Branching and Commits
 
 - Branch names: `feat/<module>-<short-description>` when branch creation is requested by the workflow.
-- Commit messages: conventional commits such as `feat:`, `fix:`, `chore:`, `refactor:`, `test:`.
+- Commit messages: conventional commits such as `feat:`, `fix:`, `chore:`, `refactor:`, `test:`, or `docs:`.
 - Keep one feature per branch and focused PRs.
-- When creating commits through this CLI, include the required Copilot co-author trailer.
+- When creating commits through Copilot CLI, include the required Copilot co-author trailer.
