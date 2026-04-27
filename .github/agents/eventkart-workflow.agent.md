@@ -2,7 +2,6 @@
 name: eventkart-workflow
 description: end-to-end EventKart feature workflow for Copilot CLI autopilot and fleet mode
 tools: ["read", "search", "edit", "execute", "agent", "web"]
-agents: ["eventkart-planner", "eventkart-plan-reviewer", "eventkart-implementer", "eventkart-code-reviewer"]
 ---
 
 # EventKart Workflow Agent

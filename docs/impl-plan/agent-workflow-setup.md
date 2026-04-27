@@ -85,7 +85,7 @@ User (feature IDs)
 | Purpose | Coordination only — parse user input, invoke subagents, monitor handoffs, preserve decisions |
 | Model | Not pinned (coordination doesn't need reasoning-heavy model) |
 | Tools | Minimal read-only: `search/codebase`, `search`, `searchResults`, `read/problems` |
-| Subagents | `eventkart-planner`, `eventkart-plan-reviewer`, `eventkart-implementer`, `eventkart-code-reviewer` |
+| Subagents | Referenced in instructions as `eventkart-planner`, `eventkart-plan-reviewer`, `eventkart-implementer`, `eventkart-code-reviewer`; do not use an `agents` frontmatter field because Copilot CLI v1.0.36 ignores it |
 | Edit tools | **None** |
 
 **Responsibilities:**
@@ -111,7 +111,7 @@ User (feature IDs)
 | Field | Value |
 |-------|-------|
 | Purpose | Produce a detailed implementation plan |
-| Model | `claude-opus-4.6:defaultReasoningEffort=high` with fallback `claude-opus-4.7:defaultReasoningEffort=medium` |
+| Model | `claude-opus-4.6:defaultReasoningEffort=high` |
 | Tools | `search/codebase`, `search`, `searchResults`, `search/usages`, `web/fetch`, `web/githubRepo`, `openSimpleBrowser`, `read/problems`, `mcp_io_github_ups_resolve-library-id/*`, `mcp_io_github_ups_get-library-docs/*` |
 | Edit tools | **None** — read-only agent |
 | user-invocable | true |
@@ -482,12 +482,12 @@ This is NOT an agent — it's a shared reference file linked by all agents via M
 | Agent | Model | Reasoning |
 |-------|-------|-----------|
 | `eventkart-workflow` | Default (not pinned) | Coordination only — no heavy reasoning needed |
-| `eventkart-planner` | `claude-opus-4.6:defaultReasoningEffort=high`, fallback `claude-opus-4.7:defaultReasoningEffort=medium` | Best reasoning for architecture + planning decisions |
+| `eventkart-planner` | `claude-opus-4.6:defaultReasoningEffort=high` | Best reasoning for architecture + planning decisions |
 | `eventkart-plan-reviewer` | `gpt-5.5:defaultReasoningEffort=high` | Strong analytical review with high thinking |
 | `eventkart-implementer` | `gpt-5.5:defaultReasoningEffort=high` | Strong implementation with high thinking |
 | `eventkart-code-reviewer` | `gpt-5.5:defaultReasoningEffort=xhigh` | Deepest analysis for security, performance, standards review |
 
-**Important:** These pins use Copilot CLI model IDs plus the supported `defaultReasoningEffort` model option. `claude-opus-4.7` was not available in the local model list at setup time; add it ahead of `claude-opus-4.6` if it becomes available.
+**Important:** Copilot CLI v1.0.36 requires `model` to be a single string, not an array. These pins use Copilot CLI model IDs plus the supported `defaultReasoningEffort` model option. If `claude-opus-4.7` becomes available later, replace the planner model string with that exact model ID.
 
 ---
 
