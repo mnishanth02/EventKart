@@ -418,3 +418,286 @@
 		scroll-behavior: auto !important;
 	}
 }
+
+/* ============================================================
+   v2 TOKENS — additive layer (v1 above is preserved untouched)
+   "Modern minimal, polished, 2026-ready"
+   ============================================================ */
+
+/* === v2: glass surface tiers ===
+   Three tiers of frosted-glass surfaces. Each tier exposes its
+   composable parts as separate custom properties so consumers can
+   apply them directly (no custom-property parsing needed):
+     --glass-N-blur    → backdrop-filter: blur(var(--glass-N-blur))
+     --glass-N-bg      → background-color
+     --glass-N-border  → border-color
+   The shorthand --glass-N is a space-separated triple
+   "<blur> <bg> <border>" for tooling that wants the bundle.
+     Tier 1 — subtle (sticky nav on scroll)
+     Tier 2 — card glass (hero overlays)
+     Tier 3 — modal-grade (dialogs, command palette)
+*/
+:root {
+	--glass-1-blur: 8px;
+	--glass-1-bg: oklch(1 0.003 75 / 62%);
+	--glass-1-border: oklch(1 0.003 75 / 70%);
+	--glass-1: var(--glass-1-blur) var(--glass-1-bg) var(--glass-1-border);
+
+	--glass-2-blur: 16px;
+	--glass-2-bg: oklch(1 0.003 75 / 46%);
+	--glass-2-border: oklch(1 0.003 75 / 55%);
+	--glass-2: var(--glass-2-blur) var(--glass-2-bg) var(--glass-2-border);
+
+	--glass-3-blur: 28px;
+	--glass-3-bg: oklch(1 0.003 75 / 30%);
+	--glass-3-border: oklch(1 0.003 75 / 40%);
+	--glass-3: var(--glass-3-blur) var(--glass-3-bg) var(--glass-3-border);
+}
+
+.dark {
+	--glass-1-blur: 8px;
+	--glass-1-bg: oklch(0.2 0.03 265 / 55%);
+	--glass-1-border: oklch(0.96 0.01 90 / 8%);
+	--glass-1: var(--glass-1-blur) var(--glass-1-bg) var(--glass-1-border);
+
+	--glass-2-blur: 16px;
+	--glass-2-bg: oklch(0.2 0.03 265 / 42%);
+	--glass-2-border: oklch(0.96 0.01 90 / 12%);
+	--glass-2: var(--glass-2-blur) var(--glass-2-bg) var(--glass-2-border);
+
+	--glass-3-blur: 28px;
+	--glass-3-bg: oklch(0.16 0.025 265 / 60%);
+	--glass-3-border: oklch(0.96 0.01 90 / 16%);
+	--glass-3: var(--glass-3-blur) var(--glass-3-bg) var(--glass-3-border);
+}
+
+/* === v2: gradients ===
+   Hero / focus / celebration backgrounds. All in OKLch so the chroma
+   stays perceptually even across the gradient.
+*/
+:root {
+	--gradient-aurora: conic-gradient(
+		from 200deg at 50% 50%,
+		oklch(0.82 0.07 265 / 35%) 0deg,
+		oklch(0.78 0.08 295 / 32%) 120deg,
+		oklch(0.86 0.09 65 / 34%) 240deg,
+		oklch(0.82 0.07 265 / 35%) 360deg
+	);
+	--gradient-spotlight: radial-gradient(
+		ellipse at center,
+		oklch(1 0.003 75 / 0%) 0%,
+		var(--background) 72%
+	);
+	--gradient-cta-saffron: linear-gradient(
+		135deg,
+		oklch(0.78 0.185 60) 0%,
+		oklch(0.62 0.19 45) 100%
+	);
+	--gradient-success-soft: linear-gradient(
+		180deg,
+		oklch(0.62 0.17 148 / 12%) 0%,
+		oklch(0.62 0.17 148 / 0%) 100%
+	);
+}
+
+.dark {
+	--gradient-aurora: conic-gradient(
+		from 200deg at 50% 50%,
+		oklch(0.42 0.1 265 / 45%) 0deg,
+		oklch(0.38 0.12 295 / 40%) 120deg,
+		oklch(0.55 0.14 65 / 38%) 240deg,
+		oklch(0.42 0.1 265 / 45%) 360deg
+	);
+	--gradient-spotlight: radial-gradient(
+		ellipse at center,
+		oklch(0.3 0.04 265 / 0%) 0%,
+		var(--background) 72%
+	);
+	--gradient-cta-saffron: linear-gradient(
+		135deg,
+		oklch(0.82 0.18 60) 0%,
+		oklch(0.66 0.2 45) 100%
+	);
+	--gradient-success-soft: linear-gradient(
+		180deg,
+		oklch(0.72 0.16 148 / 18%) 0%,
+		oklch(0.72 0.16 148 / 0%) 100%
+	);
+}
+
+/* === v2: surface noise === */
+:root {
+	--noise-subtle: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/></svg>");
+}
+
+/* === v2: density modes ===
+   Multipliers applied to --space-* aliases:
+     [data-density="compact"]      → 0.875×
+     (default, no attribute)       → 1×
+     [data-density="spacious"]     → 1.125×
+   The base values mirror the v1 --spacing-* semantic aliases so the
+   two scales stay in sync; density only varies the --space-* family.
+*/
+:root {
+	--space-step: 0.5rem;
+	--space-stride: 1rem;
+	--space-pace: 1.5rem;
+	--space-block: 2rem;
+}
+
+[data-density="compact"] {
+	--space-step: calc(0.5rem * 0.875);
+	--space-stride: calc(1rem * 0.875);
+	--space-pace: calc(1.5rem * 0.875);
+	--space-block: calc(2rem * 0.875);
+}
+
+[data-density="comfortable"] {
+	--space-step: 0.5rem;
+	--space-stride: 1rem;
+	--space-pace: 1.5rem;
+	--space-block: 2rem;
+}
+
+[data-density="spacious"] {
+	--space-step: calc(0.5rem * 1.125);
+	--space-stride: calc(1rem * 1.125);
+	--space-pace: calc(1.5rem * 1.125);
+	--space-block: calc(2rem * 1.125);
+}
+
+/* === v2: motion-spring tokens (motion.dev compatible) ===
+   CSS can't hold JS objects, so each spring is broken into its three
+   numeric parts. Compose in JS as:
+     {
+       type: "spring",
+       stiffness: Number(getComputedStyle(el).getPropertyValue("--motion-spring-soft-stiffness")),
+       damping:   Number(getComputedStyle(el).getPropertyValue("--motion-spring-soft-damping")),
+       mass:      Number(getComputedStyle(el).getPropertyValue("--motion-spring-soft-mass")),
+     }
+   Three presets:
+     soft    — gentle settle (page transitions, surface lifts)
+     snappy  — UI feedback (buttons, toggles, list reorder)
+     bouncy  — celebration (confirmations, badge pop)
+*/
+:root {
+	--motion-spring-soft-stiffness: 120;
+	--motion-spring-soft-damping: 20;
+	--motion-spring-soft-mass: 1;
+
+	--motion-spring-snappy-stiffness: 260;
+	--motion-spring-snappy-damping: 26;
+	--motion-spring-snappy-mass: 1;
+
+	--motion-spring-bouncy-stiffness: 320;
+	--motion-spring-bouncy-damping: 14;
+	--motion-spring-bouncy-mass: 1;
+
+	--motion-stagger-base: 60ms;
+}
+
+/* === v2: view-transition reserved names ===
+   Reserved `view-transition-name` values used across the app. Keep
+   these unique per element instance:
+     event-card-{id}      — per-card morph between list ↔ detail
+     event-hero           — hero image / title continuity
+     booking-step         — booking wizard step container
+     dashboard-kpi-{key}  — KPI tile cross-fade on dashboard refresh
+*/
+::view-transition-old(*),
+::view-transition-new(*) {
+	animation-duration: var(--duration-quick);
+	animation-timing-function: var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-old(*),
+	::view-transition-new(*) {
+		animation-duration: 0.01ms !important;
+		animation-timing-function: linear !important;
+	}
+}
+
+/* === v2: marketing vs app palette deltas ===
+   Marketing surfaces lean warm + airy with a saffron halo for hero
+   moments. App chrome (sidebar/topbar) stays muted so content carries
+   the weight; the active rail accent promotes saffron in dark mode.
+*/
+:root {
+	--marketing-bg: oklch(0.985 0.005 75);
+	--marketing-fg: oklch(0.195 0.01 42);
+	--marketing-accent-glow: oklch(0.78 0.185 55 / 18%);
+
+	--app-chrome: oklch(0.98 0.005 75);
+	--app-rail: oklch(0.96 0.008 70);
+	--app-rail-active: oklch(0.21 0.05 265);
+}
+
+.dark {
+	--marketing-bg: oklch(0.16 0.025 265);
+	--marketing-fg: oklch(0.96 0.01 90);
+	--marketing-accent-glow: oklch(0.78 0.175 55 / 22%);
+
+	--app-chrome: oklch(0.18 0.028 265);
+	--app-rail: oklch(0.22 0.03 265);
+	--app-rail-active: oklch(0.78 0.175 55);
+}
+
+/* === v2: number-flow tokens ===
+   Drives the @number-flow/react tabular animations and the optional
+   flash-on-change highlight (e.g. ticket count, attendee total).
+*/
+:root {
+	--num-tabular-spring-stiffness: 200;
+	--num-tabular-spring-damping: 24;
+	--num-flash-on-change: var(--accent);
+}
+
+/* === v2: print tokens ===
+   Forces a light, ink-friendly rendering regardless of .dark, strips
+   shadows, and surfaces link URLs after the link text.
+*/
+@media print {
+	:root,
+	.dark {
+		--print-text: oklch(0.15 0 0);
+		--print-rule: oklch(0.7 0 0);
+		--print-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+
+		--background: oklch(1 0 0);
+		--foreground: var(--print-text);
+		--card: oklch(1 0 0);
+		--card-foreground: var(--print-text);
+		--popover: oklch(1 0 0);
+		--popover-foreground: var(--print-text);
+		--border: var(--print-rule);
+		--muted-foreground: oklch(0.35 0 0);
+	}
+
+	body {
+		background: white !important;
+		color: var(--print-text) !important;
+	}
+
+	*,
+	*::before,
+	*::after {
+		box-shadow: none !important;
+		text-shadow: none !important;
+		filter: none !important;
+		backdrop-filter: none !important;
+	}
+
+	a[href]::after {
+		content: " (" attr(href) ")";
+		font-family: var(--print-mono);
+		font-size: 0.85em;
+		color: var(--print-rule);
+	}
+
+	a[href^="#"]::after,
+	a[href^="javascript:"]::after,
+	a[href^="mailto:"]::after {
+		content: "";
+	}
+}

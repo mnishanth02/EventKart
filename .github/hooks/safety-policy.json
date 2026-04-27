@@ -1,0 +1,13 @@
+{
+	"version": 1,
+	"hooks": {
+		"preToolUse": [
+			{
+				"type": "command",
+				"bash": "node .github/hooks/scripts/guard-dangerous-commands.mjs",
+				"powershell": "node .github\\hooks\\scripts\\guard-dangerous-commands.mjs",
+				"timeoutSec": 10
+			}
+		]
+	}
+}

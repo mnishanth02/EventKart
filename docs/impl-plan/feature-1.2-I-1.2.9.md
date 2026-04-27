@@ -20,17 +20,17 @@ Allow organizers to upload and manage the event hero image and route map through
 
 ## Implementation Tasks
 
-| #   | Task                             | File(s)                                                                                         | Status        |
-| --- | -------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
-| 1   | Shared constants and schemas     | `packages/shared/src/constants/event.ts`, `packages/shared/src/schemas/event-image.ts`           | ✅ 2026-04-27 |
-| 2   | Database table and migration     | `packages/db/src/schema/event-images.ts`, `packages/db/drizzle/0012_event_images.sql`           | ✅ 2026-04-27 |
-| 3   | Rollback coverage                | `packages/db/drizzle/rollbacks/0012_event_images.rollback.sql`                                  | ✅ 2026-04-27 |
-| 4   | API schemas/routes/service       | `apps/api/src/modules/events/{schemas,routes,event-image-service}.ts`                           | ✅ 2026-04-27 |
-| 5   | API tests                        | `apps/api/test/modules/events/{routes,event-image-service}.test.ts`                             | ✅ 2026-04-27 |
-| 6   | Web server functions and queries | `apps/web/src/features/events/{api,api.server,queries,types}.ts`                                | ✅ 2026-04-27 |
-| 7   | Web image upload UI              | `apps/web/src/features/events/components/event-image-config-form.tsx`                           | ✅ 2026-04-27 |
-| 8   | Organizer image route            | `apps/web/src/routes/_authed/org/events/$eventId/configure-images.tsx`                          | ✅ 2026-04-27 |
-| 9   | Integrated validation/review     | Shared, DB, API, and web targeted checks plus lint/check-types                                  | ✅ 2026-04-27 |
+| #   | Task                             | File(s)                                                                                | Status        |
+| --- | -------------------------------- | -------------------------------------------------------------------------------------- | ------------- |
+| 1   | Shared constants and schemas     | `packages/shared/src/constants/event.ts`, `packages/shared/src/schemas/event-image.ts` | ✅ 2026-04-27 |
+| 2   | Database table and migration     | `packages/db/src/schema/event-images.ts`, `packages/db/drizzle/0012_event_images.sql`  | ✅ 2026-04-27 |
+| 3   | Rollback coverage                | `packages/db/drizzle/rollbacks/0012_event_images.rollback.sql`                         | ✅ 2026-04-27 |
+| 4   | API schemas/routes/service       | `apps/api/src/modules/events/{schemas,routes,event-image-service}.ts`                  | ✅ 2026-04-27 |
+| 5   | API tests                        | `apps/api/test/modules/events/{routes,event-image-service}.test.ts`                    | ✅ 2026-04-27 |
+| 6   | Web server functions and queries | `apps/web/src/features/events/{api,api.server,queries,types}.ts`                       | ✅ 2026-04-27 |
+| 7   | Web image upload UI              | `apps/web/src/features/events/components/event-image-config-form.tsx`                  | ✅ 2026-04-27 |
+| 8   | Organizer image route            | `apps/web/src/routes/_authed/org/events/$eventId/configure-images.tsx`                 | ✅ 2026-04-27 |
+| 9   | Integrated validation/review     | Shared, DB, API, and web targeted checks plus lint/check-types                         | ✅ 2026-04-27 |
 
 ## Key Endpoints and Routes
 

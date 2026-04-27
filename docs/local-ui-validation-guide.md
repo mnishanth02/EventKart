@@ -98,14 +98,14 @@ Important notes:
 
 Basic local validation does not require third-party accounts. For full validation, use the table below.
 
-| Account | Required for local validation? | Needed for |
-| --- | --- | --- |
-| Cloudflare R2 or AWS S3 | Yes, for full Module 1.1 | Organizer document upload and admin document view URLs |
-| MSG91 | No | Real SMS/WhatsApp OTP delivery instead of log mode |
-| Resend | No | Real email delivery instead of console/dev logging |
-| Razorpay | Optional | Linked-account creation and KYC/payment readiness validation |
-| Sentry | No | Error tracking validation |
-| PostHog | No | Product analytics validation |
+| Account                 | Required for local validation? | Needed for                                                   |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------ |
+| Cloudflare R2 or AWS S3 | Yes, for full Module 1.1       | Organizer document upload and admin document view URLs       |
+| MSG91                   | No                             | Real SMS/WhatsApp OTP delivery instead of log mode           |
+| Resend                  | No                             | Real email delivery instead of console/dev logging           |
+| Razorpay                | Optional                       | Linked-account creation and KYC/payment readiness validation |
+| Sentry                  | No                             | Error tracking validation                                    |
+| PostHog                 | No                             | Product analytics validation                                 |
 
 ### Object storage env for document upload
 
@@ -183,11 +183,11 @@ pnpm --filter @repo/db db:seed
 
 Seeded login users:
 
-| Role | Phone to enter in UI | Stored phone |
-| --- | ---: | --- |
-| Admin | `9999900001` | `+919999900001` |
-| Organizer | `9999900002` | `+919999900002` |
-| Participant | `9999900003` | `+919999900003` |
+| Role        | Phone to enter in UI | Stored phone    |
+| ----------- | -------------------: | --------------- |
+| Admin       |         `9999900001` | `+919999900001` |
+| Organizer   |         `9999900002` | `+919999900002` |
+| Participant |         `9999900003` | `+919999900003` |
 
 In the UI, enter only the 10-digit number. The UI prepends `+91` automatically.
 
@@ -282,10 +282,10 @@ Steps:
 
 Role routing checks:
 
-| Phone | Expected access |
-| --- | --- |
-| `9999900001` | Can access `/admin` |
-| `9999900002` | Can access `/org` |
+| Phone        | Expected access                                              |
+| ------------ | ------------------------------------------------------------ |
+| `9999900001` | Can access `/admin`                                          |
+| `9999900002` | Can access `/org`                                            |
 | `9999900003` | Can access `/my`; should be blocked from `/org` and `/admin` |
 
 ### 7.3 Organizer registration and profile management

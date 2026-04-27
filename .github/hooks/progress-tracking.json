@@ -1,10 +1,12 @@
 {
+	"version": 1,
 	"hooks": {
-		"SessionStart": [
+		"sessionStart": [
 			{
 				"type": "command",
-				"command": "node .github/hooks/scripts/inject-progress-context.mjs",
-				"timeout": 10
+				"bash": "node .github/hooks/scripts/inject-progress-context.mjs",
+				"powershell": "node .github/hooks/scripts/inject-progress-context.mjs",
+				"timeoutSec": 10
 			}
 		]
 	}
