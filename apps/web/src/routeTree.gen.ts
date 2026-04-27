@@ -30,6 +30,7 @@ import { Route as AuthedOrgEventsNewRouteImport } from './routes/_authed/org/eve
 import { Route as AuthedAdminVerificationsOrganizerIdRouteImport } from './routes/_authed/admin/verifications/$organizerId'
 import { Route as AuthedOrgEventsEventIdConfigurePricingRouteImport } from './routes/_authed/org/events/$eventId/configure-pricing'
 import { Route as AuthedOrgEventsEventIdConfigurePoliciesRouteImport } from './routes/_authed/org/events/$eventId/configure-policies'
+import { Route as AuthedOrgEventsEventIdConfigureImagesRouteImport } from './routes/_authed/org/events/$eventId/configure-images'
 import { Route as AuthedOrgEventsEventIdConfigureCategoriesRouteImport } from './routes/_authed/org/events/$eventId/configure-categories'
 
 const ReadyRoute = ReadyRouteImport.update({
@@ -139,6 +140,12 @@ const AuthedOrgEventsEventIdConfigurePoliciesRoute =
     path: '/events/$eventId/configure-policies',
     getParentRoute: () => AuthedOrgRoute,
   } as any)
+const AuthedOrgEventsEventIdConfigureImagesRoute =
+  AuthedOrgEventsEventIdConfigureImagesRouteImport.update({
+    id: '/events/$eventId/configure-images',
+    path: '/events/$eventId/configure-images',
+    getParentRoute: () => AuthedOrgRoute,
+  } as any)
 const AuthedOrgEventsEventIdConfigureCategoriesRoute =
   AuthedOrgEventsEventIdConfigureCategoriesRouteImport.update({
     id: '/events/$eventId/configure-categories',
@@ -165,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/org/events/new': typeof AuthedOrgEventsNewRoute
   '/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
   '/org/events/$eventId/configure-categories': typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
+  '/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
   '/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   '/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
 }
@@ -184,6 +192,7 @@ export interface FileRoutesByTo {
   '/org/events/new': typeof AuthedOrgEventsNewRoute
   '/admin/verifications': typeof AuthedAdminVerificationsIndexRoute
   '/org/events/$eventId/configure-categories': typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
+  '/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
   '/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   '/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
 }
@@ -209,6 +218,7 @@ export interface FileRoutesById {
   '/_authed/org/events/new': typeof AuthedOrgEventsNewRoute
   '/_authed/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
   '/_authed/org/events/$eventId/configure-categories': typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
+  '/_authed/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
   '/_authed/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   '/_authed/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
 }
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/org/events/new'
     | '/admin/verifications/'
     | '/org/events/$eventId/configure-categories'
+    | '/org/events/$eventId/configure-images'
     | '/org/events/$eventId/configure-policies'
     | '/org/events/$eventId/configure-pricing'
   fileRoutesByTo: FileRoutesByTo
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/org/events/new'
     | '/admin/verifications'
     | '/org/events/$eventId/configure-categories'
+    | '/org/events/$eventId/configure-images'
     | '/org/events/$eventId/configure-policies'
     | '/org/events/$eventId/configure-pricing'
   id:
@@ -276,6 +288,7 @@ export interface FileRouteTypes {
     | '/_authed/org/events/new'
     | '/_authed/admin/verifications/'
     | '/_authed/org/events/$eventId/configure-categories'
+    | '/_authed/org/events/$eventId/configure-images'
     | '/_authed/org/events/$eventId/configure-policies'
     | '/_authed/org/events/$eventId/configure-pricing'
   fileRoutesById: FileRoutesById
@@ -436,6 +449,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedOrgEventsEventIdConfigurePoliciesRouteImport
       parentRoute: typeof AuthedOrgRoute
     }
+    '/_authed/org/events/$eventId/configure-images': {
+      id: '/_authed/org/events/$eventId/configure-images'
+      path: '/events/$eventId/configure-images'
+      fullPath: '/org/events/$eventId/configure-images'
+      preLoaderRoute: typeof AuthedOrgEventsEventIdConfigureImagesRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
     '/_authed/org/events/$eventId/configure-categories': {
       id: '/_authed/org/events/$eventId/configure-categories'
       path: '/events/$eventId/configure-categories'
@@ -483,6 +503,7 @@ interface AuthedOrgRouteChildren {
   AuthedOrgIndexRoute: typeof AuthedOrgIndexRoute
   AuthedOrgEventsNewRoute: typeof AuthedOrgEventsNewRoute
   AuthedOrgEventsEventIdConfigureCategoriesRoute: typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
+  AuthedOrgEventsEventIdConfigureImagesRoute: typeof AuthedOrgEventsEventIdConfigureImagesRoute
   AuthedOrgEventsEventIdConfigurePoliciesRoute: typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   AuthedOrgEventsEventIdConfigurePricingRoute: typeof AuthedOrgEventsEventIdConfigurePricingRoute
 }
@@ -496,6 +517,8 @@ const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
   AuthedOrgEventsNewRoute: AuthedOrgEventsNewRoute,
   AuthedOrgEventsEventIdConfigureCategoriesRoute:
     AuthedOrgEventsEventIdConfigureCategoriesRoute,
+  AuthedOrgEventsEventIdConfigureImagesRoute:
+    AuthedOrgEventsEventIdConfigureImagesRoute,
   AuthedOrgEventsEventIdConfigurePoliciesRoute:
     AuthedOrgEventsEventIdConfigurePoliciesRoute,
   AuthedOrgEventsEventIdConfigurePricingRoute:

@@ -9,6 +9,8 @@
 import type {
 	CreateEvent,
 	EventCategoriesConfig,
+	EventImageListQuery,
+	EventImageUploadUrlRequest,
 	EventPoliciesConfig,
 	EventPricingConfig,
 } from "@repo/shared/schemas";
@@ -19,6 +21,10 @@ import {
 } from "#/lib/auth/server-fns.server";
 import type {
 	EventCategoriesResponse,
+	EventImageConfirmResponse,
+	EventImageDeleteResponse,
+	EventImagesResponse,
+	EventImageUploadUrlApiResponse,
 	EventPoliciesResponse,
 	EventPricingResponse,
 	EventResponse,
@@ -104,4 +110,60 @@ export async function replaceEventPricingOnServer(
 		body: config,
 		headers,
 	});
+}
+
+export async function listEventImagesOnServer(
+	eventId: string,
+	query: EventImageListQuery = {},
+): Promise<EventImagesResponse> {
+	const headers = getForwardedAuthHeaders();
+	const params = new URLSearchParams();
+	if (query.kind) params.set("kind", query.kind);
+	if (query.status) params.set("status", query.status);
+	const qs = params.toString();
+
+	return serverApiClient<EventImagesResponse>(
+		`/events/${eventId}/images${qs ? `?${qs}` : ""}`,
+		{ headers },
+	);
+}
+
+export async function requestEventImageUploadUrlOnServer(
+	eventId: string,
+	data: EventImageUploadUrlRequest,
+): Promise<EventImageUploadUrlApiResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventImageUploadUrlApiResponse>(
+		`/events/${eventId}/images/upload-url`,
+		{
+			method: "POST",
+			body: data,
+			headers,
+		},
+	);
+}
+
+export async function confirmEventImageUploadOnServer(
+	eventId: string,
+	imageId: string,
+): Promise<EventImageConfirmResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventImageConfirmResponse>(
+		`/events/${eventId}/images/${imageId}/confirm`,
+		{ method: "POST", headers },
+	);
+}
+
+export async function deleteEventImageOnServer(
+	eventId: string,
+	imageId: string,
+): Promise<EventImageDeleteResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventImageDeleteResponse>(
+		`/events/${eventId}/images/${imageId}`,
+		{ method: "DELETE", headers },
+	);
 }

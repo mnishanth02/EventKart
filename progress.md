@@ -52,6 +52,7 @@
 | 40  | I-1.2.1 — Event Creation Form (DB/API/Web)                                        | —                                                          | ✅ Complete | 2026-04-26 | 2026-04-26   |
 | 41  | I-1.2.2 — Event Category & Distance Configuration                                 | [impl-plan](docs/impl-plan/feature-1.2-I-1.2.2.md)         | ✅ Complete | 2026-04-26 | 2026-04-26   |
 | 42  | I-1.2.3 — Pricing Configuration API + Web                                         | [impl-plan](docs/impl-plan/feature-1.2-I-1.2.3.md)         | ✅ Complete | 2026-04-26 | 2026-04-26   |
+| 43  | I-1.2.9 — Event Image Upload                                                      | [impl-plan](docs/impl-plan/feature-1.2-I-1.2.9.md)         | ✅ Complete | 2026-04-27 | 2026-04-27   |
 
 ## Completed Implementation Plans
 
@@ -70,7 +71,7 @@ Summary of phase/module completion from [v1-implementation-plan.md](docs/v1-impl
 | Phase 0 | 0.3 — Design System & App Shell                     | ✅ Complete    | All features complete: I-0.3.1 through I-0.3.6, plus I-0.2.9 and I-0.2.7.                                                                                                                                                                                                                                                                                |
 | Phase 0 | 0.4 — Observability, Metrics & Error Infrastructure | ✅ Complete    | All features complete: I-0.4.1 (Sentry), I-0.4.2 (Pino/OTEL), I-0.4.3 (Health checks), I-0.4.4 (Audit log), I-0.4.5 (Production metrics), I-0.4.6 (BullMQ observability). 403 API tests passing.                                                                                                                                                         |
 | Phase 1 | 1.1 — Organizer Signup & Verification               | ✅ Complete    | All 8 features (I-1.1.1 through I-1.1.8) complete. Includes registration, document upload, policy acceptance, verification tracking, admin review, verification badge, Razorpay linked-account creation, profile management. 528 API tests, 76 web tests passing.                                                                                        |
-| Phase 1 | 1.2 — Event Creation & Management                   | 🟡 In Progress | I-1.2.10 event slug generation API service, I-1.2.1 event creation form, I-1.2.2 category/distance configuration (DB/shared/API/web), and I-1.2.3 pricing configuration API + web UI complete. Registration form, refund policy, image upload, edit, publish, and admin review features remain. |
+| Phase 1 | 1.2 — Event Creation & Management                   | 🟡 In Progress | I-1.2.10 event slug generation API service, I-1.2.1 event creation form, I-1.2.2 category/distance configuration (DB/shared/API/web), I-1.2.3 pricing configuration API + web UI, and I-1.2.9 event image upload complete. Registration form, refund policy, edit, publish, and admin review features remain. |
 
 ## Foundation (Pre-Phase 0) — Completed
 

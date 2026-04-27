@@ -6,6 +6,7 @@ import {
 import { Button } from "@repo/ui/components/ui/button";
 import {
 	Card,
+	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
@@ -80,6 +81,28 @@ function ConfigureEventPoliciesPage() {
 					eventId={eventId}
 					initialPolicies={policiesQuery.data}
 				/>
+			) : null}
+
+			{policiesQuery.data ? (
+				<Card className="border-dashed">
+					<CardHeader>
+						<CardTitle>Next: configure images</CardTitle>
+						<CardDescription>
+							Upload a hero image and route map before your event is ready for
+							review.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Button asChild>
+							<Link
+								to="/org/events/$eventId/configure-images"
+								params={{ eventId }}
+							>
+								Configure images
+							</Link>
+						</Button>
+					</CardContent>
+				</Card>
 			) : null}
 		</div>
 	);

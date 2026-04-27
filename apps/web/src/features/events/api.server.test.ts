@@ -2,6 +2,7 @@
 import type {
 	CreateEvent,
 	EventCategoriesConfig,
+	EventImageUploadUrlRequest,
 	EventPricingConfig,
 } from "@repo/shared/schemas";
 import {
@@ -17,8 +18,12 @@ import {
 } from "#/lib/auth/server-fns.server";
 import {
 	createEventOnServer,
+	confirmEventImageUploadOnServer,
+	deleteEventImageOnServer,
+	listEventImagesOnServer,
 	listEventCategoriesOnServer,
 	listEventPricingOnServer,
+	requestEventImageUploadUrlOnServer,
 	replaceEventCategoriesOnServer,
 	replaceEventPricingOnServer,
 } from "./api.server";
@@ -57,6 +62,7 @@ const validCreateEvent = {
 } satisfies CreateEvent;
 
 const eventId = "11111111-1111-4111-8111-111111111111";
+const imageId = "55555555-5555-4555-8555-555555555555";
 const validCategoryConfig = eventCategoriesConfigSchema.parse(
 	defaultEventCategoriesConfig,
 ) satisfies EventCategoriesConfig;
@@ -99,6 +105,27 @@ const pricingTiers = validPricingConfig.tiers.map((tier, index) => ({
 	updatedAt: "2026-04-26T12:00:00.000Z",
 	category: categoryRecords[index],
 }));
+
+const validImageUploadRequest = {
+	kind: "hero",
+	fileName: "hero.png",
+	contentType: "image/png",
+	sizeBytes: 2048,
+} satisfies EventImageUploadUrlRequest;
+
+const eventImage = {
+	id: imageId,
+	eventId,
+	kind: "hero",
+	fileName: "hero.png",
+	contentType: "image/png",
+	sizeBytes: 2048,
+	storageKey: "events/event-1/hero.png",
+	status: "uploaded",
+	uploadedBy: "22222222-2222-4222-8222-222222222222",
+	createdAt: "2026-04-26T12:00:00.000Z",
+	updatedAt: "2026-04-26T12:00:00.000Z",
+} as const;
 
 describe("createEventOnServer", () => {
 	beforeEach(() => {
@@ -295,5 +322,155 @@ describe("replaceEventPricingOnServer", () => {
 		).rejects.toThrow("Invalid request origin");
 
 		expect(serverApiClient).not.toHaveBeenCalled();
+	});
+});
+
+describe("listEventImagesOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("fetches event images with filters and forwarded auth headers", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: { images: [eventImage] },
+		});
+
+		await listEventImagesOnServer(eventId, {
+			kind: "hero",
+			status: "uploaded",
+		});
+
+		expect(assertSameOriginMutationRequest).not.toHaveBeenCalled();
+		expect(serverApiClient).toHaveBeenCalledWith(
+			`/events/${eventId}/images?kind=hero&status=uploaded`,
+			{
+				headers: {
+					Cookie: "session=test-session",
+					"X-Request-ID": "req-1",
+				},
+			},
+		);
+	});
+});
+
+describe("requestEventImageUploadUrlOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("requests an image upload URL with same-origin validation", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: {
+				imageId,
+				url: "https://storage.example.com/upload",
+				method: "PUT",
+				headers: { "content-type": "image/png" },
+				key: "events/event-1/hero.png",
+				expiresAt: "2026-04-26T12:05:00.000Z",
+			},
+		});
+
+		await requestEventImageUploadUrlOnServer(eventId, validImageUploadRequest);
+
+		expect(assertSameOriginMutationRequest).toHaveBeenCalledOnce();
+		expect(serverApiClient).toHaveBeenCalledWith(
+			`/events/${eventId}/images/upload-url`,
+			{
+				method: "POST",
+				body: validImageUploadRequest,
+				headers: {
+					Cookie: "session=test-session",
+					"X-Request-ID": "req-1",
+				},
+			},
+		);
+	});
+
+	it("does not request an image upload URL when same-origin validation fails", async () => {
+		vi.mocked(assertSameOriginMutationRequest).mockImplementationOnce(() => {
+			throw new Error("Invalid request origin");
+		});
+
+		await expect(
+			requestEventImageUploadUrlOnServer(eventId, validImageUploadRequest),
+		).rejects.toThrow("Invalid request origin");
+
+		expect(serverApiClient).not.toHaveBeenCalled();
+	});
+});
+
+describe("confirmEventImageUploadOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("confirms an image upload with same-origin validation", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: eventImage,
+		});
+
+		await confirmEventImageUploadOnServer(eventId, imageId);
+
+		expect(assertSameOriginMutationRequest).toHaveBeenCalledOnce();
+		expect(serverApiClient).toHaveBeenCalledWith(
+			`/events/${eventId}/images/${imageId}/confirm`,
+			{
+				method: "POST",
+				headers: {
+					Cookie: "session=test-session",
+					"X-Request-ID": "req-1",
+				},
+			},
+		);
+	});
+});
+
+describe("deleteEventImageOnServer", () => {
+	beforeEach(() => {
+		vi.mocked(serverApiClient).mockReset();
+		vi.mocked(assertSameOriginMutationRequest).mockReset();
+		vi.mocked(getForwardedAuthHeaders).mockReturnValue({
+			Cookie: "session=test-session",
+			"X-Request-ID": "req-1",
+		});
+	});
+
+	it("deletes an image with same-origin validation", async () => {
+		vi.mocked(serverApiClient).mockResolvedValueOnce({
+			success: true,
+			data: { deleted: true, imageId, kind: "hero" },
+		});
+
+		await deleteEventImageOnServer(eventId, imageId);
+
+		expect(assertSameOriginMutationRequest).toHaveBeenCalledOnce();
+		expect(serverApiClient).toHaveBeenCalledWith(
+			`/events/${eventId}/images/${imageId}`,
+			{
+				method: "DELETE",
+				headers: {
+					Cookie: "session=test-session",
+					"X-Request-ID": "req-1",
+				},
+			},
+		);
 	});
 });

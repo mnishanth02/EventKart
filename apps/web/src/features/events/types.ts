@@ -1,6 +1,12 @@
 import type {
 	Event,
 	EventCategoryRecord,
+	EventImage,
+	EventImageKind,
+	EventImageListQuery,
+	EventImageStatus,
+	EventImageUploadUrlRequest,
+	EventImageUploadUrlResponse,
 	EventPoliciesConfig,
 	EventPoliciesRecord,
 	EventPricingConfig,
@@ -10,6 +16,12 @@ import type {
 export type {
 	Event,
 	EventCategoryRecord,
+	EventImage,
+	EventImageKind,
+	EventImageListQuery,
+	EventImageStatus,
+	EventImageUploadUrlRequest,
+	EventImageUploadUrlResponse,
 	EventPoliciesConfig,
 	EventPoliciesRecord,
 	EventPricingConfig,
@@ -38,4 +50,30 @@ export type EventPricingResponse = {
 export type EventPoliciesResponse = {
 	success: true;
 	data: EventPoliciesRecord;
+};
+
+export type EventImagesResponse = {
+	success: true;
+	data: {
+		images: EventImage[];
+	};
+};
+
+export type EventImageUploadUrlApiResponse = {
+	success: true;
+	data: EventImageUploadUrlResponse;
+};
+
+export type EventImageConfirmResponse = {
+	success: true;
+	data: EventImage;
+};
+
+export type EventImageDeleteResponse = {
+	success: true;
+	data: {
+		deleted: true;
+		imageId: string;
+		kind: EventImageKind;
+	};
 };

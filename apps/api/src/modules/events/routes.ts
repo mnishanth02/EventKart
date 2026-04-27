@@ -1,14 +1,28 @@
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyPluginAsync } from "fastify";
-import { UnauthorizedError } from "../../lib/errors.js";
+import { createAuditLogger } from "../../lib/audit.js";
+import { UnauthorizedError, ValidationError } from "../../lib/errors.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { requireRole } from "../../middleware/require-role.js";
+import {
+	confirmEventImageUpload,
+	deleteEventImage,
+	listEventImages,
+	requestEventImageUpload,
+} from "./event-image-service.js";
 import {
 	createEventBodySchema,
 	createEventResponseSchema,
 	eventCategoriesBodySchema,
 	eventCategoriesResponseSchema,
 	eventErrorResponseSchema,
+	eventImageConfirmResponseSchema,
+	eventImageDeleteResponseSchema,
+	eventImageIdParamsSchema,
+	eventImagesListResponseSchema,
+	eventImagesQuerySchema,
+	eventImageUploadBodySchema,
+	eventImageUploadResponseSchema,
 	eventIdParamsSchema,
 	eventPoliciesBodySchema,
 	eventPoliciesResponseSchema,
@@ -235,6 +249,154 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			);
 
 			return { success: true as const, data: { tiers } };
+		},
+	);
+
+	typedApp.post(
+		"/:eventId/images/upload-url",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				body: eventImageUploadBodySchema,
+				response: {
+					200: eventImageUploadResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			if (!app.storage.enabled) {
+				throw new ValidationError(
+					"Event image upload is not available at this time",
+				);
+			}
+
+			const auditLogger = createAuditLogger(app.db, request.log);
+			const result = await requestEventImageUpload(
+				{ db: app.db, log: request.log, storage: app.storage, auditLogger },
+				session.userId,
+				request.params.eventId,
+				request.body,
+				request.ip,
+			);
+
+			return { success: true as const, data: result };
+		},
+	);
+
+	typedApp.post(
+		"/:eventId/images/:imageId/confirm",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventImageIdParamsSchema,
+				response: {
+					200: eventImageConfirmResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			if (!app.storage.enabled) {
+				throw new ValidationError(
+					"Event image upload is not available at this time",
+				);
+			}
+
+			const auditLogger = createAuditLogger(app.db, request.log);
+			const result = await confirmEventImageUpload(
+				{ db: app.db, log: request.log, storage: app.storage, auditLogger },
+				session.userId,
+				request.params.eventId,
+				request.params.imageId,
+				request.ip,
+			);
+
+			return { success: true as const, data: result };
+		},
+	);
+
+	typedApp.get(
+		"/:eventId/images",
+		{
+			schema: {
+				params: eventIdParamsSchema,
+				querystring: eventImagesQuerySchema,
+				response: {
+					200: eventImagesListResponseSchema,
+					400: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const result = await listEventImages(
+				app.db,
+				request.params.eventId,
+				request.query,
+				request.session?.role === "organizer"
+					? request.session.userId
+					: undefined,
+			);
+
+			return { success: true as const, data: { images: result } };
+		},
+	);
+
+	typedApp.delete(
+		"/:eventId/images/:imageId",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventImageIdParamsSchema,
+				response: {
+					200: eventImageDeleteResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			if (!app.storage.enabled) {
+				throw new ValidationError(
+					"Event image upload is not available at this time",
+				);
+			}
+
+			const auditLogger = createAuditLogger(app.db, request.log);
+			const result = await deleteEventImage(
+				{ db: app.db, log: request.log, storage: app.storage, auditLogger },
+				session.userId,
+				request.params.eventId,
+				request.params.imageId,
+				request.ip,
+			);
+
+			return { success: true as const, data: result };
 		},
 	);
 };

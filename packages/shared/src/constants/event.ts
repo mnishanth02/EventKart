@@ -74,6 +74,32 @@ export const EVENT_PRICE_MIN_INR = EVENT_PRICING_MIN_PRICE_PAISE / 100;
 export const EVENT_PRICE_MAX_INR = EVENT_PRICING_MAX_PRICE_PAISE / 100;
 export const EVENT_POLICY_MAX_LENGTH = 2000;
 
+export const EVENT_IMAGE_KINDS = ["hero", "route_map"] as const;
+export type EventImageKind = (typeof EVENT_IMAGE_KINDS)[number];
+export const eventImageKindSchema = z.enum(EVENT_IMAGE_KINDS);
+
+export const EVENT_IMAGE_STATUSES = [
+	"pending",
+	"uploaded",
+	"replaced",
+	"deleted",
+] as const;
+export type EventImageStatus = (typeof EVENT_IMAGE_STATUSES)[number];
+export const eventImageStatusSchema = z.enum(EVENT_IMAGE_STATUSES);
+
+export const EVENT_IMAGE_ALLOWED_CONTENT_TYPES = [
+	"image/jpeg",
+	"image/png",
+	"image/webp",
+] as const;
+export type EventImageContentType =
+	(typeof EVENT_IMAGE_ALLOWED_CONTENT_TYPES)[number];
+export const eventImageContentTypeSchema = z.enum(
+	EVENT_IMAGE_ALLOWED_CONTENT_TYPES,
+);
+
+export const EVENT_IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+
 export const V1_EVENT_TYPE = "race" satisfies EventType;
 export const V1_EVENT_SPORT = "running" satisfies EventSport;
 export const V1_EVENT_CATEGORY = "running" satisfies EventCategory;

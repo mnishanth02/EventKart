@@ -10,6 +10,15 @@ import {
 	type Event,
 	type EventCategoriesConfigInput,
 	type EventCategoryRecord,
+	type EventImage,
+	type EventImageKind,
+	type EventImageListQuery,
+	type EventImageUploadUrlRequest,
+	type EventImageUploadUrlResponse,
+	eventImageConfirmRequestSchema,
+	eventImageDeleteRequestSchema,
+	eventImageListQuerySchema,
+	eventImageUploadUrlRequestSchema,
 	type EventPoliciesConfigInput,
 	type EventPoliciesRecord,
 	type EventPricingConfigInput,
@@ -41,6 +50,23 @@ const updateEventPoliciesInputSchema = z.object({
 	config: eventPoliciesConfigSchema,
 });
 
+const getEventImagesInputSchema = eventIdInputSchema.extend({
+	kind: eventImageListQuerySchema.shape.kind,
+	status: eventImageListQuerySchema.shape.status,
+});
+
+const requestEventImageUploadUrlInputSchema = eventIdInputSchema.extend(
+	eventImageUploadUrlRequestSchema.shape,
+);
+
+const eventImageMutationInputSchema = eventIdInputSchema.extend({
+	imageId: eventImageConfirmRequestSchema.shape.imageId,
+});
+
+const deleteEventImageInputSchema = eventIdInputSchema.extend({
+	imageId: eventImageDeleteRequestSchema.shape.imageId,
+});
+
 export type GetEventCategoriesInput = z.input<typeof eventIdInputSchema>;
 export type UpdateEventCategoriesInput = {
 	eventId: string;
@@ -55,6 +81,19 @@ export type GetEventPoliciesInput = z.input<typeof eventIdInputSchema>;
 export type UpdateEventPoliciesInput = {
 	eventId: string;
 	config: EventPoliciesConfigInput;
+};
+export type GetEventImagesInput = z.input<typeof getEventImagesInputSchema>;
+export type RequestEventImageUploadUrlInput = {
+	eventId: string;
+} & EventImageUploadUrlRequest;
+export type ConfirmEventImageUploadInput = z.input<
+	typeof eventImageMutationInputSchema
+>;
+export type DeleteEventImageInput = z.input<typeof deleteEventImageInputSchema>;
+export type DeleteEventImageResult = {
+	deleted: true;
+	imageId: string;
+	kind: EventImageKind;
 };
 export const createEvent = createServerFn({ method: "POST" })
 	.inputValidator((data: CreateEventInput) =>
@@ -133,4 +172,51 @@ export const updateEventPricing = createServerFn({ method: "POST" })
 			data.config,
 		);
 		return response.data.tiers;
+	});
+
+export const getEventImages = createServerFn({ method: "GET" })
+	.inputValidator((data: GetEventImagesInput) =>
+		getEventImagesInputSchema.parse(data),
+	)
+	.handler(async ({ data }): Promise<EventImage[]> => {
+		const { listEventImagesOnServer } = await import("./api.server");
+		const query: EventImageListQuery = {};
+		if (data.kind) query.kind = data.kind;
+		if (data.status) query.status = data.status;
+		const response = await listEventImagesOnServer(data.eventId, query);
+		return response.data.images;
+	});
+
+export const requestEventImageUploadUrl = createServerFn({ method: "POST" })
+	.inputValidator((data: RequestEventImageUploadUrlInput) =>
+		requestEventImageUploadUrlInputSchema.parse(data),
+	)
+	.handler(async ({ data }): Promise<EventImageUploadUrlResponse> => {
+		const { requestEventImageUploadUrlOnServer } = await import("./api.server");
+		const { eventId, ...request } = data;
+		const response = await requestEventImageUploadUrlOnServer(eventId, request);
+		return response.data;
+	});
+
+export const confirmEventImageUpload = createServerFn({ method: "POST" })
+	.inputValidator((data: ConfirmEventImageUploadInput) =>
+		eventImageMutationInputSchema.parse(data),
+	)
+	.handler(async ({ data }): Promise<EventImage> => {
+		const { confirmEventImageUploadOnServer } = await import("./api.server");
+		const response = await confirmEventImageUploadOnServer(
+			data.eventId,
+			data.imageId,
+		);
+		return response.data;
+	});
+
+export const deleteEventImage = createServerFn({ method: "POST" })
+	.inputValidator((data: DeleteEventImageInput) =>
+		deleteEventImageInputSchema.parse(data),
+	)
+	.handler(async ({ data }): Promise<DeleteEventImageResult> => {
+		const { deleteEventImageOnServer } = await import("./api.server");
+		const response = await deleteEventImageOnServer(data.eventId, data.imageId);
+		return response.data;
 	});

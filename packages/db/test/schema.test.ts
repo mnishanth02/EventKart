@@ -6,6 +6,9 @@ import {
 	eventCategories,
 	eventCategoryEnum,
 	eventCurrencyEnum,
+	eventImageKindEnum,
+	eventImageStatusEnum,
+	eventImages,
 	eventPricingTiers,
 	eventSportEnum,
 	eventStatusEnum,
@@ -162,6 +165,33 @@ describe("schema exports", () => {
 		expect(eventPricingTiers.earlyBirdDeadline).toBeDefined();
 		expect(eventPricingTiers.createdAt).toBeDefined();
 		expect(eventPricingTiers.updatedAt).toBeDefined();
+	});
+
+	it("exports eventImages table with expected columns", () => {
+		expect(eventImages).toBeDefined();
+		expect(eventImages.id).toBeDefined();
+		expect(eventImages.eventId).toBeDefined();
+		expect(eventImages.kind).toBeDefined();
+		expect(eventImages.fileName).toBeDefined();
+		expect(eventImages.contentType).toBeDefined();
+		expect(eventImages.sizeBytes).toBeDefined();
+		expect(eventImages.storageKey).toBeDefined();
+		expect(eventImages.status).toBeDefined();
+		expect(eventImages.uploadedBy).toBeDefined();
+		expect(eventImages.createdAt).toBeDefined();
+		expect(eventImages.updatedAt).toBeDefined();
+	});
+
+	it("exports event image enums with correct values", () => {
+		expect(eventImageKindEnum).toBeDefined();
+		expect(eventImageKindEnum.enumValues).toEqual(["hero", "route_map"]);
+		expect(eventImageStatusEnum).toBeDefined();
+		expect(eventImageStatusEnum.enumValues).toEqual([
+			"pending",
+			"uploaded",
+			"replaced",
+			"deleted",
+		]);
 	});
 
 	it("exports slugRedirects table with expected columns", () => {

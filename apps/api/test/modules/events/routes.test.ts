@@ -15,6 +15,10 @@ const mockGetEventPolicies = vi.fn();
 const mockUpdateEventPolicies = vi.fn();
 const mockReplaceEventPricing = vi.fn();
 const mockReplaceEventCategories = vi.fn();
+const mockRequestEventImageUpload = vi.fn();
+const mockConfirmEventImageUpload = vi.fn();
+const mockListEventImages = vi.fn();
+const mockDeleteEventImage = vi.fn();
 
 vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	const actual =
@@ -37,6 +41,15 @@ vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	};
 });
 
+vi.mock("../../../src/modules/events/event-image-service.js", () => ({
+	requestEventImageUpload: (...args: unknown[]) =>
+		mockRequestEventImageUpload(...args),
+	confirmEventImageUpload: (...args: unknown[]) =>
+		mockConfirmEventImageUpload(...args),
+	listEventImages: (...args: unknown[]) => mockListEventImages(...args),
+	deleteEventImage: (...args: unknown[]) => mockDeleteEventImage(...args),
+}));
+
 import type { FastifyInstance } from "fastify";
 import {
 	ConflictError,
@@ -55,6 +68,7 @@ const TEST_SESSION_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 const TEST_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const TEST_ORGANIZER_ID = "660e8400-e29b-41d4-a716-446655440001";
 const TEST_EVENT_ID = "11111111-1111-4111-8111-111111111111";
+const TEST_IMAGE_ID = "12121212-1212-4121-8121-121212121212";
 const TEST_CATEGORY_5K_ID = "22222222-2222-4222-8222-222222222222";
 const TEST_CATEGORY_10K_ID = "33333333-3333-4333-8333-333333333333";
 const TEST_CSRF_SECRET = "eventkart-csrf-secret-v1";
@@ -143,6 +157,36 @@ const validPoliciesBody = {
 		"Refunds are available until seven days before race day, less payment gateway fees.",
 	cancellationPolicy:
 		"If the event is cancelled by the organizer, registered participants receive a full refund.",
+};
+
+const validImageUploadBody = {
+	kind: "hero",
+	fileName: "hero.jpg",
+	contentType: "image/jpeg",
+	sizeBytes: 1_024_000,
+};
+
+const mockEventImage = {
+	id: TEST_IMAGE_ID,
+	eventId: TEST_EVENT_ID,
+	kind: "hero",
+	fileName: "hero.jpg",
+	contentType: "image/jpeg",
+	sizeBytes: 1_024_000,
+	storageKey: `events/images/${TEST_EVENT_ID}/hero.jpg`,
+	status: "uploaded",
+	uploadedBy: TEST_USER_ID,
+	createdAt: "2026-04-26T12:00:00.000Z",
+	updatedAt: "2026-04-26T12:00:00.000Z",
+};
+
+const mockImageUploadUrl = {
+	imageId: TEST_IMAGE_ID,
+	url: "https://s3.example.com/event-image-upload",
+	method: "PUT" as const,
+	headers: { "Content-Type": "image/jpeg" },
+	key: `events/images/${TEST_EVENT_ID}/hero.jpg`,
+	expiresAt: "2026-04-26T12:15:00.000Z",
 };
 
 const mockPolicies = {
@@ -234,6 +278,10 @@ function buildCsrfHeaders() {
 			[CSRF_HEADER_NAME]: csrfToken,
 		},
 	};
+}
+
+function enableStorage(app: FastifyInstance) {
+	Object.assign(app.storage, { enabled: true });
 }
 
 describe("POST /api/v1/events", () => {
@@ -1159,5 +1207,322 @@ describe("PUT /api/v1/events/:eventId/pricing", () => {
 			error: { code: "VALIDATION_ERROR" },
 		});
 		expect(mockReplaceEventPricing).not.toHaveBeenCalled();
+	});
+});
+
+describe("POST /api/v1/events/:eventId/images/upload-url", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+		enableStorage(app);
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockRequestEventImageUpload.mockReset();
+	});
+
+	it("returns a presigned event image upload URL for an organizer", async () => {
+		setupOrganizerSession(app);
+		mockRequestEventImageUpload.mockResolvedValue(mockImageUploadUrl);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
+			...csrf,
+			payload: validImageUploadBody,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: mockImageUploadUrl,
+		});
+		expect(mockRequestEventImageUpload).toHaveBeenCalledOnce();
+		const [_deps, userId, eventId, body] = mockRequestEventImageUpload.mock
+			.calls[0] as [unknown, string, string, Record<string, unknown>];
+		expect(userId).toBe(TEST_USER_ID);
+		expect(eventId).toBe(TEST_EVENT_ID);
+		expect(body).toEqual(validImageUploadBody);
+	});
+
+	it("returns 401 without a session", async () => {
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
+			payload: validImageUploadBody,
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(mockRequestEventImageUpload).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 for participant sessions", async () => {
+		setupParticipantSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
+			...csrf,
+			payload: validImageUploadBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "INSUFFICIENT_ROLE" },
+		});
+	});
+
+	it.each([
+		["invalid MIME type", { contentType: "image/gif" }],
+		["oversized request", { sizeBytes: 5 * 1024 * 1024 + 1 }],
+	])("returns 400 for %s", async (_name, override) => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
+			...csrf,
+			payload: { ...validImageUploadBody, ...override },
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(mockRequestEventImageUpload).not.toHaveBeenCalled();
+	});
+});
+
+describe("event image routes with disabled storage", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockRequestEventImageUpload.mockReset();
+		Object.assign(app.storage, { enabled: false });
+		setupOrganizerSession(app);
+	});
+
+	it("returns 400 when image storage is disabled", async () => {
+		const csrf = buildCsrfHeaders();
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
+			...csrf,
+			payload: validImageUploadBody,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "VALIDATION_ERROR" },
+		});
+		expect(mockRequestEventImageUpload).not.toHaveBeenCalled();
+	});
+});
+
+describe("POST /api/v1/events/:eventId/images/:imageId/confirm", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+		enableStorage(app);
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockConfirmEventImageUpload.mockReset();
+	});
+
+	it("confirms an uploaded image", async () => {
+		setupOrganizerSession(app);
+		mockConfirmEventImageUpload.mockResolvedValue(mockEventImage);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/${TEST_IMAGE_ID}/confirm`,
+			...csrf,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({ success: true, data: mockEventImage });
+		expect(mockConfirmEventImageUpload).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_USER_ID,
+			TEST_EVENT_ID,
+			TEST_IMAGE_ID,
+			expect.any(String),
+		);
+	});
+
+	it("returns 400 for invalid image id", async () => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/not-a-uuid/confirm`,
+			...csrf,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(mockConfirmEventImageUpload).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when the organizer does not own the event", async () => {
+		setupOrganizerSession(app);
+		mockConfirmEventImageUpload.mockRejectedValue(
+			new ForbiddenError("You do not have access to this event"),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/${TEST_IMAGE_ID}/confirm`,
+			...csrf,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "FORBIDDEN" },
+		});
+	});
+});
+
+describe("GET /api/v1/events/:eventId/images", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockListEventImages.mockReset();
+	});
+
+	it("lists public uploaded images without authentication", async () => {
+		mockListEventImages.mockResolvedValue([mockEventImage]);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images?kind=hero`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: { images: [mockEventImage] },
+		});
+		expect(mockListEventImages).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+			{ kind: "hero" },
+			undefined,
+		);
+	});
+
+	it("passes organizer identity for draft image reads", async () => {
+		setupOrganizerSession(app);
+		mockListEventImages.mockResolvedValue([mockEventImage]);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images?status=uploaded`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(mockListEventImages).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_EVENT_ID,
+			{ status: "uploaded" },
+			TEST_USER_ID,
+		);
+	});
+});
+
+describe("DELETE /api/v1/events/:eventId/images/:imageId", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+		enableStorage(app);
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockDeleteEventImage.mockReset();
+	});
+
+	it("deletes an event image", async () => {
+		setupOrganizerSession(app);
+		mockDeleteEventImage.mockResolvedValue({
+			deleted: true,
+			imageId: TEST_IMAGE_ID,
+			kind: "hero",
+		});
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "DELETE",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/${TEST_IMAGE_ID}`,
+			...csrf,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: { deleted: true, imageId: TEST_IMAGE_ID, kind: "hero" },
+		});
+		expect(mockDeleteEventImage).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_USER_ID,
+			TEST_EVENT_ID,
+			TEST_IMAGE_ID,
+			expect.any(String),
+		);
+	});
+
+	it("returns 403 without CSRF token", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "DELETE",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/${TEST_IMAGE_ID}`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(mockDeleteEventImage).not.toHaveBeenCalled();
 	});
 });

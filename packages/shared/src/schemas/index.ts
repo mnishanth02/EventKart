@@ -51,6 +51,32 @@ export {
 	eventCategorySlugSchema,
 } from "./event-category.js";
 export type {
+	EventImage,
+	EventImageConfirmRequest,
+	EventImageContentType,
+	EventImageDeleteRequest,
+	EventImageKind,
+	EventImageListQuery,
+	EventImageStatus,
+	EventImagesResponse,
+	EventImageUploadUrlRequest,
+	EventImageUploadUrlResponse,
+} from "./event-image.js";
+export {
+	eventImageConfirmRequestSchema,
+	eventImageContentTypeSchema,
+	eventImageDeleteRequestSchema,
+	eventImageFileNameSchema,
+	eventImageKindSchema,
+	eventImageListQuerySchema,
+	eventImageSchema,
+	eventImageSizeBytesSchema,
+	eventImageStatusSchema,
+	eventImagesResponseSchema,
+	eventImageUploadUrlRequestSchema,
+	eventImageUploadUrlResponseSchema,
+} from "./event-image.js";
+export type {
 	EventPoliciesConfig,
 	EventPoliciesConfigInput,
 	EventPoliciesRecord,

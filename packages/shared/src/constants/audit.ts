@@ -34,6 +34,9 @@ export const AUDIT_ACTIONS = {
 	EVENT_PUBLISH: "event.publish",
 	EVENT_UNPUBLISH: "event.unpublish",
 	EVENT_CANCEL: "event.cancel",
+	EVENT_IMAGE_UPLOAD_REQUEST: "event.image_upload_request",
+	EVENT_IMAGE_UPLOAD_CONFIRM: "event.image_upload_confirm",
+	EVENT_IMAGE_DELETE: "event.image_delete",
 	// Booking
 	BOOKING_CREATE: "booking.create",
 	BOOKING_CANCEL: "booking.cancel",
