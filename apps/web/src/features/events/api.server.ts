@@ -13,6 +13,7 @@ import type {
 	EventImageUploadUrlRequest,
 	EventPoliciesConfig,
 	EventPricingConfig,
+	EventRegistrationForm,
 } from "@repo/shared/schemas";
 import { serverApiClient } from "#/lib/api-client.server";
 import {
@@ -28,6 +29,7 @@ import type {
 	EventImageUploadUrlApiResponse,
 	EventPoliciesResponse,
 	EventPricingResponse,
+	EventRegistrationFormResponse,
 	EventResponse,
 	PublishEventResponse,
 	PublishReadinessResponse,
@@ -169,6 +171,32 @@ export async function replaceEventPricingOnServer(
 		body: config,
 		headers,
 	});
+}
+
+export async function getEventRegistrationFormOnServer(
+	eventId: string,
+): Promise<EventRegistrationFormResponse> {
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventRegistrationFormResponse>(
+		`/events/${eventId}/registration-form`,
+		{ headers },
+	);
+}
+
+export async function updateEventRegistrationFormOnServer(
+	eventId: string,
+	config: EventRegistrationForm,
+): Promise<EventRegistrationFormResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventRegistrationFormResponse>(
+		`/events/${eventId}/registration-form`,
+		{
+			method: "PUT",
+			body: config,
+			headers,
+		},
+	);
 }
 
 export async function listEventImagesOnServer(

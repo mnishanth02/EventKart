@@ -5,6 +5,7 @@ import {
 	getEventImages,
 	getEventPolicies,
 	getEventPricing,
+	getEventRegistrationForm,
 	getPublishReadiness,
 } from "./api";
 import type { EventImageListQuery } from "./types";
@@ -63,6 +64,18 @@ export function eventPoliciesQueryOptions(eventId: string) {
 	return queryOptions({
 		queryKey: eventPoliciesQueryKey(eventId),
 		queryFn: () => getEventPolicies({ data: { eventId } }),
+		staleTime: 30_000,
+		gcTime: 300_000,
+	});
+}
+
+export const eventRegistrationFormQueryKey = (eventId: string) =>
+	["events", eventId, "registration-form"] as const;
+
+export function eventRegistrationFormQueryOptions(eventId: string) {
+	return queryOptions({
+		queryKey: eventRegistrationFormQueryKey(eventId),
+		queryFn: () => getEventRegistrationForm({ data: { eventId } }),
 		staleTime: 30_000,
 		gcTime: 300_000,
 	});

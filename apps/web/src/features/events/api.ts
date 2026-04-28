@@ -19,9 +19,8 @@ import {
 	type EventPoliciesRecord,
 	type EventPricingConfigInput,
 	type EventPricingTierWithCategory,
-	type PublishEventResponse,
-	type PublishReadiness,
-	type UnpublishEventResponse,
+	type EventRegistrationForm,
+	type EventRegistrationFormInput,
 	eventCategoriesConfigSchema,
 	eventImageConfirmRequestSchema,
 	eventImageDeleteRequestSchema,
@@ -29,6 +28,10 @@ import {
 	eventImageUploadUrlRequestSchema,
 	eventPoliciesConfigSchema,
 	eventPricingConfigSchema,
+	eventRegistrationFormSchema,
+	type PublishEventResponse,
+	type PublishReadiness,
+	type UnpublishEventResponse,
 	uuidSchema,
 } from "@repo/shared/schemas";
 import { createServerFn } from "@tanstack/react-start";
@@ -57,6 +60,11 @@ const updateEventPricingInputSchema = z.object({
 const updateEventPoliciesInputSchema = z.object({
 	eventId: uuidSchema,
 	config: eventPoliciesConfigSchema,
+});
+
+const updateEventRegistrationFormInputSchema = z.object({
+	eventId: uuidSchema,
+	config: eventRegistrationFormSchema,
 });
 
 const getEventImagesInputSchema = eventIdInputSchema.extend({
@@ -90,6 +98,11 @@ export type GetEventPoliciesInput = z.input<typeof eventIdInputSchema>;
 export type UpdateEventPoliciesInput = {
 	eventId: string;
 	config: EventPoliciesConfigInput;
+};
+export type GetEventRegistrationFormInput = z.input<typeof eventIdInputSchema>;
+export type UpdateEventRegistrationFormInput = {
+	eventId: string;
+	config: EventRegistrationFormInput;
 };
 export type GetEventImagesInput = z.input<typeof getEventImagesInputSchema>;
 export type RequestEventImageUploadUrlInput = {
@@ -230,6 +243,31 @@ export const updateEventPricing = createServerFn({ method: "POST" })
 			data.config,
 		);
 		return response.data.tiers;
+	});
+
+export const getEventRegistrationForm = createServerFn({ method: "GET" })
+	.inputValidator((data: GetEventRegistrationFormInput) =>
+		eventIdInputSchema.parse(data),
+	)
+	.handler(async ({ data }): Promise<EventRegistrationForm> => {
+		const { getEventRegistrationFormOnServer } = await import("./api.server");
+		const response = await getEventRegistrationFormOnServer(data.eventId);
+		return response.data.formSchema;
+	});
+
+export const updateEventRegistrationForm = createServerFn({ method: "POST" })
+	.inputValidator((data: UpdateEventRegistrationFormInput) =>
+		updateEventRegistrationFormInputSchema.parse(data),
+	)
+	.handler(async ({ data }): Promise<EventRegistrationForm> => {
+		const { updateEventRegistrationFormOnServer } = await import(
+			"./api.server"
+		);
+		const response = await updateEventRegistrationFormOnServer(
+			data.eventId,
+			data.config,
+		);
+		return response.data.formSchema;
 	});
 
 export const getEventImages = createServerFn({ method: "GET" })

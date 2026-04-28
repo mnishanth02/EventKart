@@ -43,10 +43,10 @@ function ConfigureEventImagesPage() {
 				<div className="flex flex-wrap gap-2">
 					<Button asChild variant="outline">
 						<Link
-							to="/org/events/$eventId/configure-policies"
+							to="/org/events/$eventId/configure-registration-fields"
 							params={{ eventId }}
 						>
-							Back to policies
+							Back to registration fields
 						</Link>
 					</Button>
 					<Button asChild variant="outline">
@@ -94,8 +94,8 @@ function ConfigureEventImagesPage() {
 				<CardHeader>
 					<CardTitle>Ready for review</CardTitle>
 					<CardDescription>
-						After categories, pricing, policies, and images are configured, you
-						can return to the organizer dashboard.
+						After categories, pricing, policies, registration fields, and images
+						are configured, you can return to the organizer dashboard.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>

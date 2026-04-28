@@ -11,8 +11,9 @@ import type {
 	EventPoliciesRecord,
 	EventPricingConfig,
 	EventPricingTierWithCategory,
-	PublishReadiness,
+	EventRegistrationForm,
 	PublishEventResponse,
+	PublishReadiness,
 	UnpublishEventResponse,
 } from "@repo/shared/schemas";
 
@@ -29,6 +30,7 @@ export type {
 	EventPoliciesRecord,
 	EventPricingConfig,
 	EventPricingTierWithCategory,
+	EventRegistrationForm,
 	PublishEventResponse,
 	PublishReadiness,
 	UnpublishEventResponse,
@@ -56,6 +58,13 @@ export type EventPricingResponse = {
 export type EventPoliciesResponse = {
 	success: true;
 	data: EventPoliciesRecord;
+};
+
+export type EventRegistrationFormResponse = {
+	success: true;
+	data: {
+		formSchema: EventRegistrationForm;
+	};
 };
 
 export type EventImagesResponse = {
