@@ -15,6 +15,8 @@ import {
 	V1_EVENT_TIMEZONE,
 	V1_EVENT_TYPE,
 } from "../constants/event.js";
+import { EVENT_REGISTRATION_FORM_SCHEMA_VERSION } from "../constants/registration-form.js";
+import { eventRegistrationFormSchema } from "./event-registration-form.js";
 import { eventSlugSchema } from "./event-slug.js";
 
 const EVENT_TITLE_MAX_LENGTH = 200;
@@ -263,6 +265,10 @@ export const eventSchema = z.object({
 	isPaid: z.boolean(),
 	currency: eventCurrencySchema,
 	status: eventStatusSchema,
+	formSchema: eventRegistrationFormSchema.optional(),
+	formSchemaVersion: z
+		.literal(EVENT_REGISTRATION_FORM_SCHEMA_VERSION)
+		.optional(),
 	createdAt: eventDateTimeSchema,
 	updatedAt: eventDateTimeSchema,
 });

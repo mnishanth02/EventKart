@@ -117,6 +117,8 @@ describe("schema exports", () => {
 		expect(events.isPaid).toBeDefined();
 		expect(events.currency).toBeDefined();
 		expect(events.status).toBeDefined();
+		expect(events.formSchema).toBeDefined();
+		expect(events.formSchemaVersion).toBeDefined();
 		expect(events.createdAt).toBeDefined();
 		expect(events.updatedAt).toBeDefined();
 	});

@@ -87,6 +87,22 @@ export {
 	RAZORPAY_RETRYABLE_STATUSES,
 	razorpayAccountStatusSchema,
 } from "./razorpay.js";
+export type {
+	EventRegistrationFieldId,
+	EventRegistrationFieldKind,
+	FitnessRegistrationFieldId,
+	StandardRegistrationFieldId,
+} from "./registration-form.js";
+export {
+	EVENT_REGISTRATION_FIELD_CATALOG,
+	EVENT_REGISTRATION_FIELD_IDS,
+	EVENT_REGISTRATION_FIELD_KINDS,
+	EVENT_REGISTRATION_FORM_SCHEMA_VERSION,
+	eventRegistrationFieldIdSchema,
+	eventRegistrationFieldKindSchema,
+	FITNESS_REGISTRATION_FIELD_IDS,
+	STANDARD_REGISTRATION_FIELD_IDS,
+} from "./registration-form.js";
 export type { UserRole } from "./roles.js";
 export {
 	hasMinimumRole,

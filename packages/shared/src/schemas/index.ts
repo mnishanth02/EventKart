@@ -1,4 +1,22 @@
 export type {
+	AdminEventApproveBody,
+	AdminEventRejectBody,
+	AdminEventReviewActionResponse,
+	AdminEventReviewDetail,
+	AdminEventReviewListItem,
+	AdminEventReviewListParams,
+	AdminEventReviewOrganizer,
+} from "./admin-event-review.js";
+export {
+	adminEventApproveBodySchema,
+	adminEventRejectBodySchema,
+	adminEventReviewActionResponseSchema,
+	adminEventReviewDetailSchema,
+	adminEventReviewListItemSchema,
+	adminEventReviewListParamsSchema,
+	adminEventReviewOrganizerSchema,
+} from "./admin-event-review.js";
+export type {
 	AdminApproveBody,
 	AdminRejectBody,
 	AdminRetryRazorpayResponse,
@@ -18,24 +36,6 @@ export {
 	adminVerificationListParamsSchema,
 	documentViewUrlSchema,
 } from "./admin-verification.js";
-export type {
-	AdminEventApproveBody,
-	AdminEventRejectBody,
-	AdminEventReviewActionResponse,
-	AdminEventReviewDetail,
-	AdminEventReviewListItem,
-	AdminEventReviewListParams,
-	AdminEventReviewOrganizer,
-} from "./admin-event-review.js";
-export {
-	adminEventApproveBodySchema,
-	adminEventRejectBodySchema,
-	adminEventReviewActionResponseSchema,
-	adminEventReviewDetailSchema,
-	adminEventReviewListItemSchema,
-	adminEventReviewListParamsSchema,
-	adminEventReviewOrganizerSchema,
-} from "./admin-event-review.js";
 export type { ErrorResponse } from "./api-response.js";
 export {
 	cursorPaginatedResponseSchema,
@@ -60,23 +60,6 @@ export {
 	eventSchema,
 	updateEventInputSchema,
 } from "./event.js";
-export type {
-	EventPublishTransition,
-	PublishEventResponse,
-	PublishReadiness,
-	PublishReadinessCheck,
-	PublishReadinessItem,
-	UnpublishEventResponse,
-} from "./event-publish.js";
-export {
-	eventPublishTransitionSchema,
-	publishEventResponseSchema,
-	publishReadinessCheckSchema,
-	publishReadinessItemSchema,
-	publishReadinessResponseSchema,
-	publishReadinessSchema,
-	unpublishEventResponseSchema,
-} from "./event-publish.js";
 export type {
 	EventCategoriesConfig,
 	EventCategoriesConfigInput,
@@ -143,6 +126,34 @@ export {
 	eventPricingTierRecordSchema,
 	eventPricingTierWithCategorySchema,
 } from "./event-pricing.js";
+export type {
+	EventPublishTransition,
+	PublishEventResponse,
+	PublishReadiness,
+	PublishReadinessCheck,
+	PublishReadinessItem,
+	UnpublishEventResponse,
+} from "./event-publish.js";
+export {
+	eventPublishTransitionSchema,
+	publishEventResponseSchema,
+	publishReadinessCheckSchema,
+	publishReadinessItemSchema,
+	publishReadinessResponseSchema,
+	publishReadinessSchema,
+	unpublishEventResponseSchema,
+} from "./event-publish.js";
+export type {
+	EventRegistrationFieldConfig,
+	EventRegistrationFieldConfigInput,
+	EventRegistrationForm,
+	EventRegistrationFormInput,
+} from "./event-registration-form.js";
+export {
+	defaultEventRegistrationFormSchema,
+	eventRegistrationFieldConfigSchema,
+	eventRegistrationFormSchema,
+} from "./event-registration-form.js";
 export type { EventSlug, EventSlugInput } from "./event-slug.js";
 export { eventSlugSchema } from "./event-slug.js";
 export type { UUID } from "./id.js";
