@@ -50,6 +50,6 @@ Allow organizers to edit pre-event draft event details after creation, while pre
 ## Baseline / Design Notes
 
 - I-1.2.10 already provides the slug generation and redirect-recording foundation; I-1.2.8 should reuse that service rather than introducing a second slug workflow.
-- I-1.2.8 depends on all editable event surfaces existing. If I-1.2.4 or I-1.2.5 is still incomplete when implementation begins, keep those sections linked to their configuration routes instead of duplicating unfinished fields in the edit form.
+- I-1.2.8 depends on all editable event surfaces existing. I-1.2.4 and I-1.2.5 are now complete, so the edit experience links to the dedicated registration-field and policy configuration routes rather than duplicating those specialized forms in the core edit form.
 - Repository search found Cloudflare architecture and roadmap references, but no current Cloudflare API purge/invalidation integration. Treat CDN purge as a documented follow-up for I-2.4.2 until that integration exists.
 - Edits are pre-event and draft-only for V1; publish/admin review workflows remain separate downstream features.

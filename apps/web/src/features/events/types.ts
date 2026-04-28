@@ -63,7 +63,10 @@ export type EventPoliciesResponse = {
 export type EventRegistrationFormResponse = {
 	success: true;
 	data: {
+		eventId: string;
 		formSchema: EventRegistrationForm;
+		formSchemaVersion: EventRegistrationForm["version"];
+		updatedAt: string;
 	};
 };
 
