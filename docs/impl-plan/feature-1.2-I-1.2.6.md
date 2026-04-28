@@ -4,7 +4,7 @@
 
 **Feature ID:** I-1.2.6
 **Module:** 1.2 — Event Creation & Management
-**Status:** Implementation-ready
+**Status:** ✅ Complete (2026-04-27)
 **Task size:** Large
 **Risk classification:** Red (`auth`, `public-api`, `migration`, `payments` gate)
 **Blast radius:** `packages/shared` (constants, schemas), `packages/db` (events migration), `apps/api` (events module), `apps/web` (events feature, org routes). Affects organizer role, admin role (downstream I-1.2.7), public event visibility. No external service calls (Razorpay checked but not called; CDN purge deferred to I-2.4.2).
