@@ -11,6 +11,7 @@ import {
 	eventImageUploadUrlResponseSchema,
 	eventPoliciesConfigSchema,
 	eventPoliciesRecordSchema,
+	eventRegistrationFormSchema,
 	publishEventResponseSchema,
 	publishReadinessResponseSchema,
 	eventPricingConfigSchema,
@@ -51,6 +52,8 @@ export const eventCategoriesBodySchema = eventCategoriesConfigSchema;
 
 export const eventPoliciesBodySchema = eventPoliciesConfigSchema;
 
+export const eventRegistrationFormBodySchema = eventRegistrationFormSchema;
+
 export const eventPricingBodySchema = eventPricingConfigSchema;
 
 export const eventImageUploadBodySchema = eventImageUploadUrlRequestSchema;
@@ -74,6 +77,16 @@ export const eventPricingResponseSchema = z.object({
 export const eventPoliciesResponseSchema = z.object({
 	success: z.literal(true),
 	data: eventPoliciesRecordSchema,
+});
+
+export const eventRegistrationFormResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.object({
+		eventId: uuidSchema,
+		formSchema: eventRegistrationFormSchema,
+		formSchemaVersion: eventRegistrationFormSchema.shape.version,
+		updatedAt: z.string().datetime(),
+	}),
 });
 
 export const eventImageUploadResponseSchema = z.object({

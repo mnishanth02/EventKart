@@ -4,7 +4,11 @@ import {
 	eventPricingTiers,
 	slugRedirects,
 } from "@repo/db/schema";
-import { eventPricingConfigSchema } from "@repo/shared/schemas";
+import {
+	defaultEventRegistrationFormSchema,
+	eventPricingConfigSchema,
+	eventRegistrationFormSchema,
+} from "@repo/shared/schemas";
 import { EVENT_SLUG_MAX_LENGTH } from "@repo/shared/utils";
 import { describe, expect, it, vi } from "vitest";
 import type { AuditLogger } from "../../../src/lib/audit.js";
@@ -23,6 +27,7 @@ import {
 	getApplicableEventPrice,
 	getEvent,
 	getEventPolicies,
+	getEventRegistrationForm,
 	listEventCategories,
 	listEventPricing,
 	publishEvent,
@@ -34,6 +39,7 @@ import {
 	unpublishEvent,
 	updateDraftEvent,
 	updateEventPolicies,
+	updateEventRegistrationForm,
 	updateEventSlug,
 } from "../../../src/modules/events/service.js";
 
@@ -320,6 +326,22 @@ const validEventPoliciesInput = {
 	cancellationPolicy:
 		"If the event is cancelled by the organizer, registered participants receive a full refund.",
 };
+
+const validRegistrationFormInput = eventRegistrationFormSchema.parse({
+	...defaultEventRegistrationFormSchema,
+	fields: defaultEventRegistrationFormSchema.fields.map((field) =>
+		field.fieldId === "blood_group"
+			? {
+					...field,
+					enabled: true,
+					required: true,
+					safetyCritical: true,
+					safetyCriticalReason:
+						"Blood group helps on-site medical staff during emergencies.",
+				}
+			: field,
+	),
+});
 
 describe("event slug service", () => {
 	it("generates a suffix when an active event already uses the base slug", async () => {
@@ -1243,6 +1265,137 @@ describe("event policy service", () => {
 			),
 		).rejects.toThrow(ValidationError);
 		expect(select).not.toHaveBeenCalled();
+		expect(update).not.toHaveBeenCalled();
+	});
+});
+
+describe("event registration form service", () => {
+	it("returns the default registration form for an organizer-owned event", async () => {
+		const { db } = createMockSlugStore([
+			[organizerRow],
+			[
+				buildEventRow({
+					formSchema: defaultEventRegistrationFormSchema,
+					formSchemaVersion: defaultEventRegistrationFormSchema.version,
+				}),
+			],
+		]);
+
+		const result = await getEventRegistrationForm(
+			db,
+			TEST_USER_ID,
+			EVENT_ID,
+		);
+
+		expect(result).toEqual({
+			eventId: EVENT_ID,
+			formSchema: defaultEventRegistrationFormSchema,
+			formSchemaVersion: defaultEventRegistrationFormSchema.version,
+			updatedAt: "2026-04-26T12:00:00.000Z",
+		});
+	});
+
+	it("updates the registration form atomically for an organizer-owned draft event", async () => {
+		const updatedAt = new Date("2026-04-27T12:00:00.000Z");
+		const { db, selectQueries, transaction, updateSet } = createMockSlugStore(
+			[[organizerRow], [buildEventRow()]],
+			[
+				buildEventRow({
+					formSchema: validRegistrationFormInput,
+					formSchemaVersion: validRegistrationFormInput.version,
+					updatedAt,
+				}),
+			],
+		);
+		const log = { info: vi.fn() };
+
+		const result = await updateEventRegistrationForm(
+			{ db, log },
+			TEST_USER_ID,
+			EVENT_ID,
+			validRegistrationFormInput,
+		);
+
+		expect(transaction).toHaveBeenCalledOnce();
+		expect(selectQueries[1]?.for).toHaveBeenCalledWith("update");
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				formSchema: validRegistrationFormInput,
+				formSchemaVersion: validRegistrationFormInput.version,
+				updatedAt: expect.any(Date),
+			}),
+		);
+		expect(result).toEqual({
+			eventId: EVENT_ID,
+			formSchema: validRegistrationFormInput,
+			formSchemaVersion: validRegistrationFormInput.version,
+			updatedAt: "2026-04-27T12:00:00.000Z",
+		});
+		expect(log.info).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventId: EVENT_ID,
+				organizerId: TEST_ORGANIZER_ID,
+				userId: TEST_USER_ID,
+				formSchemaVersion: validRegistrationFormInput.version,
+			}),
+			"Event registration form updated",
+		);
+	});
+
+	it("rejects sensitive required fields without a safety-critical reason before touching the database", async () => {
+		const { db, select, update } = createMockSlugStore();
+		const invalidInput = {
+			...defaultEventRegistrationFormSchema,
+			fields: defaultEventRegistrationFormSchema.fields.map((field) =>
+				field.fieldId === "date_of_birth"
+					? { ...field, enabled: true, required: true }
+					: field,
+			),
+		};
+
+		await expect(
+			updateEventRegistrationForm(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				invalidInput,
+			),
+		).rejects.toThrow(ValidationError);
+		expect(select).not.toHaveBeenCalled();
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when updating another organizer's registration form", async () => {
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ organizerId: OTHER_ORGANIZER_ID })],
+		]);
+
+		await expect(
+			updateEventRegistrationForm(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validRegistrationFormInput,
+			),
+		).rejects.toThrow(ForbiddenError);
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when updating a published event registration form", async () => {
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ status: "published" })],
+		]);
+
+		await expect(
+			updateEventRegistrationForm(
+				{ db, log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				validRegistrationFormInput,
+			),
+		).rejects.toThrow(ConflictError);
 		expect(update).not.toHaveBeenCalled();
 	});
 });

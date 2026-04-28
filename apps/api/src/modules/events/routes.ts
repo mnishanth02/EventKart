@@ -28,6 +28,8 @@ import {
 	eventPoliciesResponseSchema,
 	eventPricingBodySchema,
 	eventPricingResponseSchema,
+	eventRegistrationFormBodySchema,
+	eventRegistrationFormResponseSchema,
 	publishEventResponseSchema,
 	publishReadinessResponseSchema,
 	unpublishEventResponseSchema,
@@ -38,6 +40,7 @@ import {
 	createDraftEvent,
 	getEvent,
 	getEventPolicies,
+	getEventRegistrationForm,
 	getPublishReadiness,
 	listEventCategories,
 	listEventPricing,
@@ -47,6 +50,7 @@ import {
 	unpublishEvent,
 	updateDraftEvent,
 	updateEventPolicies,
+	updateEventRegistrationForm,
 } from "./service.js";
 
 const eventRoutes: FastifyPluginAsync = async (app) => {
@@ -358,6 +362,71 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			);
 
 			return { success: true as const, data: policies };
+		},
+	);
+
+	typedApp.get(
+		"/:eventId/registration-form",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				response: {
+					200: eventRegistrationFormResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const registrationForm = await getEventRegistrationForm(
+				app.db,
+				session.userId,
+				request.params.eventId,
+			);
+
+			return { success: true as const, data: registrationForm };
+		},
+	);
+
+	typedApp.put(
+		"/:eventId/registration-form",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				body: eventRegistrationFormBodySchema,
+				response: {
+					200: eventRegistrationFormResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const registrationForm = await updateEventRegistrationForm(
+				{ db: app.db, log: request.log },
+				session.userId,
+				request.params.eventId,
+				request.body,
+			);
+
+			return { success: true as const, data: registrationForm };
 		},
 	);
 

@@ -15,6 +15,8 @@ const mockListEventPricing = vi.fn();
 const mockListEventCategories = vi.fn();
 const mockGetEventPolicies = vi.fn();
 const mockUpdateEventPolicies = vi.fn();
+const mockGetEventRegistrationForm = vi.fn();
+const mockUpdateEventRegistrationForm = vi.fn();
 const mockReplaceEventPricing = vi.fn();
 const mockReplaceEventCategories = vi.fn();
 const mockRequestEventImageUpload = vi.fn();
@@ -45,6 +47,10 @@ vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 			mockListEventCategories(...args),
 		updateEventPolicies: (...args: unknown[]) =>
 			mockUpdateEventPolicies(...args),
+		getEventRegistrationForm: (...args: unknown[]) =>
+			mockGetEventRegistrationForm(...args),
+		updateEventRegistrationForm: (...args: unknown[]) =>
+			mockUpdateEventRegistrationForm(...args),
 		replaceEventPricing: (...args: unknown[]) =>
 			mockReplaceEventPricing(...args),
 		replaceEventCategories: (...args: unknown[]) =>
@@ -62,6 +68,10 @@ vi.mock("../../../src/modules/events/event-image-service.js", () => ({
 }));
 
 import type { FastifyInstance } from "fastify";
+import {
+	defaultEventRegistrationFormSchema,
+	eventRegistrationFormSchema,
+} from "@repo/shared/schemas";
 import {
 	ConflictError,
 	ForbiddenError,
@@ -217,6 +227,29 @@ const mockImageUploadUrl = {
 const mockPolicies = {
 	eventId: TEST_EVENT_ID,
 	...validPoliciesBody,
+	updatedAt: "2026-04-26T12:00:00.000Z",
+};
+
+const validRegistrationFormBody = eventRegistrationFormSchema.parse({
+	...defaultEventRegistrationFormSchema,
+	fields: defaultEventRegistrationFormSchema.fields.map((field) =>
+		field.fieldId === "blood_group"
+			? {
+					...field,
+					enabled: true,
+					required: true,
+					safetyCritical: true,
+					safetyCriticalReason:
+						"Blood group helps on-site medical staff during emergencies.",
+				}
+			: field,
+	),
+});
+
+const mockRegistrationForm = {
+	eventId: TEST_EVENT_ID,
+	formSchema: validRegistrationFormBody,
+	formSchemaVersion: validRegistrationFormBody.version,
 	updatedAt: "2026-04-26T12:00:00.000Z",
 };
 
@@ -1435,6 +1468,172 @@ describe("PUT /api/v1/events/:eventId/policies", () => {
 			error: { code: "VALIDATION_ERROR" },
 		});
 		expect(mockUpdateEventPolicies).not.toHaveBeenCalled();
+	});
+});
+
+describe("event registration form routes", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockGetEventRegistrationForm.mockReset();
+		mockUpdateEventRegistrationForm.mockReset();
+	});
+
+	it("returns the registration form for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		mockGetEventRegistrationForm.mockResolvedValue(mockRegistrationForm);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: mockRegistrationForm,
+		});
+		expect(mockGetEventRegistrationForm).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_USER_ID,
+			TEST_EVENT_ID,
+		);
+	});
+
+	it("returns 401 when reading without a session", async () => {
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "UNAUTHORIZED" },
+		});
+		expect(mockGetEventRegistrationForm).not.toHaveBeenCalled();
+	});
+
+	it("updates the registration form for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		mockUpdateEventRegistrationForm.mockResolvedValue(mockRegistrationForm);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			...csrf,
+			payload: validRegistrationFormBody,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: mockRegistrationForm,
+		});
+		expect(mockUpdateEventRegistrationForm).toHaveBeenCalledOnce();
+		const [_deps, userId, eventId, body] = mockUpdateEventRegistrationForm.mock
+			.calls[0] as [unknown, string, string, Record<string, unknown>];
+		expect(userId).toBe(TEST_USER_ID);
+		expect(eventId).toBe(TEST_EVENT_ID);
+		expect(body).toEqual(validRegistrationFormBody);
+	});
+
+	it("rejects sensitive required fields without a safety-critical reason through shared validation", async () => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+		const payload = {
+			...defaultEventRegistrationFormSchema,
+			fields: defaultEventRegistrationFormSchema.fields.map((field) =>
+				field.fieldId === "date_of_birth"
+					? { ...field, enabled: true, required: true }
+					: field,
+			),
+		};
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			...csrf,
+			payload,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "VALIDATION_ERROR" },
+		});
+		expect(mockUpdateEventRegistrationForm).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when another organizer cannot access the form", async () => {
+		setupOrganizerSession(app);
+		mockGetEventRegistrationForm.mockRejectedValue(
+			new ForbiddenError("You do not have access to this event"),
+		);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "FORBIDDEN" },
+		});
+	});
+
+	it("requires CSRF for registration form updates", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			payload: validRegistrationFormBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockUpdateEventRegistrationForm).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when updating a published event registration form", async () => {
+		setupOrganizerSession(app);
+		mockUpdateEventRegistrationForm.mockRejectedValue(
+			new ConflictError(
+				"Event registration form can only be updated while the event is in draft status",
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			...csrf,
+			payload: validRegistrationFormBody,
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CONFLICT" },
+		});
 	});
 });
 

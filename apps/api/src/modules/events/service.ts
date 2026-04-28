@@ -15,6 +15,7 @@ import type {
 	EventPoliciesRecord,
 	EventPricingConfig,
 	EventPricingTierWithCategory,
+	EventRegistrationForm,
 	EventPublishTransition,
 	EventSlug,
 	PublishReadiness,
@@ -30,8 +31,10 @@ import {
 	eventPoliciesRecordSchema,
 	eventPricingConfigSchema,
 	eventPricingTierWithCategorySchema,
+	eventRegistrationFormSchema,
 	eventSchema,
 	eventSlugSchema,
+	defaultEventRegistrationFormSchema,
 	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
@@ -172,6 +175,25 @@ export interface EventPoliciesWriteStore extends EventPoliciesStore {
 export interface EventPoliciesDeps {
 	db: EventPoliciesWriteStore;
 	log: Pick<FastifyBaseLogger, "info">;
+}
+
+export type EventRegistrationFormStore = Pick<Database, "select" | "update">;
+
+export interface EventRegistrationFormWriteStore
+	extends EventRegistrationFormStore {
+	transaction: Database["transaction"];
+}
+
+export interface EventRegistrationFormDeps {
+	db: EventRegistrationFormWriteStore;
+	log: Pick<FastifyBaseLogger, "info">;
+}
+
+export interface EventRegistrationFormRecord {
+	eventId: string;
+	formSchema: EventRegistrationForm;
+	formSchemaVersion: EventRegistrationForm["version"];
+	updatedAt: string;
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -600,6 +622,21 @@ function toEventPoliciesResponse(
 		cancellationPolicy: row.cancellationPolicy ?? null,
 		updatedAt: row.updatedAt.toISOString(),
 	});
+}
+
+function toEventRegistrationFormResponse(
+	row: Pick<EventRow, "id" | "formSchema" | "formSchemaVersion" | "updatedAt">,
+): EventRegistrationFormRecord {
+	const formSchema = eventRegistrationFormSchema.parse(
+		row.formSchema ?? defaultEventRegistrationFormSchema,
+	);
+
+	return {
+		eventId: row.id,
+		formSchema,
+		formSchemaVersion: formSchema.version,
+		updatedAt: row.updatedAt.toISOString(),
+	};
 }
 
 function toValidationDetails(error: {
@@ -1111,6 +1148,117 @@ export async function updateEventPolicies(
 	);
 
 	return policies;
+}
+
+export async function getEventRegistrationForm(
+	db: EventRegistrationFormStore,
+	userId: string,
+	eventId: string,
+): Promise<EventRegistrationFormRecord> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const organizer = await getOrganizerByUserId(db as Database, userId);
+
+	if (!organizer) {
+		throw new NotFoundError(
+			"Organizer profile not found. Please register first.",
+		);
+	}
+
+	const [event] = await db
+		.select({
+			id: events.id,
+			organizerId: events.organizerId,
+			formSchema: events.formSchema,
+			formSchemaVersion: events.formSchemaVersion,
+			updatedAt: events.updatedAt,
+		})
+		.from(events)
+		.where(eq(events.id, parsedEventId))
+		.limit(1);
+
+	if (!event) {
+		throw new NotFoundError("Event not found");
+	}
+
+	if (event.organizerId !== organizer.id) {
+		throw new ForbiddenError("You do not have access to this event");
+	}
+
+	return toEventRegistrationFormResponse(event);
+}
+
+export async function updateEventRegistrationForm(
+	deps: EventRegistrationFormDeps,
+	userId: string,
+	eventId: string,
+	input: unknown,
+): Promise<EventRegistrationFormRecord> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const parsed = eventRegistrationFormSchema.safeParse(input);
+	if (!parsed.success) {
+		throw new ValidationError(
+			"Invalid event registration form configuration",
+			toValidationDetails(parsed.error),
+		);
+	}
+
+	const organizer = await getOrganizerByUserId(deps.db as Database, userId);
+
+	if (!organizer) {
+		throw new NotFoundError(
+			"Organizer profile not found. Please register first.",
+		);
+	}
+
+	const registrationForm = await deps.db.transaction(async (tx) => {
+		const event = await selectEventForCategories(tx, parsedEventId, {
+			forUpdate: true,
+		});
+
+		if (event.organizerId !== organizer.id) {
+			throw new ForbiddenError("You do not have access to this event");
+		}
+
+		if (event.status !== DEFAULT_EVENT_STATUS) {
+			throw new ConflictError(
+				"Event registration form can only be updated while the event is in draft status",
+			);
+		}
+
+		const data: EventRegistrationForm = parsed.data;
+		const [updated] = await tx
+			.update(events)
+			.set({
+				formSchema: data,
+				formSchemaVersion: data.version,
+				updatedAt: new Date(),
+			})
+			.where(eq(events.id, parsedEventId))
+			.returning({
+				id: events.id,
+				formSchema: events.formSchema,
+				formSchemaVersion: events.formSchemaVersion,
+				updatedAt: events.updatedAt,
+			});
+
+		if (!updated) {
+			throw new Error("Failed to update event registration form");
+		}
+
+		return toEventRegistrationFormResponse(updated);
+	});
+
+	deps.log.info(
+		{
+			eventId: parsedEventId,
+			organizerId: organizer.id,
+			userId,
+			formSchemaVersion: registrationForm.formSchemaVersion,
+		},
+		"Event registration form updated",
+	);
+
+	return registrationForm;
 }
 
 export async function replaceEventCategories(
