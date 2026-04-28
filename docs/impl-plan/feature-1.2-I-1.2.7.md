@@ -4,7 +4,7 @@
 
 **Feature ID:** I-1.2.7  
 **Module:** 1.2 — Event Creation & Management  
-**Status:** In progress  
+**Status:** ✅ Complete (2026-04-27)  
 **Task size:** Large  
 **Risk classification:** Red (`admin`, `public-api`, publish workflow)
 
