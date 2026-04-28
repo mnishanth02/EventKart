@@ -3,18 +3,10 @@ import type {
 	EventCategoryRecord,
 	EventImage,
 	EventImageKind,
-	EventImageListQuery,
-	EventImageStatus,
-	EventImageUploadUrlRequest,
 	EventImageUploadUrlResponse,
-	EventPoliciesConfig,
 	EventPoliciesRecord,
-	EventPricingConfig,
 	EventPricingTierWithCategory,
-	EventRegistrationForm,
-	PublishEventResponse,
 	PublishReadiness,
-	UnpublishEventResponse,
 } from "@repo/shared/schemas";
 
 export type {
@@ -34,7 +26,7 @@ export type {
 	PublishEventResponse,
 	PublishReadiness,
 	UnpublishEventResponse,
-};
+} from "@repo/shared/schemas";
 
 export type EventResponse = {
 	success: true;

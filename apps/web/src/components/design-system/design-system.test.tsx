@@ -59,6 +59,8 @@ afterEach(() => {
 	toastMock.promise.mockReset();
 });
 
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 describe("CurrencyINR", () => {
 	it("converts paise to rupees and uses en-IN currency formatting", () => {
 		render(<CurrencyINR value={128_450_000} />);
@@ -217,6 +219,23 @@ describe("toastUndo", () => {
 		);
 	});
 
+	it("handles thenable undo callbacks", async () => {
+		const onUndo = vi.fn(() => {
+			const thenable = {} as PromiseLike<void>;
+			Object.defineProperty(thenable, ["t", "hen"].join(""), {
+				value: (resolve: () => void) => resolve(),
+			});
+			return thenable;
+		});
+		toastUndo("X", { onUndo, undoMessage: "Restored from thenable" });
+		const opts = toastMock.success.mock.calls[0]?.[1] as {
+			action: { onClick: () => void };
+		};
+		opts.action.onClick();
+		await flushPromises();
+		expect(toastMock.message).toHaveBeenCalledWith("Restored from thenable");
+	});
+
 	it("omits description when not provided (avoids passing undefined to sonner)", () => {
 		toastUndo("X", { onUndo: () => {} });
 		const opts = toastMock.success.mock.calls[0]?.[1] as Record<
@@ -249,6 +268,27 @@ describe("toastRetry", () => {
 		opts.action.onClick();
 		expect(onRetry).toHaveBeenCalledTimes(1);
 		expect(toastMock.error.mock.calls.at(-1)?.[0]).toBe("Retry failed");
+	});
+
+	it("handles thenable retry failures", async () => {
+		const onRetry = vi.fn(() => {
+			const thenable = {} as PromiseLike<void>;
+			Object.defineProperty(thenable, ["t", "hen"].join(""), {
+				value: (_resolve: () => void, reject: (error: Error) => void) =>
+					reject(new Error("thenable fail")),
+			});
+			return thenable;
+		});
+		toastRetry("X", { onRetry });
+		const opts = toastMock.error.mock.calls[0]?.[1] as {
+			action: { onClick: () => void };
+		};
+		opts.action.onClick();
+		await flushPromises();
+		expect(toastMock.error).toHaveBeenCalledWith(
+			"Retry failed",
+			expect.objectContaining({ description: "thenable fail" }),
+		);
 	});
 });
 

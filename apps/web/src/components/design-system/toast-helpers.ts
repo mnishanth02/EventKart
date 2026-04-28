@@ -31,9 +31,21 @@ export interface ToastUndoOptions {
 	/** Label on the action button. Default "Undo". */
 	actionLabel?: string;
 	/** Called when the user clicks Undo. May be sync or async. */
-	onUndo: () => void | Promise<void>;
+	onUndo: () => void | PromiseLike<void>;
 	/** Optional message after a successful undo. Default "Restored". */
 	undoMessage?: string;
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+	return (
+		value !== null &&
+		(typeof value === "object" || typeof value === "function") &&
+		typeof (value as { then?: unknown }).then === "function"
+	);
+}
+
+function getErrorDescription(err: unknown) {
+	return err instanceof Error ? err.message : String(err);
 }
 
 /**
@@ -60,20 +72,20 @@ export function toastUndo(
 			onClick: () => {
 				try {
 					const result = onUndo();
-					if (result instanceof Promise) {
-						result.then(
+					if (isPromiseLike(result)) {
+						Promise.resolve(result).then(
 							() => toast.message(undoMessage),
 							(err: unknown) => {
-								const detail = err instanceof Error ? err.message : String(err);
-								toast.error("Undo failed", { description: detail });
+								toast.error("Undo failed", {
+									description: getErrorDescription(err),
+								});
 							},
 						);
 					} else {
 						toast.message(undoMessage);
 					}
 				} catch (err) {
-					const detail = err instanceof Error ? err.message : String(err);
-					toast.error("Undo failed", { description: detail });
+					toast.error("Undo failed", { description: getErrorDescription(err) });
 				}
 			},
 		},
@@ -85,7 +97,7 @@ export interface ToastRetryOptions {
 	/** Label on the action button. Default "Retry". */
 	actionLabel?: string;
 	/** Re-runs the failed operation when the user clicks Retry. */
-	onRetry: () => void | Promise<void>;
+	onRetry: () => void | PromiseLike<void>;
 }
 
 /**
@@ -105,15 +117,17 @@ export function toastRetry(
 			onClick: () => {
 				try {
 					const result = onRetry();
-					if (result instanceof Promise) {
-						result.catch((err: unknown) => {
-							const detail = err instanceof Error ? err.message : String(err);
-							toast.error("Retry failed", { description: detail });
+					if (isPromiseLike(result)) {
+						Promise.resolve(result).catch((err: unknown) => {
+							toast.error("Retry failed", {
+								description: getErrorDescription(err),
+							});
 						});
 					}
 				} catch (err) {
-					const detail = err instanceof Error ? err.message : String(err);
-					toast.error("Retry failed", { description: detail });
+					toast.error("Retry failed", {
+						description: getErrorDescription(err),
+					});
 				}
 			},
 		},

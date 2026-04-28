@@ -1,5 +1,5 @@
 import {
-	createEventBaseSchema,
+	createEventInputSchema,
 	eventCategoriesConfigSchema,
 	eventCategoryRecordSchema,
 	eventImageConfirmRequestSchema,
@@ -11,19 +11,18 @@ import {
 	eventImageUploadUrlResponseSchema,
 	eventPoliciesConfigSchema,
 	eventPoliciesRecordSchema,
-	eventRegistrationFormSchema,
-	publishEventResponseSchema,
-	publishReadinessResponseSchema,
 	eventPricingConfigSchema,
 	eventPricingTierWithCategorySchema,
 	eventSchema,
+	publishEventResponseSchema,
+	publishReadinessResponseSchema,
 	unpublishEventResponseSchema,
 	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
 import { z } from "zod/v4";
 
-export const createEventBodySchema = createEventBaseSchema;
+export const createEventBodySchema = createEventInputSchema;
 
 export const updateEventBodySchema = updateEventInputSchema;
 

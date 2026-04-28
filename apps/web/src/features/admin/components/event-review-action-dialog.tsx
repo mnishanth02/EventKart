@@ -36,20 +36,24 @@ export function EventReviewActionDialog({
 	const isApprove = type === "approve";
 
 	const mutation = useMutation({
-		mutationFn: () =>
-			isApprove
+		mutationFn: () => {
+			const trimmedNotes = notes.trim();
+			const trimmedReason = reason.trim();
+
+			return isApprove
 				? approveEventReview({
 						data: {
 							eventId,
-							body: notes.trim() ? { notes } : {},
+							body: trimmedNotes ? { notes: trimmedNotes } : {},
 						},
 					})
 				: rejectEventReview({
 						data: {
 							eventId,
-							body: { reason },
+							body: { reason: trimmedReason },
 						},
-					}),
+					});
+		},
 		onSuccess: () => {
 			toast.success(isApprove ? "Event published" : "Event returned to draft");
 			void queryClient.invalidateQueries({
