@@ -10,6 +10,7 @@ import { type AppConfig, loadConfig } from "./lib/config.js";
 import { createLoggerOptions } from "./lib/logger.js";
 import adminRoutes from "./modules/admin/routes.js";
 import authRoutes from "./modules/auth/routes.js";
+import eventRoutes from "./modules/events/routes.js";
 import organizerRoutes from "./modules/organizer/routes.js";
 import authPlugin from "./plugins/auth.js";
 import configPlugin from "./plugins/config.js";
@@ -69,6 +70,7 @@ export function buildApp(options: BuildAppOptions = {}) {
 	app.register(healthRoutes);
 	app.register(authRoutes, { prefix: "/api/v1/auth" });
 	app.register(organizerRoutes, { prefix: "/api/v1/organizers" });
+	app.register(eventRoutes, { prefix: "/api/v1/events" });
 	app.register(adminRoutes, { prefix: "/api/v1/admin" });
 
 	app.setNotFoundHandler((request, reply) => {

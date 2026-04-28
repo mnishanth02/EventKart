@@ -31,6 +31,7 @@ import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { useState } from "react";
 import { adminVerificationsQueryOptions } from "../queries";
+import { VerificationSlaBadge } from "./verification-sla-badge";
 
 const STATUS_FILTER_OPTIONS = [
 	{ value: "all", label: "All Statuses" },
@@ -72,12 +73,24 @@ export function VerificationQueue() {
 		status: statusFilter === "all" ? undefined : statusFilter,
 	};
 
-	const { data, isLoading, isError } = useQuery(
+	const { data, isLoading, isError, refetch } = useQuery(
 		adminVerificationsQueryOptions(queryParams),
 	);
 
 	const items = data?.items ?? [];
 	const meta = data?.meta;
+	const selectedStatusLabel =
+		STATUS_FILTER_OPTIONS.find((option) => option.value === statusFilter)
+			?.label ?? "selected status";
+	const emptyStateSubject =
+		statusFilter === "all"
+			? "verification"
+			: `${selectedStatusLabel.toLowerCase()} verification`;
+
+	function handleStatusFilterChange(value: string) {
+		setStatusFilter(value);
+		setPage(1);
+	}
 
 	return (
 		<Card>
@@ -89,8 +102,11 @@ export function VerificationQueue() {
 							Review and manage organizer verification applications
 						</CardDescription>
 					</div>
-					<Select value={statusFilter} onValueChange={setStatusFilter}>
-						<SelectTrigger className="w-48">
+					<Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+						<SelectTrigger
+							className="w-full sm:w-48"
+							aria-label="Filter verifications by status"
+						>
 							<SelectValue placeholder="Filter by status" />
 						</SelectTrigger>
 						<SelectContent>
@@ -105,21 +121,47 @@ export function VerificationQueue() {
 			</CardHeader>
 			<CardContent>
 				{isLoading ? (
-					<p className="text-muted-foreground py-8 text-center">
+					<p
+						className="py-8 text-center text-muted-foreground"
+						role="status"
+						aria-live="polite"
+					>
 						Loading verifications...
 					</p>
 				) : isError ? (
-					<p className="text-destructive py-8 text-center">
-						Failed to load verifications. Please try again.
-					</p>
+					<div
+						className="flex flex-col items-center gap-3 py-8 text-center"
+						role="alert"
+					>
+						<p className="text-destructive">
+							Failed to load verifications. Please try again.
+						</p>
+						<Button variant="outline" size="sm" onClick={() => void refetch()}>
+							Retry
+						</Button>
+					</div>
 				) : items.length === 0 ? (
-					<p className="text-muted-foreground py-8 text-center">
-						No verification applications found.
-					</p>
+					<div className="flex flex-col items-center gap-3 py-8 text-center">
+						<p className="text-muted-foreground">
+							No {emptyStateSubject} applications found.
+						</p>
+						{statusFilter !== "all" ? (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => handleStatusFilterChange("all")}
+							>
+								Show all statuses
+							</Button>
+						) : null}
+					</div>
 				) : (
 					<>
-						<div className="rounded-md border">
-							<Table>
+						<div className="overflow-x-auto rounded-md border">
+							<Table className="min-w-[900px]">
+								<caption className="sr-only">
+									Organizer verification applications
+								</caption>
 								<TableHeader>
 									<TableRow>
 										<TableHead>Business Name</TableHead>
@@ -127,6 +169,7 @@ export function VerificationQueue() {
 										<TableHead>City</TableHead>
 										<TableHead>Status</TableHead>
 										<TableHead>Submitted</TableHead>
+										<TableHead>SLA</TableHead>
 										<TableHead>Docs</TableHead>
 										<TableHead className="text-right">Actions</TableHead>
 									</TableRow>
@@ -160,6 +203,12 @@ export function VerificationQueue() {
 											<TableCell>
 												{formatDate(item.submittedForReviewAt)}
 											</TableCell>
+											<TableCell>
+												<VerificationSlaBadge
+													status={item.verificationStatus}
+													submittedForReviewAt={item.submittedForReviewAt}
+												/>
+											</TableCell>
 											<TableCell>{item.documentCount}/4</TableCell>
 											<TableCell className="text-right">
 												<Button variant="ghost" size="sm" asChild>
@@ -179,7 +228,7 @@ export function VerificationQueue() {
 						</div>
 
 						{meta ? (
-							<div className="flex items-center justify-between pt-4">
+							<div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
 								<p className="text-sm text-muted-foreground">
 									Page {meta.page} of {meta.totalPages} ({meta.total} total)
 								</p>
@@ -187,8 +236,10 @@ export function VerificationQueue() {
 									<Button
 										variant="outline"
 										size="sm"
+										className="flex-1 sm:flex-none"
 										disabled={!meta.hasPrev}
 										onClick={() => setPage((p) => Math.max(1, p - 1))}
+										aria-label="Go to previous verification page"
 									>
 										<ChevronLeft className="mr-1 size-4" />
 										Previous
@@ -196,8 +247,10 @@ export function VerificationQueue() {
 									<Button
 										variant="outline"
 										size="sm"
+										className="flex-1 sm:flex-none"
 										disabled={!meta.hasNext}
 										onClick={() => setPage((p) => p + 1)}
+										aria-label="Go to next verification page"
 									>
 										Next
 										<ChevronRight className="ml-1 size-4" />

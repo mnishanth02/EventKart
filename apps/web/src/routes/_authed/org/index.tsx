@@ -249,6 +249,9 @@ function OrganizerDashboard() {
 			</p>
 			<VerificationStatusCard />
 			<div className="flex gap-3">
+				<Button asChild>
+					<Link to="/org/events/new">Create Event</Link>
+				</Button>
 				<Button asChild variant="outline">
 					<Link to="/org/profile">Edit Profile</Link>
 				</Button>

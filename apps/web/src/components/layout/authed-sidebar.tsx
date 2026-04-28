@@ -16,15 +16,18 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
 	BuildingIcon,
+	CalendarPlusIcon,
+	ClipboardCheckIcon,
+	FileCheckIcon,
 	LayoutDashboardIcon,
 	LogOutIcon,
 	ShieldIcon,
 	UserIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { useAuthActions } from "#/features/auth/hooks";
 import { apiClient } from "#/lib/api-client";
 import type { AuthSession } from "#/lib/auth/server-fns";
+import { toastRetry } from "@/components/design-system";
 
 // ── Navigation Config ──────────────────────────────────────────────
 
@@ -36,8 +39,25 @@ type NavItem = {
 
 const NAV_ITEMS: Record<Area, NavItem[]> = {
 	my: [{ label: "Dashboard", href: "/my", icon: LayoutDashboardIcon }],
-	org: [{ label: "Dashboard", href: "/org", icon: LayoutDashboardIcon }],
-	admin: [{ label: "Dashboard", href: "/admin", icon: LayoutDashboardIcon }],
+	org: [
+		{ label: "Dashboard", href: "/org", icon: LayoutDashboardIcon },
+		{ label: "Create Event", href: "/org/events/new", icon: CalendarPlusIcon },
+		{ label: "Profile", href: "/org/profile", icon: UserIcon },
+		{ label: "Policies", href: "/org/policies", icon: FileCheckIcon },
+		{
+			label: "Verification",
+			href: "/org/verification",
+			icon: ClipboardCheckIcon,
+		},
+	],
+	admin: [
+		{ label: "Dashboard", href: "/admin", icon: LayoutDashboardIcon },
+		{
+			label: "Verifications",
+			href: "/admin/verifications",
+			icon: ClipboardCheckIcon,
+		},
+	],
 };
 
 const AREA_CONFIG: Record<Area, { label: string; icon: LucideIcon }> = {
@@ -71,9 +91,9 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 			// API failed — clear local cache so UI reflects logged-out state,
 			// but warn the user that the server session may persist.
 			clearSession();
-			toast.error(
-				"Logout may not have completed. Please close your browser if issues persist.",
-			);
+			toastRetry("Logout failed", {
+				onRetry: () => apiClient("/auth/logout", { method: "POST" }),
+			});
 		}
 		void navigate({ to: "/" });
 	}

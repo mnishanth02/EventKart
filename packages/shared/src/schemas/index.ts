@@ -18,6 +18,24 @@ export {
 	adminVerificationListParamsSchema,
 	documentViewUrlSchema,
 } from "./admin-verification.js";
+export type {
+	AdminEventApproveBody,
+	AdminEventRejectBody,
+	AdminEventReviewActionResponse,
+	AdminEventReviewDetail,
+	AdminEventReviewListItem,
+	AdminEventReviewListParams,
+	AdminEventReviewOrganizer,
+} from "./admin-event-review.js";
+export {
+	adminEventApproveBodySchema,
+	adminEventRejectBodySchema,
+	adminEventReviewActionResponseSchema,
+	adminEventReviewDetailSchema,
+	adminEventReviewListItemSchema,
+	adminEventReviewListParamsSchema,
+	adminEventReviewOrganizerSchema,
+} from "./admin-event-review.js";
 export type { ErrorResponse } from "./api-response.js";
 export {
 	cursorPaginatedResponseSchema,
@@ -29,6 +47,104 @@ export type { DateString, DateTimeString, Timestamp } from "./date.js";
 export { dateSchema, datetimeSchema, timestampSchema } from "./date.js";
 export type { Email, EmailInput } from "./email.js";
 export { emailSchema } from "./email.js";
+export type {
+	CreateEvent,
+	CreateEventInput,
+	Event,
+	UpdateEvent,
+	UpdateEventInput,
+} from "./event.js";
+export {
+	createEventBaseSchema,
+	createEventInputSchema,
+	eventSchema,
+	updateEventInputSchema,
+} from "./event.js";
+export type {
+	EventPublishTransition,
+	PublishEventResponse,
+	PublishReadiness,
+	PublishReadinessCheck,
+	PublishReadinessItem,
+	UnpublishEventResponse,
+} from "./event-publish.js";
+export {
+	eventPublishTransitionSchema,
+	publishEventResponseSchema,
+	publishReadinessCheckSchema,
+	publishReadinessItemSchema,
+	publishReadinessResponseSchema,
+	publishReadinessSchema,
+	unpublishEventResponseSchema,
+} from "./event-publish.js";
+export type {
+	EventCategoriesConfig,
+	EventCategoriesConfigInput,
+	EventCategoryConfig,
+	EventCategoryConfigInput,
+	EventCategoryRecord,
+	EventCategorySlug,
+} from "./event-category.js";
+export {
+	defaultEventCategoriesConfig,
+	eventCategoriesConfigSchema,
+	eventCategoryConfigSchema,
+	eventCategoryRecordSchema,
+	eventCategorySlugSchema,
+} from "./event-category.js";
+export type {
+	EventImage,
+	EventImageConfirmRequest,
+	EventImageContentType,
+	EventImageDeleteRequest,
+	EventImageKind,
+	EventImageListQuery,
+	EventImageStatus,
+	EventImagesResponse,
+	EventImageUploadUrlRequest,
+	EventImageUploadUrlResponse,
+} from "./event-image.js";
+export {
+	eventImageConfirmRequestSchema,
+	eventImageContentTypeSchema,
+	eventImageDeleteRequestSchema,
+	eventImageFileNameSchema,
+	eventImageKindSchema,
+	eventImageListQuerySchema,
+	eventImageSchema,
+	eventImageSizeBytesSchema,
+	eventImageStatusSchema,
+	eventImagesResponseSchema,
+	eventImageUploadUrlRequestSchema,
+	eventImageUploadUrlResponseSchema,
+} from "./event-image.js";
+export type {
+	EventPoliciesConfig,
+	EventPoliciesConfigInput,
+	EventPoliciesRecord,
+} from "./event-policy.js";
+export {
+	eventPoliciesConfigSchema,
+	eventPoliciesRecordSchema,
+	eventPolicyTextSchema,
+} from "./event-policy.js";
+export type {
+	EventPricingConfig,
+	EventPricingConfigInput,
+	EventPricingTierConfig,
+	EventPricingTierConfigInput,
+	EventPricingTierRecord,
+	EventPricingTierWithCategory,
+} from "./event-pricing.js";
+export {
+	eventPriceSchema,
+	eventPricingConfigSchema,
+	eventPricingTierConfigSchema,
+	eventPricingTierRecordSchema,
+	eventPricingTierWithCategorySchema,
+} from "./event-pricing.js";
+export type { EventSlug, EventSlugInput } from "./event-slug.js";
+export { eventSlugSchema } from "./event-slug.js";
 export type { UUID } from "./id.js";
 export { uuidSchema } from "./id.js";
 export type {

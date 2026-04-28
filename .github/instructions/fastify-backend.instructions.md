@@ -1,4 +1,5 @@
 ---
+description: "Use when editing EventKart Fastify backend files under apps/api. Covers module structure, auth, validation, database, queues, and testing conventions."
 applyTo: "**/apps/api/**/*.{ts,tsx}"
 ---
 

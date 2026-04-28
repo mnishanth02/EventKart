@@ -21,7 +21,7 @@ import {
 } from "@repo/ui/components/ui/card";
 import { VerifiedBadge } from "@repo/ui/components/verified-badge";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
 	ArrowLeft,
 	CheckCircle2,
@@ -33,13 +33,18 @@ import {
 	XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toastRetry } from "@/components/design-system";
 import { getDocumentViewUrl } from "../api";
 import {
 	ADMIN_VERIFICATIONS_QUERY_KEY,
 	adminVerificationDetailQueryOptions,
 } from "../queries";
 import { ReviewActionDialog } from "./review-action-dialog";
+import {
+	formatSlaDate,
+	getVerificationSlaInfo,
+	VerificationSlaBadge,
+} from "./verification-sla-badge";
 
 function formatDate(dateStr: string | null): string {
 	if (!dateStr) return "—";
@@ -69,19 +74,33 @@ function getStatusBadgeVariant(
 function ViewDocumentButton({
 	organizerId,
 	documentId,
+	documentLabel,
 }: {
 	organizerId: string;
 	documentId: string;
+	documentLabel: string;
 }) {
 	const mutation = useMutation({
 		mutationFn: async () => {
 			return getDocumentViewUrl({ data: { organizerId, documentId } });
 		},
 		onSuccess: (data) => {
-			window.open(data.url, "_blank", "noopener,noreferrer");
+			const openedWindow = window.open(
+				data.url,
+				"_blank",
+				"noopener,noreferrer",
+			);
+			if (!openedWindow) {
+				toastRetry("Document popup was blocked", {
+					description: "Allow pop-ups and try again.",
+					onRetry: () => mutation.mutate(),
+				});
+			}
 		},
-		onError: () => {
-			toast.error("Failed to get document URL");
+		onError: (error: Error) => {
+			toastRetry(error.message || "Failed to get document URL", {
+				onRetry: () => mutation.mutate(),
+			});
 		},
 	});
 
@@ -91,6 +110,7 @@ function ViewDocumentButton({
 			size="sm"
 			disabled={mutation.isPending}
 			onClick={() => mutation.mutate()}
+			aria-label={`View ${documentLabel}`}
 		>
 			{mutation.isPending ? (
 				<Loader2 className="mr-1 size-3 animate-spin" />
@@ -110,39 +130,69 @@ export function VerificationReviewDetail({
 	organizerId: string;
 }) {
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 	const [dialogState, setDialogState] = useState<{
 		open: boolean;
 		type: "approve" | "reject";
 	}>({ open: false, type: "approve" });
 
-	const { data, isLoading, isError } = useQuery(
+	const { data, isLoading, isError, refetch } = useQuery(
 		adminVerificationDetailQueryOptions(organizerId),
 	);
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-12">
-				<Loader2 className="size-6 animate-spin text-muted-foreground" />
-				<span className="ml-2 text-muted-foreground">Loading details...</span>
+			<div className="space-y-6">
+				<Button variant="ghost" size="sm" asChild>
+					<Link to="/admin/verifications">
+						<ArrowLeft className="mr-1 size-4" />
+						Back to Queue
+					</Link>
+				</Button>
+				<div
+					className="flex items-center justify-center py-12"
+					role="status"
+					aria-live="polite"
+				>
+					<Loader2 className="size-6 animate-spin text-muted-foreground" />
+					<span className="ml-2 text-muted-foreground">Loading details...</span>
+				</div>
 			</div>
 		);
 	}
 
 	if (isError || !data) {
 		return (
-			<Alert variant="destructive">
-				<XCircle className="size-4" />
-				<AlertTitle>Error</AlertTitle>
-				<AlertDescription>
-					Failed to load verification details. The organizer may not exist.
-				</AlertDescription>
-			</Alert>
+			<div className="space-y-6">
+				<Button variant="ghost" size="sm" asChild>
+					<Link to="/admin/verifications">
+						<ArrowLeft className="mr-1 size-4" />
+						Back to Queue
+					</Link>
+				</Button>
+				<Alert variant="destructive">
+					<XCircle className="size-4" />
+					<AlertTitle>Error</AlertTitle>
+					<AlertDescription className="space-y-3">
+						<p>
+							Failed to load verification details. The organizer may not exist.
+						</p>
+						<Button variant="outline" size="sm" onClick={() => void refetch()}>
+							Try again
+						</Button>
+					</AlertDescription>
+				</Alert>
+			</div>
 		);
 	}
 
 	const { organizer, documents, policiesAccepted, policyDetails } = data;
 	const status = organizer.verificationStatus as VerificationStatus;
 	const isPendingReview = status === "pending_review";
+	const slaInfo = getVerificationSlaInfo(
+		organizer.submittedForReviewAt,
+		organizer.reviewedAt,
+	);
 
 	// Build map of uploaded documents by type
 	const docsByType = new Map<string, (typeof documents)[number]>();
@@ -154,6 +204,7 @@ export function VerificationReviewDetail({
 		void queryClient.invalidateQueries({
 			queryKey: [...ADMIN_VERIFICATIONS_QUERY_KEY, organizerId],
 		});
+		void navigate({ to: "/admin/verifications" });
 	}
 
 	return (
@@ -168,13 +219,13 @@ export function VerificationReviewDetail({
 				</Button>
 			</div>
 
-			<div className="flex items-center justify-between">
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<div>
 					<h1 className="flex items-center gap-2 text-2xl font-bold">
 						{organizer.businessName}
 						{organizer.isVerified && <VerifiedBadge variant="inline" />}
 					</h1>
-					<p className="text-muted-foreground">
+					<p className="break-all text-muted-foreground">
 						Verification Review for organizer {organizerId}
 					</p>
 				</div>
@@ -267,7 +318,7 @@ export function VerificationReviewDetail({
 							return (
 								<div
 									key={docType}
-									className={`flex items-center justify-between rounded-md border p-3 ${
+									className={`flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between ${
 										isUploaded
 											? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950"
 											: "border-muted"
@@ -290,7 +341,7 @@ export function VerificationReviewDetail({
 												] ?? docType}
 											</p>
 											{doc ? (
-												<p className="text-xs text-muted-foreground">
+												<p className="break-all text-xs text-muted-foreground">
 													{doc.fileName}
 												</p>
 											) : null}
@@ -308,6 +359,11 @@ export function VerificationReviewDetail({
 												<ViewDocumentButton
 													organizerId={organizerId}
 													documentId={doc.id}
+													documentLabel={
+														VERIFICATION_DOCUMENT_TYPE_LABELS[
+															docType as VerificationDocumentType
+														] ?? docType
+													}
 												/>
 											</>
 										) : (
@@ -403,14 +459,34 @@ export function VerificationReviewDetail({
 								<dd className="mt-1">{formatDate(organizer.reviewedAt)}</dd>
 							</div>
 						) : null}
+						{slaInfo ? (
+							<div>
+								<dt className="text-sm font-medium text-muted-foreground">
+									Review SLA
+								</dt>
+								<dd className="mt-1">
+									<VerificationSlaBadge
+										status={status}
+										submittedForReviewAt={organizer.submittedForReviewAt}
+										reviewedAt={organizer.reviewedAt}
+									/>
+								</dd>
+							</div>
+						) : null}
 					</dl>
 					{isPendingReview ? (
-						<Alert className="mt-4">
+						<Alert
+							variant={slaInfo?.isOverdue ? "destructive" : "default"}
+							className="mt-4"
+						>
 							<Clock className="size-4" />
-							<AlertTitle>Awaiting Review</AlertTitle>
+							<AlertTitle>
+								{slaInfo?.isOverdue ? "Review SLA Overdue" : "Awaiting Review"}
+							</AlertTitle>
 							<AlertDescription>
 								This application is pending admin review. SLA target: 2 business
-								days from submission.
+								days from submission
+								{slaInfo ? ` (due ${formatSlaDate(slaInfo.dueAt)}).` : "."}
 							</AlertDescription>
 						</Alert>
 					) : null}
@@ -423,12 +499,14 @@ export function VerificationReviewDetail({
 					<CardHeader>
 						<CardTitle>Review Actions</CardTitle>
 						<CardDescription>
-							Approve or reject this organizer's verification application
+							Approve only after documents and policy acceptance are valid.
+							Reject with a clear reason the organizer can act on.
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<div className="flex gap-3">
+						<div className="flex flex-col gap-3 sm:flex-row">
 							<Button
+								className="w-full sm:w-auto"
 								onClick={() => setDialogState({ open: true, type: "approve" })}
 							>
 								<ShieldCheck className="mr-2 size-4" />
@@ -436,6 +514,7 @@ export function VerificationReviewDetail({
 							</Button>
 							<Button
 								variant="destructive"
+								className="w-full sm:w-auto"
 								onClick={() => setDialogState({ open: true, type: "reject" })}
 							>
 								<XCircle className="mr-2 size-4" />

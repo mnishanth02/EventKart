@@ -13,8 +13,11 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@repo/ui/components/ui/card";
+import { Input } from "@repo/ui/components/ui/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useId, useRef } from "react";
 import { toast } from "sonner";
+import { toastRetry, toastUndo } from "@/components/design-system";
 import {
 	confirmDocumentUpload,
 	deleteDocument,
@@ -57,6 +60,9 @@ function DocumentUploadCard({
 	existingDoc: VerificationDocument | undefined;
 	onUploadComplete: () => void;
 }) {
+	const inputId = useId();
+	const inputRef = useRef<HTMLInputElement>(null);
+
 	const uploadMutation = useMutation({
 		mutationFn: async (file: File) => {
 			// 1. Request presigned URL
@@ -92,8 +98,10 @@ function DocumentUploadCard({
 			);
 			onUploadComplete();
 		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Failed to upload document");
+		onError: (error: Error, file: File) => {
+			toastRetry(error.message || "Failed to upload document", {
+				onRetry: () => uploadMutation.mutate(file),
+			});
 		},
 	});
 
@@ -101,14 +109,19 @@ function DocumentUploadCard({
 		mutationFn: async (documentId: string) => {
 			await deleteDocument({ data: { documentId } });
 		},
-		onSuccess: () => {
-			toast.success(
-				`${VERIFICATION_DOCUMENT_TYPE_LABELS[documentType]} deleted`,
-			);
+		onSuccess: (_data: void, documentId: string) => {
+			toastUndo(`${VERIFICATION_DOCUMENT_TYPE_LABELS[documentType]} deleted`, {
+				// Full undo would re-upload the file, but we no longer have
+				// the blob after deletion. Reload to let the user re-upload.
+				onUndo: () => window.location.reload(),
+				undoMessage: "Refreshing — please re-upload the document.",
+			});
 			onUploadComplete();
 		},
-		onError: () => {
-			toast.error("Failed to delete document");
+		onError: (_error: Error, documentId: string) => {
+			toastRetry("Failed to delete document", {
+				onRetry: () => deleteMutation.mutate(documentId),
+			});
 		},
 	});
 
@@ -139,14 +152,14 @@ function DocumentUploadCard({
 	const isUploading = uploadMutation.isPending;
 	const isDeleting = deleteMutation.isPending;
 	const isUploaded = existingDoc?.status === "uploaded";
+	const documentLabel = VERIFICATION_DOCUMENT_TYPE_LABELS[documentType];
+	const fileInputDescriptionId = `${inputId}-description`;
 
 	return (
 		<Card>
 			<CardHeader className="pb-3">
-				<div className="flex items-center justify-between">
-					<CardTitle className="text-base">
-						{VERIFICATION_DOCUMENT_TYPE_LABELS[documentType]}
-					</CardTitle>
+				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+					<CardTitle className="text-base">{documentLabel}</CardTitle>
 					{existingDoc ? getStatusBadge(existingDoc.status) : null}
 				</div>
 				{isUploaded && existingDoc ? (
@@ -156,48 +169,64 @@ function DocumentUploadCard({
 				) : null}
 			</CardHeader>
 			<CardContent>
+				<Input
+					ref={inputRef}
+					id={inputId}
+					type="file"
+					className="hidden"
+					accept={ACCEPT_STRING}
+					onChange={handleFileSelect}
+					disabled={isUploading || isDeleting}
+					tabIndex={-1}
+					aria-hidden="true"
+				/>
+				<span id={fileInputDescriptionId} className="sr-only">
+					Accepted formats: PDF, JPEG, PNG. Maximum file size: 10MB.
+				</span>
 				{isUploaded && existingDoc ? (
-					<div className="flex gap-2">
-						<label className="cursor-pointer">
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={isUploading}
-								asChild
-							>
-								<span>{isUploading ? "Replacing..." : "Replace"}</span>
-							</Button>
-							<input
-								type="file"
-								className="hidden"
-								accept={ACCEPT_STRING}
-								onChange={handleFileSelect}
-								disabled={isUploading || isDeleting}
-							/>
-						</label>
+					<div className="flex flex-wrap gap-2">
 						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							disabled={isUploading || isDeleting}
+							onClick={() => inputRef.current?.click()}
+							aria-describedby={fileInputDescriptionId}
+							aria-label={`Replace ${documentLabel}`}
+						>
+							{isUploading ? "Replacing..." : "Replace"}
+						</Button>
+						<Button
+							type="button"
 							variant="ghost"
 							size="sm"
 							disabled={isDeleting}
 							onClick={() => deleteMutation.mutate(existingDoc.id)}
+							aria-label={`Delete ${documentLabel}`}
 						>
 							{isDeleting ? "Deleting..." : "Delete"}
 						</Button>
 					</div>
 				) : (
-					<label className="cursor-pointer">
-						<Button variant="outline" size="sm" disabled={isUploading} asChild>
-							<span>{isUploading ? "Uploading..." : "Upload"}</span>
-						</Button>
-						<input
-							type="file"
-							className="hidden"
-							accept={ACCEPT_STRING}
-							onChange={handleFileSelect}
-							disabled={isUploading}
-						/>
-					</label>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={isUploading}
+						onClick={() => inputRef.current?.click()}
+						aria-describedby={fileInputDescriptionId}
+						aria-label={`Upload ${documentLabel}`}
+					>
+						{isUploading ? "Uploading..." : "Upload"}
+					</Button>
 				)}
+				{isUploading || isDeleting ? (
+					<p className="sr-only" role="status" aria-live="polite">
+						{isUploading
+							? `${documentLabel} upload in progress`
+							: `${documentLabel} deletion in progress`}
+					</p>
+				) : null}
 			</CardContent>
 		</Card>
 	);
@@ -205,9 +234,12 @@ function DocumentUploadCard({
 
 export function VerificationDocuments() {
 	const queryClient = useQueryClient();
-	const { data: documents = [], isLoading } = useQuery(
-		verificationDocumentsQueryOptions(),
-	);
+	const {
+		data: documents = [],
+		isError,
+		isLoading,
+		refetch,
+	} = useQuery(verificationDocumentsQueryOptions());
 
 	function handleUploadComplete() {
 		void queryClient.invalidateQueries({ queryKey: DOCUMENTS_QUERY_KEY });
@@ -231,8 +263,28 @@ export function VerificationDocuments() {
 		return (
 			<div className="space-y-4">
 				<h2 className="text-xl font-semibold">Verification Documents</h2>
-				<p className="text-muted-foreground">Loading documents...</p>
+				<p className="text-muted-foreground" role="status" aria-live="polite">
+					Loading documents...
+				</p>
 			</div>
+		);
+	}
+
+	if (isError) {
+		return (
+			<Card>
+				<CardHeader>
+					<CardTitle>Verification Documents</CardTitle>
+					<CardDescription>
+						We couldn&apos;t load your uploaded documents.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<Button type="button" onClick={() => refetch()}>
+						Retry
+					</Button>
+				</CardContent>
+			</Card>
 		);
 	}
 
@@ -244,7 +296,7 @@ export function VerificationDocuments() {
 					Upload your verification documents to complete your organizer profile.
 					All documents are encrypted at rest.
 				</p>
-				<p className="text-sm text-muted-foreground mt-1">
+				<p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
 					{uploadedCount} of {totalRequired} documents uploaded
 					{uploadedCount === totalRequired ? " ✓" : ""}
 				</p>

@@ -1,0 +1,12 @@
+{
+	"hooks": {
+		"PreToolUse": [
+			{
+				"type": "command",
+				"command": "node .github/hooks/scripts/guard-dangerous-commands.mjs",
+				"windows": "node .github\\hooks\\scripts\\guard-dangerous-commands.mjs",
+				"timeout": 10
+			}
+		]
+	}
+}

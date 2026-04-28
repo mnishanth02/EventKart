@@ -4,10 +4,13 @@ import { FullPageSpinner } from "#/components/loading";
 import { getCurrentUser } from "#/lib/auth/server-fns";
 
 export const Route = createFileRoute("/_authed")({
-	beforeLoad: async () => {
+	beforeLoad: async ({ location }) => {
 		const user = await getCurrentUser();
 		if (!user) {
-			throw redirect({ to: "/", search: { reason: "auth-required" } });
+			throw redirect({
+				to: "/",
+				search: { reason: "auth-required", redirect: location.href },
+			});
 		}
 		return { user };
 	},

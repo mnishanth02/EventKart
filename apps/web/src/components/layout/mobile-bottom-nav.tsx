@@ -1,14 +1,20 @@
 import { cn } from "@repo/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { CompassIcon, SearchIcon } from "lucide-react";
+import { GlassSurface } from "@/components/design-system";
 
 function MobileBottomNav() {
 	return (
 		<nav
-			className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)] md:hidden"
+			className="fixed inset-x-0 bottom-0 z-50 pb-[env(safe-area-inset-bottom)] md:hidden"
 			aria-label="Mobile navigation"
 		>
-			<div className="flex h-14 items-stretch justify-around">
+			<GlassSurface
+				tier={1}
+				className="absolute inset-0 rounded-none border-x-0 border-b-0"
+				aria-hidden
+			/>
+			<div className="relative flex h-14 items-stretch justify-around">
 				<MobileNavItem
 					to="/"
 					icon={<CompassIcon className="size-5" />}

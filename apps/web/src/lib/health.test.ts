@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Mock server env (required by api-client.server import chain) ───
+// ── Mock server env ────────────────────────────────────────────────
 vi.mock("#/lib/env/server", () => ({
 	get serverEnv() {
 		return {
@@ -12,18 +12,15 @@ vi.mock("#/lib/env/server", () => ({
 	},
 }));
 
-// ── Mock serverApiClient ───────────────────────────────────────────
-const mockServerApiClient = vi.fn();
-
-vi.mock("#/lib/api-client.server", () => ({
-	serverApiClient: (...args: unknown[]) => mockServerApiClient(...args),
-}));
+// ── Mock global fetch ──────────────────────────────────────────────
+const mockFetch = vi.fn();
+vi.stubGlobal("fetch", mockFetch);
 
 // ── Tests ──────────────────────────────────────────────────────────
 
 describe("checkApiReachability", () => {
 	beforeEach(() => {
-		mockServerApiClient.mockReset();
+		mockFetch.mockReset();
 	});
 
 	afterEach(() => {
@@ -31,7 +28,9 @@ describe("checkApiReachability", () => {
 	});
 
 	it("returns ok when the API responds successfully", async () => {
-		mockServerApiClient.mockResolvedValueOnce({ status: "ok" });
+		mockFetch.mockResolvedValueOnce(
+			new Response(JSON.stringify({ status: "ok" }), { status: 200 }),
+		);
 
 		const { checkApiReachability } = await import("#/lib/health");
 		const result = await checkApiReachability();
@@ -42,23 +41,25 @@ describe("checkApiReachability", () => {
 		expect(result).not.toHaveProperty("message");
 	});
 
-	it("calls serverApiClient with /ready and a timeout signal", async () => {
-		mockServerApiClient.mockResolvedValueOnce({ status: "ok" });
+	it("calls fetch with the correct /ready URL and a timeout signal", async () => {
+		mockFetch.mockResolvedValueOnce(
+			new Response(JSON.stringify({ status: "ok" }), { status: 200 }),
+		);
 
 		const { checkApiReachability } = await import("#/lib/health");
 		await checkApiReachability();
 
-		expect(mockServerApiClient).toHaveBeenCalledOnce();
-		const [path, options] = mockServerApiClient.mock.calls[0] as [
+		expect(mockFetch).toHaveBeenCalledOnce();
+		const [url, options] = mockFetch.mock.calls[0] as [
 			string,
 			{ signal: AbortSignal },
 		];
-		expect(path).toBe("/ready");
+		expect(url).toBe("http://internal-api.test:3001/ready");
 		expect(options.signal).toBeInstanceOf(AbortSignal);
 	});
 
-	it("returns error when serverApiClient throws", async () => {
-		mockServerApiClient.mockRejectedValueOnce(new Error("Connection refused"));
+	it("returns error when fetch throws", async () => {
+		mockFetch.mockRejectedValueOnce(new Error("Connection refused"));
 
 		const { checkApiReachability } = await import("#/lib/health");
 		const result = await checkApiReachability();
@@ -69,8 +70,8 @@ describe("checkApiReachability", () => {
 		expect(result.message).toBe("API unreachable");
 	});
 
-	it("returns error when serverApiClient throws a non-Error", async () => {
-		mockServerApiClient.mockRejectedValueOnce("network failure");
+	it("returns error when fetch returns a non-ok response", async () => {
+		mockFetch.mockResolvedValueOnce(new Response(null, { status: 503 }));
 
 		const { checkApiReachability } = await import("#/lib/health");
 		const result = await checkApiReachability();

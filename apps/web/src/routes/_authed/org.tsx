@@ -5,9 +5,12 @@ import { AuthedHeader } from "#/components/layout/authed-header";
 import { AuthedSidebar } from "#/components/layout/authed-sidebar";
 
 export const Route = createFileRoute("/_authed/org")({
-	beforeLoad: ({ context }) => {
+	beforeLoad: ({ context, location }) => {
 		if (!hasMinimumRole(context.user.role, "organizer")) {
-			throw redirect({ to: "/", search: { reason: "forbidden" } });
+			if (location.pathname === "/org/register") {
+				return;
+			}
+			throw redirect({ to: "/org/register" });
 		}
 	},
 	component: OrganizerLayout,

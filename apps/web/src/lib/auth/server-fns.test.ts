@@ -100,6 +100,49 @@ describe("getForwardedAuthHeaders", () => {
 	});
 });
 
+// ── assertSameOriginMutationRequest ─────────────────────────────────
+
+describe("assertSameOriginMutationRequest", () => {
+	it("allows same-origin mutation requests", async () => {
+		mockHeaders.set("origin", "http://localhost:3000");
+		mockHeaders.set("host", "localhost:3000");
+		mockHeaders.set("sec-fetch-site", "same-origin");
+
+		const { assertSameOriginMutationRequest } = await import(
+			"#/lib/auth/server-fns.server"
+		);
+
+		expect(() => assertSameOriginMutationRequest()).not.toThrow();
+	});
+
+	it("blocks cross-site mutation requests before forwarding cookies", async () => {
+		mockHeaders.set("origin", "https://attacker.example");
+		mockHeaders.set("host", "localhost:3000");
+		mockHeaders.set("sec-fetch-site", "cross-site");
+
+		const { assertSameOriginMutationRequest } = await import(
+			"#/lib/auth/server-fns.server"
+		);
+
+		expect(() => assertSameOriginMutationRequest()).toThrow(
+			"Invalid request origin",
+		);
+	});
+
+	it("blocks origin mismatches when fetch metadata is absent", async () => {
+		mockHeaders.set("origin", "https://attacker.example");
+		mockHeaders.set("host", "localhost:3000");
+
+		const { assertSameOriginMutationRequest } = await import(
+			"#/lib/auth/server-fns.server"
+		);
+
+		expect(() => assertSameOriginMutationRequest()).toThrow(
+			"Invalid request origin",
+		);
+	});
+});
+
 // ── getCurrentUser ─────────────────────────────────────────────────
 
 describe("getCurrentUser", () => {

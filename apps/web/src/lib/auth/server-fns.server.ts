@@ -11,6 +11,7 @@ import { userRoleSchema } from "@repo/shared/constants/roles";
 import { SESSION_COOKIE_NAME } from "@repo/shared/constants/session";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { ApiClientError, serverApiClient } from "#/lib/api-client.server";
+import { serverEnv } from "#/lib/env/server";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -41,6 +42,34 @@ function extractCookie(cookieHeader: string, name: string): string | undefined {
 	return undefined;
 }
 
+function normalizeOrigin(value: string): string | undefined {
+	try {
+		return new URL(value).origin;
+	} catch {
+		return undefined;
+	}
+}
+
+function getExpectedRequestOrigin(): string | undefined {
+	if (serverEnv.SERVER_URL) {
+		return normalizeOrigin(serverEnv.SERVER_URL);
+	}
+
+	const host = getRequestHeader("x-forwarded-host") ?? getRequestHeader("host");
+	if (!host) {
+		return undefined;
+	}
+
+	const forwardedProto = getRequestHeader("x-forwarded-proto");
+	const protocol =
+		forwardedProto ??
+		(host.startsWith("localhost") || host.startsWith("127.0.0.1")
+			? "http"
+			: "https");
+
+	return normalizeOrigin(`${protocol}://${host}`);
+}
+
 // ── Public Helpers ─────────────────────────────────────────────────
 
 /**
@@ -67,6 +96,29 @@ export function getForwardedAuthHeaders(): Record<string, string> {
 	}
 
 	return headers;
+}
+
+export function assertSameOriginMutationRequest(): void {
+	const secFetchSite = getRequestHeader("sec-fetch-site");
+	if (
+		secFetchSite &&
+		secFetchSite !== "same-origin" &&
+		secFetchSite !== "same-site" &&
+		secFetchSite !== "none"
+	) {
+		throw new Error("Invalid request origin");
+	}
+
+	const origin = getRequestHeader("origin");
+	if (!origin) {
+		return;
+	}
+
+	const actualOrigin = normalizeOrigin(origin);
+	const expectedOrigin = getExpectedRequestOrigin();
+	if (actualOrigin && expectedOrigin && actualOrigin !== expectedOrigin) {
+		throw new Error("Invalid request origin");
+	}
 }
 
 /**

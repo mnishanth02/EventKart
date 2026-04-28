@@ -3,7 +3,20 @@ import {
 	auditLog,
 	consentRecords,
 	consentTypeEnum,
+	eventCategories,
+	eventCategoryEnum,
+	eventCurrencyEnum,
+	eventImageKindEnum,
+	eventImageStatusEnum,
+	eventImages,
+	eventPricingTiers,
+	eventSportEnum,
+	eventStatusEnum,
+	events,
+	eventTypeEnum,
 	sessions,
+	slugRedirectResourceTypeEnum,
+	slugRedirects,
 	userRoleEnum,
 	users,
 } from "../src/schema/index.js";
@@ -58,6 +71,8 @@ describe("schema exports", () => {
 			"booking_terms",
 			"data_usage",
 			"marketing",
+			"platform_terms",
+			"refund_policy",
 		]);
 	});
 
@@ -72,5 +87,128 @@ describe("schema exports", () => {
 		expect(auditLog.metadata).toBeDefined();
 		expect(auditLog.ipAddress).toBeDefined();
 		expect(auditLog.createdAt).toBeDefined();
+	});
+
+	it("exports events table with expected columns", () => {
+		expect(events).toBeDefined();
+		expect(events.id).toBeDefined();
+		expect(events.organizerId).toBeDefined();
+		expect(events.title).toBeDefined();
+		expect(events.slug).toBeDefined();
+		expect(events.description).toBeDefined();
+		expect(events.eventType).toBeDefined();
+		expect(events.sport).toBeDefined();
+		expect(events.category).toBeDefined();
+		expect(events.venueName).toBeDefined();
+		expect(events.addressLine1).toBeDefined();
+		expect(events.addressLine2).toBeDefined();
+		expect(events.city).toBeDefined();
+		expect(events.state).toBeDefined();
+		expect(events.country).toBeDefined();
+		expect(events.postalCode).toBeDefined();
+		expect(events.timezone).toBeDefined();
+		expect(events.startAt).toBeDefined();
+		expect(events.endAt).toBeDefined();
+		expect(events.registrationOpensAt).toBeDefined();
+		expect(events.registrationClosesAt).toBeDefined();
+		expect(events.routeDetails).toBeDefined();
+		expect(events.refundPolicy).toBeDefined();
+		expect(events.cancellationPolicy).toBeDefined();
+		expect(events.isPaid).toBeDefined();
+		expect(events.currency).toBeDefined();
+		expect(events.status).toBeDefined();
+		expect(events.createdAt).toBeDefined();
+		expect(events.updatedAt).toBeDefined();
+	});
+
+	it("exports eventStatusEnum with correct values", () => {
+		expect(eventStatusEnum).toBeDefined();
+		expect(eventStatusEnum.enumValues).toEqual([
+			"draft",
+			"under_review",
+			"published",
+			"completed",
+			"cancelled",
+		]);
+	});
+
+	it("exports V1 event foundation enums with correct values", () => {
+		expect(eventTypeEnum).toBeDefined();
+		expect(eventTypeEnum.enumValues).toEqual(["race"]);
+		expect(eventSportEnum).toBeDefined();
+		expect(eventSportEnum.enumValues).toEqual(["running"]);
+		expect(eventCategoryEnum).toBeDefined();
+		expect(eventCategoryEnum.enumValues).toEqual(["running"]);
+		expect(eventCurrencyEnum).toBeDefined();
+		expect(eventCurrencyEnum.enumValues).toEqual(["INR"]);
+	});
+
+	it("exports eventCategories table with expected columns", () => {
+		expect(eventCategories).toBeDefined();
+		expect(eventCategories.id).toBeDefined();
+		expect(eventCategories.eventId).toBeDefined();
+		expect(eventCategories.name).toBeDefined();
+		expect(eventCategories.slug).toBeDefined();
+		expect(eventCategories.distanceMeters).toBeDefined();
+		expect(eventCategories.sortOrder).toBeDefined();
+		expect(eventCategories.createdAt).toBeDefined();
+		expect(eventCategories.updatedAt).toBeDefined();
+	});
+
+	it("exports eventPricingTiers table with expected columns", () => {
+		expect(eventPricingTiers).toBeDefined();
+		expect(eventPricingTiers.id).toBeDefined();
+		expect(eventPricingTiers.eventId).toBeDefined();
+		expect(eventPricingTiers.eventCategoryId).toBeDefined();
+		expect(eventPricingTiers.basePrice).toBeDefined();
+		expect(eventPricingTiers.earlyBirdPrice).toBeDefined();
+		expect(eventPricingTiers.earlyBirdDeadline).toBeDefined();
+		expect(eventPricingTiers.createdAt).toBeDefined();
+		expect(eventPricingTiers.updatedAt).toBeDefined();
+	});
+
+	it("exports eventImages table with expected columns", () => {
+		expect(eventImages).toBeDefined();
+		expect(eventImages.id).toBeDefined();
+		expect(eventImages.eventId).toBeDefined();
+		expect(eventImages.kind).toBeDefined();
+		expect(eventImages.fileName).toBeDefined();
+		expect(eventImages.contentType).toBeDefined();
+		expect(eventImages.sizeBytes).toBeDefined();
+		expect(eventImages.storageKey).toBeDefined();
+		expect(eventImages.status).toBeDefined();
+		expect(eventImages.uploadedBy).toBeDefined();
+		expect(eventImages.createdAt).toBeDefined();
+		expect(eventImages.updatedAt).toBeDefined();
+	});
+
+	it("exports event image enums with correct values", () => {
+		expect(eventImageKindEnum).toBeDefined();
+		expect(eventImageKindEnum.enumValues).toEqual(["hero", "route_map"]);
+		expect(eventImageStatusEnum).toBeDefined();
+		expect(eventImageStatusEnum.enumValues).toEqual([
+			"pending",
+			"uploaded",
+			"replaced",
+			"deleted",
+		]);
+	});
+
+	it("exports slugRedirects table with expected columns", () => {
+		expect(slugRedirects).toBeDefined();
+		expect(slugRedirects.id).toBeDefined();
+		expect(slugRedirects.oldSlug).toBeDefined();
+		expect(slugRedirects.newSlug).toBeDefined();
+		expect(slugRedirects.resourceType).toBeDefined();
+		expect(slugRedirects.resourceId).toBeDefined();
+		expect(slugRedirects.createdAt).toBeDefined();
+	});
+
+	it("exports slugRedirectResourceTypeEnum with correct values", () => {
+		expect(slugRedirectResourceTypeEnum).toBeDefined();
+		expect(slugRedirectResourceTypeEnum.enumValues).toEqual([
+			"event",
+			"organizer",
+		]);
 	});
 });

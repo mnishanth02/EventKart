@@ -2,22 +2,35 @@ import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from "@repo/shared/constants";
 import type { FastifyPluginAsync } from "fastify";
 import { createAuditLogger } from "../../lib/audit.js";
-import { ValidationError } from "../../lib/errors.js";
+import { UnauthorizedError, ValidationError } from "../../lib/errors.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { requireRole } from "../../middleware/require-role.js";
 import {
 	adminErrorResponseSchema,
+	approveEventReviewBodySchema,
 	approveBodySchema,
 	documentViewParamsSchema,
 	documentViewUrlResponseSchema,
+	eventReviewActionResponseSchema,
+	eventReviewDetailResponseSchema,
+	eventReviewIdParamsSchema,
 	listVerificationsQuerySchema,
 	listVerificationsResponseSchema,
+	listEventReviewsQuerySchema,
+	listEventReviewsResponseSchema,
 	organizerIdParamsSchema,
+	rejectEventReviewBodySchema,
 	rejectBodySchema,
 	retryRazorpayResponseSchema,
 	reviewActionResponseSchema,
 	verificationDetailResponseSchema,
 } from "./schemas.js";
+import {
+	approveEventReview,
+	getEventReviewDetail,
+	listEventReviews,
+	rejectEventReview,
+} from "./event-review-service.js";
 import {
 	approveOrganizer,
 	getDocumentViewUrl,
@@ -50,6 +63,121 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 		async (request) => {
 			const result = await listVerifications(app.db, request.query);
 			return { success: true as const, data: result.data, meta: result.meta };
+		},
+	);
+
+	/**
+	 * GET /api/v1/admin/event-reviews — List events awaiting admin review.
+	 */
+	typedApp.get(
+		"/event-reviews",
+		{
+			preHandler: [requireAuth, requireRole("admin")],
+			schema: {
+				querystring: listEventReviewsQuerySchema,
+				response: {
+					200: listEventReviewsResponseSchema,
+					401: adminErrorResponseSchema,
+					403: adminErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const result = await listEventReviews(app.db, request.query);
+			return { success: true as const, data: result.data, meta: result.meta };
+		},
+	);
+
+	/**
+	 * GET /api/v1/admin/event-reviews/:eventId — Event review detail.
+	 */
+	typedApp.get(
+		"/event-reviews/:eventId",
+		{
+			preHandler: [requireAuth, requireRole("admin")],
+			schema: {
+				params: eventReviewIdParamsSchema,
+				response: {
+					200: eventReviewDetailResponseSchema,
+					401: adminErrorResponseSchema,
+					403: adminErrorResponseSchema,
+					404: adminErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const detail = await getEventReviewDetail(app.db, request.params.eventId);
+			return { success: true as const, data: detail };
+		},
+	);
+
+	/**
+	 * POST /api/v1/admin/event-reviews/:eventId/approve — Approve an event.
+	 */
+	typedApp.post(
+		"/event-reviews/:eventId/approve",
+		{
+			preHandler: [requireAuth, requireRole("admin")],
+			schema: {
+				params: eventReviewIdParamsSchema,
+				body: approveEventReviewBodySchema,
+				response: {
+					200: eventReviewActionResponseSchema,
+					401: adminErrorResponseSchema,
+					403: adminErrorResponseSchema,
+					404: adminErrorResponseSchema,
+					409: adminErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+			const result = await approveEventReview(
+				{ db: app.db, log: request.log, auditLogger },
+				request.params.eventId,
+				session.userId,
+				request.ip,
+				request.body.notes,
+			);
+			return { success: true as const, data: result };
+		},
+	);
+
+	/**
+	 * POST /api/v1/admin/event-reviews/:eventId/reject — Reject an event.
+	 */
+	typedApp.post(
+		"/event-reviews/:eventId/reject",
+		{
+			preHandler: [requireAuth, requireRole("admin")],
+			schema: {
+				params: eventReviewIdParamsSchema,
+				body: rejectEventReviewBodySchema,
+				response: {
+					200: eventReviewActionResponseSchema,
+					401: adminErrorResponseSchema,
+					403: adminErrorResponseSchema,
+					404: adminErrorResponseSchema,
+					409: adminErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+			const result = await rejectEventReview(
+				{ db: app.db, log: request.log, auditLogger },
+				request.params.eventId,
+				session.userId,
+				request.body.reason,
+				request.ip,
+			);
+			return { success: true as const, data: result };
 		},
 	);
 
@@ -98,6 +226,10 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
 			if (!app.storage.enabled) {
 				throw new ValidationError(
 					"Document viewing is not available at this time",
@@ -113,7 +245,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 
 			// Audit document access (fire-and-forget — acceptable for reads)
 			void auditLogger.log({
-				actorId: request.session!.userId,
+				actorId: session.userId,
 				actorRole: "admin",
 				action: AUDIT_ACTIONS.ORGANIZER_DOCUMENT_VIEW,
 				resourceType: AUDIT_RESOURCE_TYPES.DOCUMENT,
@@ -150,10 +282,14 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
 			const result = await approveOrganizer(
 				app.db,
 				request.log,
-				request.session!.userId,
+				session.userId,
 				request.params.organizerId,
 				request.ip,
 				request.body.notes,
@@ -184,10 +320,14 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
 			const result = await rejectOrganizer(
 				app.db,
 				request.log,
-				request.session!.userId,
+				session.userId,
 				request.params.organizerId,
 				request.body.reason,
 				request.ip,
@@ -216,12 +356,16 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
 			const result = await retryRazorpayAccount(
 				app.db,
 				request.log,
 				request.params.organizerId,
 				app.queues,
-				request.session!.userId,
+				session.userId,
 				request.ip,
 			);
 			return { success: true as const, data: result };

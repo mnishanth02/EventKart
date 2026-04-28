@@ -20,12 +20,21 @@ import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
 import { Route as AuthedOrgIndexRouteImport } from './routes/_authed/org/index'
 import { Route as AuthedMyIndexRouteImport } from './routes/_authed/my/index'
 import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
+import { Route as PublicAuthVerifyEmailRouteImport } from './routes/_public/auth/verify-email'
 import { Route as AuthedOrgVerificationRouteImport } from './routes/_authed/org/verification'
 import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/register'
 import { Route as AuthedOrgProfileRouteImport } from './routes/_authed/org/profile'
 import { Route as AuthedOrgPoliciesRouteImport } from './routes/_authed/org/policies'
+import { Route as AuthedAdminEventReviewsIndexRouteImport } from './routes/_authed/admin/event-reviews/index'
 import { Route as AuthedAdminVerificationsIndexRouteImport } from './routes/_authed/admin/verifications/index'
+import { Route as AuthedOrgEventsNewRouteImport } from './routes/_authed/org/events/new'
+import { Route as AuthedAdminEventReviewsEventIdRouteImport } from './routes/_authed/admin/event-reviews/$eventId'
 import { Route as AuthedAdminVerificationsOrganizerIdRouteImport } from './routes/_authed/admin/verifications/$organizerId'
+import { Route as AuthedOrgEventsEventIdEditRouteImport } from './routes/_authed/org/events/$eventId/edit'
+import { Route as AuthedOrgEventsEventIdConfigurePricingRouteImport } from './routes/_authed/org/events/$eventId/configure-pricing'
+import { Route as AuthedOrgEventsEventIdConfigurePoliciesRouteImport } from './routes/_authed/org/events/$eventId/configure-policies'
+import { Route as AuthedOrgEventsEventIdConfigureImagesRouteImport } from './routes/_authed/org/events/$eventId/configure-images'
+import { Route as AuthedOrgEventsEventIdConfigureCategoriesRouteImport } from './routes/_authed/org/events/$eventId/configure-categories'
 
 const ReadyRoute = ReadyRouteImport.update({
   id: '/ready',
@@ -80,6 +89,11 @@ const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedAdminRoute,
 } as any)
+const PublicAuthVerifyEmailRoute = PublicAuthVerifyEmailRouteImport.update({
+  id: '/auth/verify-email',
+  path: '/auth/verify-email',
+  getParentRoute: () => PublicRoute,
+} as any)
 const AuthedOrgVerificationRoute = AuthedOrgVerificationRouteImport.update({
   id: '/verification',
   path: '/verification',
@@ -100,10 +114,27 @@ const AuthedOrgPoliciesRoute = AuthedOrgPoliciesRouteImport.update({
   path: '/policies',
   getParentRoute: () => AuthedOrgRoute,
 } as any)
+const AuthedAdminEventReviewsIndexRoute =
+  AuthedAdminEventReviewsIndexRouteImport.update({
+    id: '/event-reviews/',
+    path: '/event-reviews/',
+    getParentRoute: () => AuthedAdminRoute,
+  } as any)
 const AuthedAdminVerificationsIndexRoute =
   AuthedAdminVerificationsIndexRouteImport.update({
     id: '/verifications/',
     path: '/verifications/',
+    getParentRoute: () => AuthedAdminRoute,
+  } as any)
+const AuthedOrgEventsNewRoute = AuthedOrgEventsNewRouteImport.update({
+  id: '/events/new',
+  path: '/events/new',
+  getParentRoute: () => AuthedOrgRoute,
+} as any)
+const AuthedAdminEventReviewsEventIdRoute =
+  AuthedAdminEventReviewsEventIdRouteImport.update({
+    id: '/event-reviews/$eventId',
+    path: '/event-reviews/$eventId',
     getParentRoute: () => AuthedAdminRoute,
   } as any)
 const AuthedAdminVerificationsOrganizerIdRoute =
@@ -111,6 +142,36 @@ const AuthedAdminVerificationsOrganizerIdRoute =
     id: '/verifications/$organizerId',
     path: '/verifications/$organizerId',
     getParentRoute: () => AuthedAdminRoute,
+  } as any)
+const AuthedOrgEventsEventIdEditRoute =
+  AuthedOrgEventsEventIdEditRouteImport.update({
+    id: '/events/$eventId/edit',
+    path: '/events/$eventId/edit',
+    getParentRoute: () => AuthedOrgRoute,
+  } as any)
+const AuthedOrgEventsEventIdConfigurePricingRoute =
+  AuthedOrgEventsEventIdConfigurePricingRouteImport.update({
+    id: '/events/$eventId/configure-pricing',
+    path: '/events/$eventId/configure-pricing',
+    getParentRoute: () => AuthedOrgRoute,
+  } as any)
+const AuthedOrgEventsEventIdConfigurePoliciesRoute =
+  AuthedOrgEventsEventIdConfigurePoliciesRouteImport.update({
+    id: '/events/$eventId/configure-policies',
+    path: '/events/$eventId/configure-policies',
+    getParentRoute: () => AuthedOrgRoute,
+  } as any)
+const AuthedOrgEventsEventIdConfigureImagesRoute =
+  AuthedOrgEventsEventIdConfigureImagesRouteImport.update({
+    id: '/events/$eventId/configure-images',
+    path: '/events/$eventId/configure-images',
+    getParentRoute: () => AuthedOrgRoute,
+  } as any)
+const AuthedOrgEventsEventIdConfigureCategoriesRoute =
+  AuthedOrgEventsEventIdConfigureCategoriesRouteImport.update({
+    id: '/events/$eventId/configure-categories',
+    path: '/events/$eventId/configure-categories',
+    getParentRoute: () => AuthedOrgRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -124,11 +185,20 @@ export interface FileRoutesByFullPath {
   '/org/profile': typeof AuthedOrgProfileRoute
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
+  '/auth/verify-email': typeof PublicAuthVerifyEmailRoute
   '/admin/': typeof AuthedAdminIndexRoute
   '/my/': typeof AuthedMyIndexRoute
   '/org/': typeof AuthedOrgIndexRoute
+  '/admin/event-reviews/$eventId': typeof AuthedAdminEventReviewsEventIdRoute
+  '/admin/event-reviews/': typeof AuthedAdminEventReviewsIndexRoute
   '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
+  '/org/events/new': typeof AuthedOrgEventsNewRoute
   '/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
+  '/org/events/$eventId/configure-categories': typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
+  '/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
+  '/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
+  '/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  '/org/events/$eventId/edit': typeof AuthedOrgEventsEventIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
@@ -138,11 +208,20 @@ export interface FileRoutesByTo {
   '/org/profile': typeof AuthedOrgProfileRoute
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
+  '/auth/verify-email': typeof PublicAuthVerifyEmailRoute
   '/admin': typeof AuthedAdminIndexRoute
   '/my': typeof AuthedMyIndexRoute
   '/org': typeof AuthedOrgIndexRoute
+  '/admin/event-reviews/$eventId': typeof AuthedAdminEventReviewsEventIdRoute
+  '/admin/event-reviews': typeof AuthedAdminEventReviewsIndexRoute
   '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
+  '/org/events/new': typeof AuthedOrgEventsNewRoute
   '/admin/verifications': typeof AuthedAdminVerificationsIndexRoute
+  '/org/events/$eventId/configure-categories': typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
+  '/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
+  '/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
+  '/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  '/org/events/$eventId/edit': typeof AuthedOrgEventsEventIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -158,11 +237,20 @@ export interface FileRoutesById {
   '/_authed/org/profile': typeof AuthedOrgProfileRoute
   '/_authed/org/register': typeof AuthedOrgRegisterRoute
   '/_authed/org/verification': typeof AuthedOrgVerificationRoute
+  '/_public/auth/verify-email': typeof PublicAuthVerifyEmailRoute
   '/_authed/admin/': typeof AuthedAdminIndexRoute
   '/_authed/my/': typeof AuthedMyIndexRoute
   '/_authed/org/': typeof AuthedOrgIndexRoute
+  '/_authed/admin/event-reviews/$eventId': typeof AuthedAdminEventReviewsEventIdRoute
+  '/_authed/admin/event-reviews/': typeof AuthedAdminEventReviewsIndexRoute
   '/_authed/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
+  '/_authed/org/events/new': typeof AuthedOrgEventsNewRoute
   '/_authed/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
+  '/_authed/org/events/$eventId/configure-categories': typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
+  '/_authed/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
+  '/_authed/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
+  '/_authed/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  '/_authed/org/events/$eventId/edit': typeof AuthedOrgEventsEventIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -177,11 +265,20 @@ export interface FileRouteTypes {
     | '/org/profile'
     | '/org/register'
     | '/org/verification'
+    | '/auth/verify-email'
     | '/admin/'
     | '/my/'
     | '/org/'
+    | '/admin/event-reviews/$eventId'
+    | '/admin/event-reviews/'
     | '/admin/verifications/$organizerId'
+    | '/org/events/new'
     | '/admin/verifications/'
+    | '/org/events/$eventId/configure-categories'
+    | '/org/events/$eventId/configure-images'
+    | '/org/events/$eventId/configure-policies'
+    | '/org/events/$eventId/configure-pricing'
+    | '/org/events/$eventId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -191,11 +288,20 @@ export interface FileRouteTypes {
     | '/org/profile'
     | '/org/register'
     | '/org/verification'
+    | '/auth/verify-email'
     | '/admin'
     | '/my'
     | '/org'
+    | '/admin/event-reviews/$eventId'
+    | '/admin/event-reviews'
     | '/admin/verifications/$organizerId'
+    | '/org/events/new'
     | '/admin/verifications'
+    | '/org/events/$eventId/configure-categories'
+    | '/org/events/$eventId/configure-images'
+    | '/org/events/$eventId/configure-policies'
+    | '/org/events/$eventId/configure-pricing'
+    | '/org/events/$eventId/edit'
   id:
     | '__root__'
     | '/_authed'
@@ -210,11 +316,20 @@ export interface FileRouteTypes {
     | '/_authed/org/profile'
     | '/_authed/org/register'
     | '/_authed/org/verification'
+    | '/_public/auth/verify-email'
     | '/_authed/admin/'
     | '/_authed/my/'
     | '/_authed/org/'
+    | '/_authed/admin/event-reviews/$eventId'
+    | '/_authed/admin/event-reviews/'
     | '/_authed/admin/verifications/$organizerId'
+    | '/_authed/org/events/new'
     | '/_authed/admin/verifications/'
+    | '/_authed/org/events/$eventId/configure-categories'
+    | '/_authed/org/events/$eventId/configure-images'
+    | '/_authed/org/events/$eventId/configure-policies'
+    | '/_authed/org/events/$eventId/configure-pricing'
+    | '/_authed/org/events/$eventId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -303,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAdminIndexRouteImport
       parentRoute: typeof AuthedAdminRoute
     }
+    '/_public/auth/verify-email': {
+      id: '/_public/auth/verify-email'
+      path: '/auth/verify-email'
+      fullPath: '/auth/verify-email'
+      preLoaderRoute: typeof PublicAuthVerifyEmailRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/_authed/org/verification': {
       id: '/_authed/org/verification'
       path: '/verification'
@@ -338,6 +460,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAdminVerificationsIndexRouteImport
       parentRoute: typeof AuthedAdminRoute
     }
+    '/_authed/admin/event-reviews/': {
+      id: '/_authed/admin/event-reviews/'
+      path: '/event-reviews'
+      fullPath: '/admin/event-reviews/'
+      preLoaderRoute: typeof AuthedAdminEventReviewsIndexRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/org/events/new': {
+      id: '/_authed/org/events/new'
+      path: '/events/new'
+      fullPath: '/org/events/new'
+      preLoaderRoute: typeof AuthedOrgEventsNewRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
     '/_authed/admin/verifications/$organizerId': {
       id: '/_authed/admin/verifications/$organizerId'
       path: '/verifications/$organizerId'
@@ -345,17 +481,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAdminVerificationsOrganizerIdRouteImport
       parentRoute: typeof AuthedAdminRoute
     }
+    '/_authed/admin/event-reviews/$eventId': {
+      id: '/_authed/admin/event-reviews/$eventId'
+      path: '/event-reviews/$eventId'
+      fullPath: '/admin/event-reviews/$eventId'
+      preLoaderRoute: typeof AuthedAdminEventReviewsEventIdRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/org/events/$eventId/edit': {
+      id: '/_authed/org/events/$eventId/edit'
+      path: '/events/$eventId/edit'
+      fullPath: '/org/events/$eventId/edit'
+      preLoaderRoute: typeof AuthedOrgEventsEventIdEditRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
+    '/_authed/org/events/$eventId/configure-pricing': {
+      id: '/_authed/org/events/$eventId/configure-pricing'
+      path: '/events/$eventId/configure-pricing'
+      fullPath: '/org/events/$eventId/configure-pricing'
+      preLoaderRoute: typeof AuthedOrgEventsEventIdConfigurePricingRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
+    '/_authed/org/events/$eventId/configure-policies': {
+      id: '/_authed/org/events/$eventId/configure-policies'
+      path: '/events/$eventId/configure-policies'
+      fullPath: '/org/events/$eventId/configure-policies'
+      preLoaderRoute: typeof AuthedOrgEventsEventIdConfigurePoliciesRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
+    '/_authed/org/events/$eventId/configure-images': {
+      id: '/_authed/org/events/$eventId/configure-images'
+      path: '/events/$eventId/configure-images'
+      fullPath: '/org/events/$eventId/configure-images'
+      preLoaderRoute: typeof AuthedOrgEventsEventIdConfigureImagesRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
+    '/_authed/org/events/$eventId/configure-categories': {
+      id: '/_authed/org/events/$eventId/configure-categories'
+      path: '/events/$eventId/configure-categories'
+      fullPath: '/org/events/$eventId/configure-categories'
+      preLoaderRoute: typeof AuthedOrgEventsEventIdConfigureCategoriesRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
   }
 }
 
 interface AuthedAdminRouteChildren {
   AuthedAdminIndexRoute: typeof AuthedAdminIndexRoute
+  AuthedAdminEventReviewsEventIdRoute: typeof AuthedAdminEventReviewsEventIdRoute
+  AuthedAdminEventReviewsIndexRoute: typeof AuthedAdminEventReviewsIndexRoute
   AuthedAdminVerificationsOrganizerIdRoute: typeof AuthedAdminVerificationsOrganizerIdRoute
   AuthedAdminVerificationsIndexRoute: typeof AuthedAdminVerificationsIndexRoute
 }
 
 const AuthedAdminRouteChildren: AuthedAdminRouteChildren = {
   AuthedAdminIndexRoute: AuthedAdminIndexRoute,
+  AuthedAdminEventReviewsEventIdRoute: AuthedAdminEventReviewsEventIdRoute,
+  AuthedAdminEventReviewsIndexRoute: AuthedAdminEventReviewsIndexRoute,
   AuthedAdminVerificationsOrganizerIdRoute:
     AuthedAdminVerificationsOrganizerIdRoute,
   AuthedAdminVerificationsIndexRoute: AuthedAdminVerificationsIndexRoute,
@@ -383,6 +565,12 @@ interface AuthedOrgRouteChildren {
   AuthedOrgRegisterRoute: typeof AuthedOrgRegisterRoute
   AuthedOrgVerificationRoute: typeof AuthedOrgVerificationRoute
   AuthedOrgIndexRoute: typeof AuthedOrgIndexRoute
+  AuthedOrgEventsNewRoute: typeof AuthedOrgEventsNewRoute
+  AuthedOrgEventsEventIdConfigureCategoriesRoute: typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
+  AuthedOrgEventsEventIdConfigureImagesRoute: typeof AuthedOrgEventsEventIdConfigureImagesRoute
+  AuthedOrgEventsEventIdConfigurePoliciesRoute: typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
+  AuthedOrgEventsEventIdConfigurePricingRoute: typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  AuthedOrgEventsEventIdEditRoute: typeof AuthedOrgEventsEventIdEditRoute
 }
 
 const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
@@ -391,6 +579,16 @@ const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
   AuthedOrgRegisterRoute: AuthedOrgRegisterRoute,
   AuthedOrgVerificationRoute: AuthedOrgVerificationRoute,
   AuthedOrgIndexRoute: AuthedOrgIndexRoute,
+  AuthedOrgEventsNewRoute: AuthedOrgEventsNewRoute,
+  AuthedOrgEventsEventIdConfigureCategoriesRoute:
+    AuthedOrgEventsEventIdConfigureCategoriesRoute,
+  AuthedOrgEventsEventIdConfigureImagesRoute:
+    AuthedOrgEventsEventIdConfigureImagesRoute,
+  AuthedOrgEventsEventIdConfigurePoliciesRoute:
+    AuthedOrgEventsEventIdConfigurePoliciesRoute,
+  AuthedOrgEventsEventIdConfigurePricingRoute:
+    AuthedOrgEventsEventIdConfigurePricingRoute,
+  AuthedOrgEventsEventIdEditRoute: AuthedOrgEventsEventIdEditRoute,
 }
 
 const AuthedOrgRouteWithChildren = AuthedOrgRoute._addFileChildren(
@@ -414,10 +612,12 @@ const AuthedRouteWithChildren =
 
 interface PublicRouteChildren {
   PublicIndexRoute: typeof PublicIndexRoute
+  PublicAuthVerifyEmailRoute: typeof PublicAuthVerifyEmailRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
   PublicIndexRoute: PublicIndexRoute,
+  PublicAuthVerifyEmailRoute: PublicAuthVerifyEmailRoute,
 }
 
 const PublicRouteWithChildren =

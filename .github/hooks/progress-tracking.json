@@ -4,6 +4,7 @@
 			{
 				"type": "command",
 				"command": "node .github/hooks/scripts/inject-progress-context.mjs",
+				"windows": "node .github\\hooks\\scripts\\inject-progress-context.mjs",
 				"timeout": 10
 			}
 		]

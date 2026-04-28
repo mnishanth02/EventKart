@@ -1,5 +1,11 @@
 import type {
 	AdminApproveBody,
+	AdminEventApproveBody,
+	AdminEventRejectBody,
+	AdminEventReviewActionResponse,
+	AdminEventReviewDetail,
+	AdminEventReviewListItem,
+	AdminEventReviewListParams,
 	AdminRejectBody,
 	AdminReviewActionResponse,
 	AdminVerificationDetail,
@@ -11,6 +17,12 @@ import type {
 
 export type {
 	AdminApproveBody,
+	AdminEventApproveBody,
+	AdminEventRejectBody,
+	AdminEventReviewActionResponse,
+	AdminEventReviewDetail,
+	AdminEventReviewListItem,
+	AdminEventReviewListParams,
 	AdminRejectBody,
 	AdminReviewActionResponse,
 	AdminVerificationDetail,
@@ -27,9 +39,20 @@ export type AdminVerificationListResponse = {
 	meta: OffsetPaginationMeta;
 };
 
+export type AdminEventReviewListResponse = {
+	success: true;
+	data: AdminEventReviewListItem[];
+	meta: OffsetPaginationMeta;
+};
+
 export type AdminVerificationDetailResponse = {
 	success: true;
 	data: AdminVerificationDetail;
+};
+
+export type AdminEventReviewDetailResponse = {
+	success: true;
+	data: AdminEventReviewDetail;
 };
 
 export type DocumentViewUrlResponse = {
@@ -40,4 +63,9 @@ export type DocumentViewUrlResponse = {
 export type AdminReviewActionApiResponse = {
 	success: true;
 	data: AdminReviewActionResponse;
+};
+
+export type AdminEventReviewActionApiResponse = {
+	success: true;
+	data: AdminEventReviewActionResponse;
 };
