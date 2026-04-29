@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockSend = vi.fn();
 const mockDestroy = vi.fn();
 const mockGetSignedUrl = vi.fn();
+const mockCreatePresignedPost = vi.fn();
 
 vi.mock("@aws-sdk/client-s3", () => {
 	class MockS3Client {
@@ -47,6 +48,10 @@ vi.mock("@aws-sdk/client-s3", () => {
 
 vi.mock("@aws-sdk/s3-request-presigner", () => ({
 	getSignedUrl: (...args: unknown[]) => mockGetSignedUrl(...args),
+}));
+
+vi.mock("@aws-sdk/s3-presigned-post", () => ({
+	createPresignedPost: (...args: unknown[]) => mockCreatePresignedPost(...args),
 }));
 
 import type { StorageClientConfig } from "../../src/lib/storage.js";
@@ -137,6 +142,7 @@ describe("createDisabledStorageClient", () => {
 				ownerId: "user-1",
 				extension: "pdf",
 				contentType: "application/pdf",
+				maxBytes: MAX_FILE_SIZES.kyc,
 			}),
 		).rejects.toThrow(StorageUnavailableError);
 	});
@@ -176,6 +182,10 @@ describe("createStorageClient", () => {
 		mockGetSignedUrl.mockResolvedValue(
 			"https://presigned-url.example.com/test",
 		);
+		mockCreatePresignedPost.mockImplementation((_client, options) => ({
+			url: "https://presigned-post.example.com/test",
+			fields: options.Fields,
+		}));
 		client = createStorageClient(TEST_CONFIG);
 	});
 
@@ -184,17 +194,18 @@ describe("createStorageClient", () => {
 	});
 
 	describe("getUploadUrl", () => {
-		it("returns presigned upload result with url, method, headers, key, expiresAt", async () => {
+		it("returns presigned upload result with url, method, fields, key, expiresAt", async () => {
 			const result = await client.getUploadUrl({
 				category: "kyc",
 				ownerId: "user-1",
 				extension: "pdf",
 				contentType: "application/pdf",
+				maxBytes: MAX_FILE_SIZES.kyc,
 			});
 
-			expect(result.url).toBe("https://presigned-url.example.com/test");
-			expect(result.method).toBe("PUT");
-			expect(result.headers["Content-Type"]).toBe("application/pdf");
+			expect(result.url).toBe("https://presigned-post.example.com/test");
+			expect(result.method).toBe("POST");
+			expect(result.fields["Content-Type"]).toBe("application/pdf");
 			expect(result.key).toMatch(/^kyc\/user-1\//);
 			expect(result.expiresAt).toBeInstanceOf(Date);
 			expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
@@ -206,20 +217,29 @@ describe("createStorageClient", () => {
 				ownerId: "user-1",
 				extension: "pdf",
 				contentType: "application/pdf",
+				maxBytes: MAX_FILE_SIZES.kyc,
 			});
 
-			expect(result.headers["x-amz-server-side-encryption"]).toBe("AES256");
+			expect(result.fields["x-amz-server-side-encryption"]).toBe("AES256");
 		});
 
-		it("does not include SSE header for event-image category", async () => {
+		it("does not include SSE field for event-image category", async () => {
+			mockCreatePresignedPost.mockResolvedValueOnce({
+				url: "https://presigned-post.example.com/test",
+				fields: {
+					key: "events/images/event-1/generated.jpg",
+					"Content-Type": "image/jpeg",
+				},
+			});
 			const result = await client.getUploadUrl({
 				category: "event-image",
 				ownerId: "event-1",
 				extension: "jpg",
 				contentType: "image/jpeg",
+				maxBytes: MAX_FILE_SIZES["event-image"],
 			});
 
-			expect(result.headers).not.toHaveProperty("x-amz-server-side-encryption");
+			expect(result.fields).not.toHaveProperty("x-amz-server-side-encryption");
 		});
 
 		it("uses custom expiresIn when provided", async () => {
@@ -229,6 +249,7 @@ describe("createStorageClient", () => {
 				ownerId: "user-1",
 				extension: "pdf",
 				contentType: "application/pdf",
+				maxBytes: MAX_FILE_SIZES.kyc,
 				expiresIn: 300,
 			});
 
@@ -241,21 +262,32 @@ describe("createStorageClient", () => {
 			);
 		});
 
-		it("calls getSignedUrl with PutObjectCommand", async () => {
+		it("calls createPresignedPost with content-length, content-type, and SSE conditions", async () => {
 			await client.getUploadUrl({
 				category: "kyc",
 				ownerId: "user-1",
 				extension: "pdf",
 				contentType: "application/pdf",
+				maxBytes: MAX_FILE_SIZES.kyc,
 			});
 
-			expect(mockGetSignedUrl).toHaveBeenCalledTimes(1);
-			const callArgs = mockGetSignedUrl.mock.calls[0] ?? [];
-			const [, command, options] = callArgs;
-			expect(command.input.Bucket).toBe("test-bucket");
-			expect(command.input.ContentType).toBe("application/pdf");
-			expect(command.input.ServerSideEncryption).toBe("AES256");
-			expect(options.expiresIn).toBe(900); // default
+			expect(mockCreatePresignedPost).toHaveBeenCalledTimes(1);
+			const callArgs = mockCreatePresignedPost.mock.calls[0] ?? [];
+			const [, options] = callArgs;
+			expect(options.Bucket).toBe("test-bucket");
+			expect(options.Fields).toMatchObject({
+				"Content-Type": "application/pdf",
+				"x-amz-server-side-encryption": "AES256",
+			});
+			expect(options.Conditions).toEqual(
+				expect.arrayContaining([
+					["content-length-range", 0, MAX_FILE_SIZES.kyc],
+					["eq", "$Content-Type", "application/pdf"],
+					["eq", "$x-amz-server-side-encryption", "AES256"],
+				]),
+			);
+			expect(options.Expires).toBe(900); // default
+			expect(mockGetSignedUrl).not.toHaveBeenCalled();
 		});
 	});
 

@@ -160,8 +160,8 @@ function createStorage(overrides: Partial<StorageClient> = {}): StorageClient {
 		enabled: true,
 		getUploadUrl: vi.fn().mockResolvedValue({
 			url: "https://storage.example.com/upload",
-			method: "PUT",
-			headers: { "Content-Type": "image/jpeg" },
+			method: "POST",
+			fields: { "Content-Type": "image/jpeg" },
 			key: `events/images/${EVENT_ID}/generated.jpg`,
 			expiresAt: new Date("2026-04-26T12:15:00.000Z"),
 		}),
@@ -222,7 +222,7 @@ describe("requestEventImageUpload", () => {
 
 		expect(result).toMatchObject({
 			imageId: IMAGE_ID,
-			method: "PUT",
+			method: "POST",
 			key: `events/images/${EVENT_ID}/generated.jpg`,
 		});
 		expect(mockDb.transaction).toHaveBeenCalledOnce();
@@ -232,6 +232,7 @@ describe("requestEventImageUpload", () => {
 			ownerId: EVENT_ID,
 			extension: "jpg",
 			contentType: "image/jpeg",
+			maxBytes: MAX_FILE_SIZES["event-image"],
 		});
 		expect(mockDb.insertValues).toHaveBeenCalledWith(
 			expect.objectContaining({

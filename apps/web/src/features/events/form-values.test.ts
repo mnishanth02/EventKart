@@ -61,6 +61,7 @@ describe("event form values", () => {
 				refundPolicy: null,
 				cancellationPolicy: null,
 				publishedAt: null,
+				firstPublishedAt: null,
 				submittedForReviewAt: null,
 				isPaid: true,
 				currency: "INR",

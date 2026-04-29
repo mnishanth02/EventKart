@@ -2,9 +2,15 @@ import type { Database } from "@repo/db";
 import { and, eq, inArray } from "@repo/db";
 import { organizers } from "@repo/db/schema";
 import type { RazorpayAccountStatus } from "@repo/shared/constants";
-import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from "@repo/shared/constants";
+import {
+	AUDIT_ACTIONS,
+	AUDIT_RESOURCE_TYPES,
+	buildEmailIdempotencyKey,
+	EMAIL_JOB_NAMES,
+} from "@repo/shared/constants";
 import type { FastifyBaseLogger } from "fastify";
 import { createAuditLogger } from "../../lib/audit.js";
+import { emitEmailStub } from "../../lib/email-stub.js";
 import { NotFoundError } from "../../lib/errors.js";
 import type { RazorpayClient } from "../../lib/razorpay.js";
 
@@ -169,6 +175,27 @@ export async function createLinkedAccount(
 			{ organizerId, accountId, rawStatus, mappedStatus },
 			"Razorpay linked account created",
 		);
+
+		// Wave B: log-only email stub on transition to active.
+		// Failures must NEVER break the account-creation flow.
+		if (mappedStatus === "active") {
+			try {
+				emitEmailStub({ log }, {
+					jobName: EMAIL_JOB_NAMES.ORGANIZER_RAZORPAY_READY,
+					idempotencyKey: buildEmailIdempotencyKey.razorpayReady(
+						organizerId,
+						now,
+					),
+					context: { organizerId },
+				});
+			} catch (emailError) {
+				log.info(
+					{ err: String(emailError), organizerId, emailStubFailed: true },
+					"razorpay.account_active email stub failed (non-fatal)",
+				);
+			}
+		}
+
 		return { status: mappedStatus, accountId };
 	} catch (error: unknown) {
 		// 8. Handle failure — set status to "failed" with error details

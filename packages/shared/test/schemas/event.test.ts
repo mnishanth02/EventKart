@@ -212,6 +212,7 @@ describe("eventSchema", () => {
 			refundPolicy: null,
 			cancellationPolicy: null,
 			publishedAt: null,
+			firstPublishedAt: null,
 			submittedForReviewAt: null,
 			status: "draft",
 			formSchema: defaultEventRegistrationFormSchema,

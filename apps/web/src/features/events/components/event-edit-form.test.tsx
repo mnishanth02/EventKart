@@ -132,6 +132,7 @@ const event = eventSchema.parse({
 	refundPolicy: null,
 	cancellationPolicy: null,
 	publishedAt: null,
+	firstPublishedAt: null,
 	submittedForReviewAt: null,
 	isPaid: true,
 	currency: "INR",

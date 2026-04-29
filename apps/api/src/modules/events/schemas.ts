@@ -1,6 +1,7 @@
 import {
 	createEventInputSchema,
 	eventCategoriesConfigSchema,
+	eventCategoryCapacityUpdateSchema,
 	eventCategoryRecordSchema,
 	eventImageConfirmRequestSchema,
 	eventImageDeleteRequestSchema,
@@ -15,6 +16,7 @@ import {
 	eventPricingTierWithCategorySchema,
 	eventRegistrationFormSchema,
 	eventSchema,
+	publishedEventPatchSchema,
 	publishEventResponseSchema,
 	publishReadinessResponseSchema,
 	unpublishEventResponseSchema,
@@ -51,6 +53,24 @@ export {
 export const eventCategoriesBodySchema = eventCategoriesConfigSchema;
 
 export const eventPoliciesBodySchema = eventPoliciesConfigSchema;
+
+export const eventCategoryIdParamsSchema = eventIdParamsSchema.extend({
+	categoryId: uuidSchema,
+});
+
+export const eventCategoryCapacityBodySchema = eventCategoryCapacityUpdateSchema;
+
+export const eventCategoryCapacityResponseSchema = z.object({
+	success: z.literal(true),
+	data: eventCategoryRecordSchema,
+});
+
+export const publishedEventPatchBodySchema = publishedEventPatchSchema;
+
+export const publishedEventPatchResponseSchema = z.object({
+	success: z.literal(true),
+	data: eventSchema,
+});
 
 export const eventRegistrationFormBodySchema = eventRegistrationFormSchema;
 

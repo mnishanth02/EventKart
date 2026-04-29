@@ -582,8 +582,8 @@ describe("requestEventImageUploadUrlOnServer", () => {
 			data: {
 				imageId,
 				url: "https://storage.example.com/upload",
-				method: "PUT",
-				headers: { "content-type": "image/png" },
+				method: "POST",
+				fields: { "Content-Type": "image/png" },
 				key: "events/event-1/hero.png",
 				expiresAt: "2026-04-26T12:05:00.000Z",
 			},

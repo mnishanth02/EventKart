@@ -80,6 +80,7 @@ export const events = pgTable(
 		refundPolicy: text("refund_policy"),
 		cancellationPolicy: text("cancellation_policy"),
 		publishedAt: timestamp("published_at", { withTimezone: true }),
+		firstPublishedAt: timestamp("first_published_at", { withTimezone: true }),
 		submittedForReviewAt: timestamp("submitted_for_review_at", {
 			withTimezone: true,
 		}),
@@ -107,6 +108,11 @@ export const events = pgTable(
 		uniqueIndex("events_slug_unique").on(table.slug),
 		index("events_organizer_id_idx").on(table.organizerId),
 		index("events_status_idx").on(table.status),
+		index("events_organizer_first_published_paid_idx")
+			.on(table.organizerId, table.firstPublishedAt)
+			.where(
+				sql`${table.firstPublishedAt} IS NOT NULL AND ${table.isPaid} = true`,
+			),
 		check("events_v1_city_check", sql.raw(`"city" = '${V1_EVENT_CITY}'`)),
 		check("events_v1_state_check", sql.raw(`"state" = '${V1_EVENT_STATE}'`)),
 		check(

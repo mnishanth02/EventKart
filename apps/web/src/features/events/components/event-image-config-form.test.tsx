@@ -186,8 +186,8 @@ describe("EventImageConfigForm", () => {
 		vi.mocked(requestEventImageUploadUrl).mockResolvedValueOnce({
 			imageId: heroImage.id,
 			url: "https://storage.example.com/upload",
-			method: "PUT",
-			headers: { "content-type": "image/png" },
+			method: "POST",
+			fields: { "Content-Type": "image/png" },
 			key: "events/event-1/hero.png",
 			expiresAt: "2026-04-26T12:05:00.000Z",
 		});
@@ -214,10 +214,13 @@ describe("EventImageConfigForm", () => {
 			}),
 		);
 		expect(fetch).toHaveBeenCalledWith("https://storage.example.com/upload", {
-			method: "PUT",
-			headers: { "content-type": "image/png" },
-			body: file,
+			method: "POST",
+			body: expect.any(FormData),
 		});
+		const uploadBody = vi.mocked(fetch).mock.calls[0]?.[1]?.body;
+		expect(uploadBody).toBeInstanceOf(FormData);
+		expect((uploadBody as FormData).get("Content-Type")).toBe("image/png");
+		expect((uploadBody as FormData).get("file")).toBe(file);
 		expect(confirmEventImageUpload).toHaveBeenCalledWith({
 			data: { eventId, imageId: heroImage.id },
 		});

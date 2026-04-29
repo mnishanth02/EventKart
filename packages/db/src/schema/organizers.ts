@@ -33,6 +33,7 @@ export const organizers = pgTable(
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		businessName: varchar("business_name", { length: 200 }).notNull(),
+		slug: varchar("slug", { length: 80 }).notNull(),
 		contactName: varchar("contact_name", { length: 100 }).notNull(),
 		contactEmail: varchar("contact_email", { length: 255 }).notNull(),
 		contactPhone: varchar("contact_phone", { length: 20 }).notNull(),
@@ -73,6 +74,7 @@ export const organizers = pgTable(
 	},
 	(table) => [
 		uniqueIndex("organizers_user_id_unique").on(table.userId),
+		uniqueIndex("organizers_slug_unique").on(table.slug),
 		uniqueIndex("organizers_razorpay_account_id_unique").on(
 			table.razorpayAccountId,
 		),

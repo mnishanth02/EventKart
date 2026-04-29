@@ -112,6 +112,8 @@ describe("eventCategoryRecordSchema", () => {
 			slug: "10k",
 			distanceMeters: 10000,
 			sortOrder: 1,
+			spotsTotal: 100,
+			spotsRemaining: 100,
 			createdAt: "2026-04-26T12:00:00.000Z",
 			updatedAt: "2026-04-26T12:00:00.000Z",
 		});

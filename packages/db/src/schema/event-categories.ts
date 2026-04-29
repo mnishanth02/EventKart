@@ -1,4 +1,5 @@
 import {
+	EVENT_CATEGORY_DEFAULT_SPOTS,
 	EVENT_DISTANCE_CATEGORY_NAME_MAX_LENGTH,
 	EVENT_DISTANCE_CATEGORY_SLUG_MAX_LENGTH,
 } from "@repo/shared/constants";
@@ -29,6 +30,12 @@ export const eventCategories = pgTable(
 		}).notNull(),
 		distanceMeters: integer("distance_meters").notNull(),
 		sortOrder: integer("sort_order").notNull(),
+		spotsTotal: integer("spots_total")
+			.notNull()
+			.default(EVENT_CATEGORY_DEFAULT_SPOTS),
+		spotsRemaining: integer("spots_remaining")
+			.notNull()
+			.default(EVENT_CATEGORY_DEFAULT_SPOTS),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
@@ -66,6 +73,18 @@ export const eventCategories = pgTable(
 		check(
 			"event_categories_sort_order_non_negative_check",
 			sql.raw(`"sort_order" >= 0`),
+		),
+		check(
+			"event_categories_spots_total_positive_check",
+			sql.raw(`"spots_total" > 0`),
+		),
+		check(
+			"event_categories_spots_remaining_non_negative_check",
+			sql.raw(`"spots_remaining" >= 0`),
+		),
+		check(
+			"event_categories_spots_remaining_lte_total_check",
+			sql.raw(`"spots_remaining" <= "spots_total"`),
 		),
 	],
 );

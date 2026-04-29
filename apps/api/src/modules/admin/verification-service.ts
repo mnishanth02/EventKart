@@ -1,9 +1,15 @@
 import type { Database } from "@repo/db";
 import { and, eq, inArray, sql } from "@repo/db";
 import { auditLog, organizers, verificationDocuments } from "@repo/db/schema";
-import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from "@repo/shared/constants";
+import {
+	AUDIT_ACTIONS,
+	AUDIT_RESOURCE_TYPES,
+	buildEmailIdempotencyKey,
+	EMAIL_JOB_NAMES,
+} from "@repo/shared/constants";
 import type { AdminVerificationListParams } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
+import { emitEmailStub } from "../../lib/email-stub.js";
 import { ConflictError, NotFoundError } from "../../lib/errors.js";
 import type { AppQueues } from "../../lib/queue.js";
 import type { StorageClient } from "../../lib/storage.js";
@@ -140,6 +146,7 @@ export async function getVerificationDetail(db: Database, organizerId: string) {
 		organizer: {
 			id: org.id,
 			userId: org.userId,
+			slug: org.slug,
 			businessName: org.businessName,
 			contactName: org.contactName,
 			contactEmail: org.contactEmail,
@@ -315,6 +322,30 @@ export async function approveOrganizer(
 		}
 	}
 
+	// Wave B: log-only email stub. Failures must NEVER break approval.
+	try {
+		const [orgRow] = await db
+			.select({ contactEmail: organizers.contactEmail })
+			.from(organizers)
+			.where(eq(organizers.id, organizerId))
+			.limit(1);
+		if (orgRow) {
+			emitEmailStub({ log }, {
+				jobName: EMAIL_JOB_NAMES.ORGANIZER_VERIFICATION_APPROVED,
+				idempotencyKey: buildEmailIdempotencyKey.verificationApproved(
+					organizerId,
+					new Date(result.reviewedAt),
+				),
+				context: { organizerId },
+			});
+		}
+	} catch (emailError) {
+		log.info(
+			{ err: String(emailError), organizerId, emailStubFailed: true },
+			"organizer.approved email stub failed (non-fatal)",
+		);
+	}
+
 	return result;
 }
 
@@ -332,7 +363,7 @@ export async function rejectOrganizer(
 ) {
 	const now = new Date();
 
-	return db.transaction(async (tx) => {
+	const result = await db.transaction(async (tx) => {
 		const [updated] = await tx
 			.update(organizers)
 			.set({
@@ -393,6 +424,32 @@ export async function rejectOrganizer(
 			reviewedBy,
 		};
 	});
+
+	// Wave B: log-only email stub. Failures must NEVER break rejection.
+	try {
+		const [orgRow] = await db
+			.select({ contactEmail: organizers.contactEmail })
+			.from(organizers)
+			.where(eq(organizers.id, organizerId))
+			.limit(1);
+		if (orgRow) {
+			emitEmailStub({ log }, {
+				jobName: EMAIL_JOB_NAMES.ORGANIZER_VERIFICATION_REJECTED,
+				idempotencyKey: buildEmailIdempotencyKey.verificationRejected(
+					organizerId,
+					new Date(result.reviewedAt),
+				),
+				context: { organizerId },
+			});
+		}
+	} catch (emailError) {
+		log.info(
+			{ err: String(emailError), organizerId, emailStubFailed: true },
+			"organizer.rejected email stub failed (non-fatal)",
+		);
+	}
+
+	return result;
 }
 
 /**
