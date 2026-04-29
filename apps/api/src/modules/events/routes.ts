@@ -15,6 +15,9 @@ import {
 	createEventResponseSchema,
 	eventCategoriesBodySchema,
 	eventCategoriesResponseSchema,
+	eventCategoryCapacityBodySchema,
+	eventCategoryCapacityResponseSchema,
+	eventCategoryIdParamsSchema,
 	eventErrorResponseSchema,
 	eventIdParamsSchema,
 	eventImageConfirmResponseSchema,
@@ -30,6 +33,8 @@ import {
 	eventPricingResponseSchema,
 	eventRegistrationFormBodySchema,
 	eventRegistrationFormResponseSchema,
+	publishedEventPatchBodySchema,
+	publishedEventPatchResponseSchema,
 	publishEventResponseSchema,
 	publishReadinessResponseSchema,
 	unpublishEventResponseSchema,
@@ -49,8 +54,10 @@ import {
 	replaceEventPricing,
 	unpublishEvent,
 	updateDraftEvent,
+	updateEventCategoryCapacity,
 	updateEventPolicies,
 	updateEventRegistrationForm,
+	updatePublishedEvent,
 } from "./service.js";
 
 const eventRoutes: FastifyPluginAsync = async (app) => {
@@ -355,13 +362,90 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			}
 
 			const policies = await updateEventPolicies(
-				{ db: app.db, log: request.log },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger: createAuditLogger(app.db, request.log),
+				},
 				session.userId,
 				request.params.eventId,
 				request.body,
 			);
 
 			return { success: true as const, data: policies };
+		},
+	);
+
+	typedApp.patch(
+		"/:eventId/published",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				body: publishedEventPatchBodySchema,
+				response: {
+					200: publishedEventPatchResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const event = await updatePublishedEvent(
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger: createAuditLogger(app.db, request.log),
+				},
+				session.userId,
+				request.params.eventId,
+				request.body,
+			);
+
+			return { success: true as const, data: event };
+		},
+	);
+
+	typedApp.put(
+		"/:eventId/categories/:categoryId/capacity",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventCategoryIdParamsSchema,
+				body: eventCategoryCapacityBodySchema,
+				response: {
+					200: eventCategoryCapacityResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const category = await updateEventCategoryCapacity(
+				{ db: app.db, log: request.log },
+				session.userId,
+				request.params.eventId,
+				request.params.categoryId,
+				request.body,
+			);
+
+			return { success: true as const, data: category };
 		},
 	);
 

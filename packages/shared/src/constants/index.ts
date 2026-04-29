@@ -1,6 +1,8 @@
 export type { AuditAction, AuditResourceType } from "./audit.js";
 export { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from "./audit.js";
 export { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "./csrf.js";
+export type { EmailJobName } from "./email-jobs.js";
+export { buildEmailIdempotencyKey, EMAIL_JOB_NAMES } from "./email-jobs.js";
 export {
 	EMAIL_VERIFICATION_RATE_LIMIT_SECONDS,
 	EMAIL_VERIFICATION_TOKEN_BYTES,
@@ -21,6 +23,8 @@ export type {
 export {
 	DEFAULT_EVENT_STATUS,
 	EVENT_CATEGORIES,
+	EVENT_CATEGORY_DEFAULT_SPOTS,
+	EVENT_CATEGORY_MIN_SPOTS,
 	EVENT_CURRENCIES,
 	EVENT_DISTANCE_CATEGORY_MAX_DISTANCE_METERS,
 	EVENT_DISTANCE_CATEGORY_MAX_PER_EVENT,
@@ -64,6 +68,14 @@ export {
 	V1_EVENT_TYPE,
 } from "./event.js";
 export type { OtpDeliveryMode } from "./otp.js";
+export type { ReservedOrganizerSlug } from "./organizer.js";
+export {
+	ORGANIZER_SLUG_FALLBACK,
+	ORGANIZER_SLUG_MAX_LENGTH,
+	ORGANIZER_SLUG_MIN_LENGTH,
+	ORGANIZER_SLUG_PATTERN,
+	RESERVED_ORGANIZER_SLUGS,
+} from "./organizer.js";
 export {
 	OTP_DELIVERY_MODES,
 	OTP_LENGTH,

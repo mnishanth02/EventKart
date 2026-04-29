@@ -163,6 +163,7 @@ const validUpdateEventInput = {
 const organizerRow = {
 	id: TEST_ORGANIZER_ID,
 	userId: TEST_USER_ID,
+	slug: "coimbatorerunners",
 	businessName: "CoimbatoreRunners",
 	contactName: "Ramesh Kumar",
 	contactEmail: "ramesh@coimbatorerunners.in",
@@ -217,6 +218,9 @@ function buildEventRow(overrides: Record<string, unknown> = {}) {
 		isPaid: true,
 		currency: "INR",
 		status: "draft",
+		firstPublishedAt: null,
+		publishedAt: null,
+		submittedForReviewAt: null,
 		createdAt: new Date("2026-04-26T12:00:00.000Z"),
 		updatedAt: new Date("2026-04-26T12:00:00.000Z"),
 		...overrides,
@@ -248,6 +252,8 @@ function buildEventCategoryRow(overrides: Record<string, unknown> = {}) {
 		slug: "5k",
 		distanceMeters: 5_000,
 		sortOrder: 0,
+		spotsTotal: 100,
+		spotsRemaining: 100,
 		createdAt: new Date("2026-04-26T12:00:00.000Z"),
 		updatedAt: new Date("2026-04-26T12:00:00.000Z"),
 		...overrides,
@@ -1233,21 +1239,31 @@ describe("event policy service", () => {
 		expect(update).not.toHaveBeenCalled();
 	});
 
-	it("returns 409 when updating policies for a published event", async () => {
-		const { db, update } = createMockSlugStore([
-			[organizerRow],
-			[buildEventRow({ status: "published" })],
-		]);
+	it("allows policy updates on a published event and writes an audit row", async () => {
+		const publishedEvent = buildEventRow({ status: "published" });
+		const { db, update } = createMockSlugStore(
+			[
+				[organizerRow],
+				[publishedEvent],
+			],
+			[publishedEvent],
+		);
+		const auditLog = vi.fn().mockResolvedValue(undefined);
 
 		await expect(
 			updateEventPolicies(
-				{ db, log: { info: vi.fn() } },
+				{
+					db,
+					log: { info: vi.fn() },
+					auditLogger: { log: auditLog, logBatch: vi.fn().mockResolvedValue(undefined) },
+				},
 				TEST_USER_ID,
 				EVENT_ID,
 				validEventPoliciesInput,
 			),
-		).rejects.toThrow(ConflictError);
-		expect(update).not.toHaveBeenCalled();
+		).resolves.toBeDefined();
+		expect(update).toHaveBeenCalled();
+		expect(auditLog).toHaveBeenCalledTimes(1);
 	});
 
 	it("rejects invalid policies before touching the database", async () => {
@@ -2092,7 +2108,10 @@ describe("event publish state machine", () => {
 	it("admin rejection returns an under-review event to draft and audits the review transition", async () => {
 		const auditLogger = createAuditLogger();
 		const { db, updateSet } = createMockSlugStore(
-			[[buildEventRow({ status: "under_review" })]],
+			[
+				[buildEventRow({ status: "under_review" })],
+				[organizerRow],
+			],
 			[
 				buildEventRow({
 					status: "draft",

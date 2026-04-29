@@ -261,6 +261,7 @@ export const eventSchema = z.object({
 	refundPolicy: z.string().nullable(),
 	cancellationPolicy: z.string().nullable(),
 	publishedAt: eventDateTimeSchema.nullable(),
+	firstPublishedAt: eventDateTimeSchema.nullable(),
 	submittedForReviewAt: eventDateTimeSchema.nullable(),
 	isPaid: z.boolean(),
 	currency: eventCurrencySchema,
@@ -278,3 +279,51 @@ export type CreateEvent = z.output<typeof createEventInputSchema>;
 export type UpdateEventInput = z.input<typeof updateEventInputSchema>;
 export type UpdateEvent = z.output<typeof updateEventInputSchema>;
 export type Event = z.infer<typeof eventSchema>;
+
+/**
+ * Strict patch schema for low-risk edits on already-published events.
+ * Only verified-low-risk fields are allowed; any extra key is rejected.
+ * Structural changes (categories, pricing, registration form, dates,
+ * venue, title) require unpublish first — see updateDraftEvent.
+ */
+export const publishedEventPatchSchema = z
+	.object({
+		description: z
+			.string()
+			.min(20, "Event description must be at least 20 characters")
+			.max(
+				EVENT_DESCRIPTION_MAX_LENGTH,
+				`Event description must not exceed ${EVENT_DESCRIPTION_MAX_LENGTH} characters`,
+			)
+			.trim()
+			.optional(),
+		routeDetails: z
+			.string()
+			.min(10, "Route details must be at least 10 characters")
+			.max(
+				EVENT_ROUTE_DETAILS_MAX_LENGTH,
+				`Route details must not exceed ${EVENT_ROUTE_DETAILS_MAX_LENGTH} characters`,
+			)
+			.trim()
+			.optional(),
+		refundPolicy: z
+			.string()
+			.max(2000, "Refund policy must not exceed 2000 characters")
+			.trim()
+			.nullable()
+			.optional(),
+		cancellationPolicy: z
+			.string()
+			.max(2000, "Cancellation policy must not exceed 2000 characters")
+			.trim()
+			.nullable()
+			.optional(),
+	})
+	.strict()
+	.refine(
+		(value) => Object.values(value).some((entry) => entry !== undefined),
+		"At least one field must be provided",
+	);
+
+export type PublishedEventPatch = z.infer<typeof publishedEventPatchSchema>;
+export type PublishedEventPatchInput = z.input<typeof publishedEventPatchSchema>;

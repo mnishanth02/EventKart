@@ -118,8 +118,12 @@ export class IpNotAllowedError extends ForbiddenError {
 }
 
 export class ConflictError extends AppError {
-	constructor(message = "Resource already exists") {
-		super(message, 409, "CONFLICT");
+	constructor(
+		message = "Resource already exists",
+		code = "CONFLICT",
+		details?: Record<string, unknown>,
+	) {
+		super(message, 409, code, details);
 		this.name = "ConflictError";
 	}
 }

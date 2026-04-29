@@ -6,7 +6,10 @@ import type {
 	OrganizerUpdate,
 } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
+import { logEmailStub } from "../../lib/email-stub.js";
 import { ConflictError } from "../../lib/errors.js";
+import { reserveUniqueOrganizerSlug } from "./slug-service.js";
+import { EMAIL_JOB_NAMES } from "@repo/shared/constants";
 
 function isUniqueViolation(error: unknown): boolean {
 	return (
@@ -25,6 +28,7 @@ export interface RegisterOrganizerDeps {
 export interface OrganizerRow {
 	id: string;
 	userId: string;
+	slug: string | null;
 	businessName: string;
 	contactName: string;
 	contactEmail: string;
@@ -47,6 +51,7 @@ function toProfileResponse(row: OrganizerRow) {
 	return {
 		id: row.id,
 		userId: row.userId,
+		slug: row.slug,
 		businessName: row.businessName,
 		contactName: row.contactName,
 		contactEmail: row.contactEmail,
@@ -87,12 +92,15 @@ export async function registerOrganizer(
 		throw new ConflictError("Organizer profile already exists for this user");
 	}
 
+	const slug = await reserveUniqueOrganizerSlug(db, data.businessName);
+
 	let inserted: OrganizerRow;
 	try {
 		const [row] = await db
 			.insert(organizers)
 			.values({
 				userId,
+				slug,
 				businessName: data.businessName,
 				contactName: data.contactName,
 				contactEmail: data.contactEmail,
@@ -116,6 +124,20 @@ export async function registerOrganizer(
 	}
 
 	log.info({ organizerId: inserted.id, userId }, "Organizer profile created");
+
+	// Wave B: log-only email stub. Failures must NEVER break registration.
+	try {
+		logEmailStub(log, {
+			jobName: EMAIL_JOB_NAMES.ORGANIZER_REGISTRATION,
+			recipientEmail: inserted.contactEmail,
+			resourceId: inserted.id,
+		});
+	} catch (emailError) {
+		log.info(
+			{ err: String(emailError), organizerId: inserted.id, emailStubFailed: true },
+			"organizer.registered email stub failed (non-fatal)",
+		);
+	}
 
 	return toProfileResponse(inserted as OrganizerRow);
 }

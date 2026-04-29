@@ -51,6 +51,8 @@ export type {
 	CreateEvent,
 	CreateEventInput,
 	Event,
+	PublishedEventPatch,
+	PublishedEventPatchInput,
 	UpdateEvent,
 	UpdateEventInput,
 } from "./event.js";
@@ -58,11 +60,14 @@ export {
 	createEventBaseSchema,
 	createEventInputSchema,
 	eventSchema,
+	publishedEventPatchSchema,
 	updateEventInputSchema,
 } from "./event.js";
 export type {
 	EventCategoriesConfig,
 	EventCategoriesConfigInput,
+	EventCategoryCapacityUpdate,
+	EventCategoryCapacityUpdateInput,
 	EventCategoryConfig,
 	EventCategoryConfigInput,
 	EventCategoryRecord,
@@ -71,6 +76,7 @@ export type {
 export {
 	defaultEventCategoriesConfig,
 	eventCategoriesConfigSchema,
+	eventCategoryCapacityUpdateSchema,
 	eventCategoryConfigSchema,
 	eventCategoryRecordSchema,
 	eventCategorySlugSchema,

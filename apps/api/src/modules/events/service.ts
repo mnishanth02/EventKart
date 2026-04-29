@@ -7,7 +7,7 @@ import {
 	organizers,
 	slugRedirects,
 } from "@repo/db/schema";
-import { AUDIT_ACTIONS, DEFAULT_EVENT_STATUS } from "@repo/shared/constants";
+import { AUDIT_ACTIONS, DEFAULT_EVENT_STATUS, EMAIL_JOB_NAMES } from "@repo/shared/constants";
 import type {
 	Event,
 	EventCategoryRecord,
@@ -27,6 +27,7 @@ import {
 	createEventInputSchema,
 	defaultEventRegistrationFormSchema,
 	eventCategoriesConfigSchema,
+	eventCategoryCapacityUpdateSchema,
 	eventCategoryRecordSchema,
 	eventPoliciesConfigSchema,
 	eventPoliciesRecordSchema,
@@ -35,12 +36,14 @@ import {
 	eventRegistrationFormSchema,
 	eventSchema,
 	eventSlugSchema,
+	publishedEventPatchSchema,
 	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
 import type { FastifyBaseLogger } from "fastify";
 import type { AuditLogger } from "../../lib/audit.js";
+import { logEmailStub } from "../../lib/email-stub.js";
 import {
 	AppError,
 	ConflictError,
@@ -112,6 +115,7 @@ type EventPricingTierRow = typeof eventPricingTiers.$inferSelect;
 type EventStatusValue = EventRow["status"];
 interface OrganizerPublishReadinessRow {
 	id: string;
+	contactEmail: string;
 	isVerified: boolean;
 	razorpayAccountStatus: string;
 }
@@ -175,6 +179,7 @@ export interface EventPoliciesWriteStore extends EventPoliciesStore {
 export interface EventPoliciesDeps {
 	db: EventPoliciesWriteStore;
 	log: Pick<FastifyBaseLogger, "info">;
+	auditLogger?: AuditLogger;
 }
 
 export type EventRegistrationFormStore = Pick<Database, "select" | "update">;
@@ -235,6 +240,7 @@ function toEventResponse(row: EventRow): Event {
 		refundPolicy: row.refundPolicy ?? null,
 		cancellationPolicy: row.cancellationPolicy ?? null,
 		publishedAt: row.publishedAt?.toISOString() ?? null,
+		firstPublishedAt: row.firstPublishedAt?.toISOString() ?? null,
 		submittedForReviewAt: row.submittedForReviewAt?.toISOString() ?? null,
 		isPaid: row.isPaid,
 		currency: row.currency,
@@ -297,6 +303,13 @@ async function selectUploadedHeroImageExists(
 	return rows.length > 0;
 }
 
+/**
+ * HIGH-RISK: This count drives the admin-review trigger. Once an organizer has
+ * ever published a paid event, future paid events skip review. We use
+ * `firstPublishedAt IS NOT NULL` (set once on first publish, never cleared)
+ * instead of current `status` so an organizer cannot republish via
+ * unpublish→draft→publish to bypass admin review.
+ */
 export async function getPublishedPaidEventCount(
 	db: Pick<Database, "select">,
 	organizerId: string,
@@ -307,7 +320,7 @@ export async function getPublishedPaidEventCount(
 		.where(
 			and(
 				eq(events.organizerId, organizerId),
-				inArray(events.status, ["published", "completed"]),
+				sql`${events.firstPublishedAt} IS NOT NULL`,
 				eq(events.isPaid, true),
 			),
 		)
@@ -455,6 +468,7 @@ async function selectOrganizerForPublishReadiness(
 	const [organizer] = await db
 		.select({
 			id: organizers.id,
+			contactEmail: organizers.contactEmail,
 			isVerified: organizers.isVerified,
 			razorpayAccountStatus: organizers.razorpayAccountStatus,
 		})
@@ -588,6 +602,8 @@ function toEventCategoryResponse(row: EventCategoryRow): EventCategoryRecord {
 		slug: row.slug,
 		distanceMeters: row.distanceMeters,
 		sortOrder: row.sortOrder,
+		spotsTotal: row.spotsTotal,
+		spotsRemaining: row.spotsRemaining,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 	});
@@ -974,8 +990,16 @@ export async function updateDraftEvent(
 		}
 
 		if (currentEvent.status !== DEFAULT_EVENT_STATUS) {
+			// Wave B: published events have a tiered post-publish edit flow.
+			// Direct PUT to the draft endpoint is rejected; clients must call
+			// PATCH /events/:eventId/published with the limited field set.
 			throw new ConflictError(
-				"Event details can only be updated while the event is in draft status",
+				"Published events cannot be edited via this endpoint. Use the published-event patch endpoint.",
+				"EVENT_PUBLISHED_USE_PATCH",
+				{
+					hint: "PATCH /events/:eventId/published",
+					status: currentEvent.status,
+				},
 			);
 		}
 
@@ -1109,13 +1133,22 @@ export async function updateEventPolicies(
 			throw new ForbiddenError("You do not have access to this event");
 		}
 
-		if (event.status !== DEFAULT_EVENT_STATUS) {
+		if (
+			event.status !== DEFAULT_EVENT_STATUS &&
+			event.status !== "published"
+		) {
 			throw new ConflictError(
-				"Event policies can only be updated while the event is in draft status",
+				"Event policies can only be updated while the event is in draft or published status",
 			);
 		}
 
 		const data: EventPoliciesConfig = parsed.data;
+		const changedFields: string[] = [];
+		if (data.refundPolicy !== event.refundPolicy)
+			changedFields.push("refundPolicy");
+		if (data.cancellationPolicy !== event.cancellationPolicy)
+			changedFields.push("cancellationPolicy");
+
 		const [updated] = await tx
 			.update(events)
 			.set({
@@ -1133,6 +1166,22 @@ export async function updateEventPolicies(
 
 		if (!updated) {
 			throw new Error("Failed to update event policies");
+		}
+
+		// Wave B: when editing a published event, write an audit row capturing
+		// only the metadata required by the spec — no raw policy text is logged.
+		if (event.status === "published" && deps.auditLogger && changedFields.length > 0) {
+			await deps.auditLogger.log({
+				actorId: userId,
+				action: AUDIT_ACTIONS.EVENT_UPDATE_PUBLISHED,
+				resourceType: "event",
+				resourceId: parsedEventId,
+				metadata: {
+					organizerId: organizer.id,
+					changedFields,
+					transition: "policies",
+				},
+			});
 		}
 
 		return toEventPoliciesResponse(updated);
@@ -1552,12 +1601,20 @@ export async function publishEvent(
 			readiness.wouldRequireAdminReview === true
 				? "draft_to_under_review"
 				: "draft_to_published";
+		// HIGH-RISK: firstPublishedAt is set ONCE on first transition to published
+		// and is never overwritten or cleared. Used by getPublishedPaidEventCount
+		// to drive admin-review gating; a second publish/unpublish cycle MUST keep
+		// the original timestamp so review-skip behaviour remains consistent.
 		const [updated] = await tx
 			.update(events)
 			.set({
 				status:
 					transition === "draft_to_under_review" ? "under_review" : "published",
 				publishedAt: transition === "draft_to_published" ? now : null,
+				firstPublishedAt:
+					transition === "draft_to_published"
+						? sql`COALESCE(${events.firstPublishedAt}, ${now})`
+						: events.firstPublishedAt,
 				submittedForReviewAt:
 					transition === "draft_to_under_review" ? now : null,
 				updatedAt: now,
@@ -1589,7 +1646,7 @@ export async function publishEvent(
 
 		const responseEvent = toEventResponse(updated);
 		invalidateEventCache(responseEvent);
-		return { event: responseEvent, transition, readiness };
+		return { event: responseEvent, transition, readiness, organizer };
 	});
 
 	deps.log.info(
@@ -1601,7 +1658,22 @@ export async function publishEvent(
 		"Event publish workflow completed",
 	);
 
-	return result;
+	// Wave B: log-only email stub. Failures must NEVER break the publish flow.
+	if (result.transition === "draft_to_published") {
+		try {
+			logEmailStub(deps.log, {
+				jobName: EMAIL_JOB_NAMES.EVENT_PUBLISHED,
+				recipientEmail: result.organizer.contactEmail,
+				resourceId: result.event.id,
+				suffix: "published",
+			});
+		} catch (emailError) {
+			deps.log.info({ err: String(emailError), eventId: result.event.id, emailStubFailed: true }, "event.published email stub failed (non-fatal)",
+			);
+		}
+	}
+
+	return { event: result.event, transition: result.transition, readiness: result.readiness };
 }
 
 export async function unpublishEvent(
@@ -1726,6 +1798,8 @@ export async function adminApproveEvent(
 			.set({
 				status: "published",
 				publishedAt: now,
+				// HIGH-RISK: see publishEvent — never overwrite once set.
+				firstPublishedAt: sql`COALESCE(${events.firstPublishedAt}, ${now})`,
 				updatedAt: now,
 			})
 			.where(
@@ -1755,10 +1829,28 @@ export async function adminApproveEvent(
 			event: responseEvent,
 			transition: "under_review_to_published" as const,
 			readiness,
+			organizer,
 		};
 	});
 
-	return result;
+	// Wave B: log-only email stub. Failures must NEVER break admin approval.
+	try {
+		logEmailStub(deps.log, {
+			jobName: EMAIL_JOB_NAMES.EVENT_ADMIN_APPROVED,
+			recipientEmail: result.organizer.contactEmail,
+			resourceId: result.event.id,
+			suffix: "approved",
+		});
+	} catch (emailError) {
+		deps.log.info({ err: String(emailError), eventId: result.event.id, emailStubFailed: true }, "event.admin_approved email stub failed (non-fatal)",
+		);
+	}
+
+	return {
+		event: result.event,
+		transition: result.transition,
+		readiness: result.readiness,
+	};
 }
 
 export async function adminRejectEvent(
@@ -1769,13 +1861,17 @@ export async function adminRejectEvent(
 	ipAddress?: string,
 ): Promise<UnpublishEventResult> {
 	const parsedEventId = parseUuid(eventId, "event id");
-	return deps.db.transaction(async (tx) => {
+	const result = await deps.db.transaction(async (tx) => {
 		const event = await selectEventForCategories(tx, parsedEventId, {
 			forUpdate: true,
 		});
 		if (event.status !== "under_review") {
 			throw new ConflictError("Only events under review can be rejected");
 		}
+		const organizer = await selectOrganizerForPublishReadiness(
+			tx as unknown as Database,
+			event.organizerId,
+		);
 		const now = new Date();
 		const [updated] = await tx
 			.update(events)
@@ -1808,8 +1904,29 @@ export async function adminRejectEvent(
 		return {
 			event: toEventResponse(updated),
 			transition: "under_review_to_draft" as const,
+			organizerEmail: organizer?.contactEmail ?? null,
 		};
 	});
+
+	// Wave B: log-only email stub. Failures must NEVER break admin rejection.
+	if (result.organizerEmail) {
+		try {
+			logEmailStub(deps.log, {
+				jobName: EMAIL_JOB_NAMES.EVENT_ADMIN_REJECTED,
+				recipientEmail: result.organizerEmail,
+				resourceId: result.event.id,
+				suffix: "rejected",
+			});
+		} catch (emailError) {
+			deps.log.info({ err: String(emailError), eventId: result.event.id, emailStubFailed: true }, "event.admin_rejected email stub failed (non-fatal)",
+			);
+		}
+	}
+
+	return {
+		event: result.event,
+		transition: result.transition,
+	};
 }
 
 function parseEventSlug(slug: string): EventSlug {
@@ -2011,3 +2128,226 @@ export async function updateEventSlug(
 		};
 	});
 }
+
+export interface UpdatePublishedEventDeps {
+	db: EventCategoryTransactionalStore;
+	log: Pick<FastifyBaseLogger, "info">;
+	auditLogger: AuditLogger;
+}
+
+/**
+ * Wave B: tiered post-publish edits — narrow PATCH endpoint.
+ * Only the fields whitelisted by `publishedEventPatchSchema` may change. Every
+ * call writes an EVENT_UPDATE_PUBLISHED audit row with the changed-field list
+ * (no raw policy text is stored, per the audit metadata constraint).
+ */
+export async function updatePublishedEvent(
+	deps: UpdatePublishedEventDeps,
+	userId: string,
+	eventId: string,
+	input: unknown,
+): Promise<Event> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const parsed = publishedEventPatchSchema.safeParse(input);
+	if (!parsed.success) {
+		throw new ValidationError(
+			"Invalid published event patch",
+			toValidationDetails(parsed.error),
+		);
+	}
+
+	const organizer = await getOrganizerByUserId(deps.db as Database, userId);
+	if (!organizer) {
+		throw new NotFoundError(
+			"Organizer profile not found. Please register first.",
+		);
+	}
+
+	const data = parsed.data;
+
+	const result = await deps.db.transaction(async (tx) => {
+		const event = await selectEventForCategories(tx, parsedEventId, {
+			forUpdate: true,
+		});
+
+		if (event.organizerId !== organizer.id) {
+			throw new ForbiddenError("You do not have access to this event");
+		}
+
+		if (event.status !== "published") {
+			throw new ConflictError(
+				"This endpoint can only be used while the event is published",
+			);
+		}
+
+		const updateFields: Record<string, unknown> = { updatedAt: new Date() };
+		const changedFields: string[] = [];
+
+		if (data.description !== undefined && data.description !== event.description) {
+			updateFields.description = data.description;
+			changedFields.push("description");
+		}
+		if (data.routeDetails !== undefined && data.routeDetails !== event.routeDetails) {
+			updateFields.routeDetails = data.routeDetails;
+			changedFields.push("routeDetails");
+		}
+		if (
+			data.refundPolicy !== undefined &&
+			data.refundPolicy !== event.refundPolicy
+		) {
+			updateFields.refundPolicy = data.refundPolicy;
+			changedFields.push("refundPolicy");
+		}
+		if (
+			data.cancellationPolicy !== undefined &&
+			data.cancellationPolicy !== event.cancellationPolicy
+		) {
+			updateFields.cancellationPolicy = data.cancellationPolicy;
+			changedFields.push("cancellationPolicy");
+		}
+
+		if (changedFields.length === 0) {
+			return toEventResponse(event);
+		}
+
+		const [updated] = await tx
+			.update(events)
+			.set(updateFields)
+			.where(and(eq(events.id, parsedEventId), eq(events.status, "published")))
+			.returning();
+
+		if (!updated) {
+			throw new ConflictError(
+				"Event status changed during update. Please retry.",
+			);
+		}
+
+		await deps.auditLogger.log({
+			actorId: userId,
+			actorRole: "organizer",
+			action: AUDIT_ACTIONS.EVENT_UPDATE_PUBLISHED,
+			resourceType: "event",
+			resourceId: parsedEventId,
+			metadata: {
+				organizerId: organizer.id,
+				changedFields,
+				transition: "published_patch",
+			},
+		});
+
+		const responseEvent = toEventResponse(updated);
+		invalidateEventCache(responseEvent);
+		return responseEvent;
+	});
+
+	deps.log.info(
+		{ eventId: parsedEventId, organizerId: organizer.id, userId },
+		"Published event patched",
+	);
+
+	return result;
+}
+
+/**
+ * Wave B: update an event category's capacity. Only allowed while the parent
+ * event is in draft. `spotsRemaining` is clamped to `spotsTotal` by both
+ * application logic and the underlying CHECK constraint.
+ */
+export async function updateEventCategoryCapacity(
+	deps: EventCategoryDeps,
+	userId: string,
+	eventId: string,
+	categoryId: string,
+	input: unknown,
+): Promise<EventCategoryRecord> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const parsedCategoryId = parseUuid(categoryId, "category id");
+	const parsed = eventCategoryCapacityUpdateSchema.safeParse(input);
+	if (!parsed.success) {
+		throw new ValidationError(
+			"Invalid event category capacity",
+			toValidationDetails(parsed.error),
+		);
+	}
+
+	const organizer = await getOrganizerByUserId(deps.db as Database, userId);
+	if (!organizer) {
+		throw new NotFoundError(
+			"Organizer profile not found. Please register first.",
+		);
+	}
+
+	const result = await deps.db.transaction(async (tx) => {
+		const event = await selectEventForCategories(tx, parsedEventId, {
+			forUpdate: true,
+		});
+
+		if (event.organizerId !== organizer.id) {
+			throw new ForbiddenError("You do not have access to this event");
+		}
+
+		if (event.status !== DEFAULT_EVENT_STATUS) {
+			throw new ConflictError(
+				"Event category capacity can only be updated while the event is in draft status",
+			);
+		}
+
+		const [category] = await tx
+			.select()
+			.from(eventCategories)
+			.where(
+				and(
+					eq(eventCategories.id, parsedCategoryId),
+					eq(eventCategories.eventId, parsedEventId),
+				),
+			)
+			.limit(1);
+
+		if (!category) {
+			throw new NotFoundError("Event category not found");
+		}
+
+		const nextTotal = parsed.data.spotsTotal ?? category.spotsTotal;
+		const nextRemaining =
+			parsed.data.spotsRemaining ?? Math.min(category.spotsRemaining, nextTotal);
+
+		if (nextRemaining > nextTotal) {
+			throw new ValidationError("spotsRemaining cannot exceed spotsTotal", {
+				field: "spotsRemaining",
+			});
+		}
+
+		const [updated] = await tx
+			.update(eventCategories)
+			.set({
+				spotsTotal: nextTotal,
+				spotsRemaining: nextRemaining,
+				updatedAt: new Date(),
+			})
+			.where(eq(eventCategories.id, parsedCategoryId))
+			.returning();
+
+		if (!updated) {
+			throw new ConflictError(
+				"Event category changed during update. Please retry.",
+			);
+		}
+
+		return toEventCategoryResponse(updated);
+	});
+
+	deps.log.info(
+		{
+			eventId: parsedEventId,
+			categoryId: parsedCategoryId,
+			organizerId: organizer.id,
+			userId,
+		},
+		"Event category capacity updated",
+	);
+
+	return result;
+}
+
+
+

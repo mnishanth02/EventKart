@@ -80,6 +80,7 @@ export const events = pgTable(
 		refundPolicy: text("refund_policy"),
 		cancellationPolicy: text("cancellation_policy"),
 		publishedAt: timestamp("published_at", { withTimezone: true }),
+		firstPublishedAt: timestamp("first_published_at", { withTimezone: true }),
 		submittedForReviewAt: timestamp("submitted_for_review_at", {
 			withTimezone: true,
 		}),

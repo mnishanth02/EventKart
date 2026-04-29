@@ -37,6 +37,7 @@ const TEST_CSRF_SECRET = "eventkart-csrf-secret-v1";
 const mockOrganizerProfile = {
 	id: TEST_ORGANIZER_ID,
 	userId: TEST_USER_ID,
+	slug: "coimbatorerunners",
 	businessName: "CoimbatoreRunners",
 	contactName: "Ramesh Kumar",
 	contactEmail: "ramesh@coimbatorerunners.in",

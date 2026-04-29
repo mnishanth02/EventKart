@@ -86,6 +86,7 @@ describe("Storage Plugin", () => {
 					ownerId: "user-1",
 					extension: "pdf",
 					contentType: "application/pdf",
+					maxBytes: 10 * 1024 * 1024,
 				}),
 			).rejects.toThrow("Object storage is not configured");
 		});
