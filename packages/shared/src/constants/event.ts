@@ -104,7 +104,6 @@ export const PUBLISHED_EVENT_HIGH_RISK_FIELDS = [
 	"currency",
 	"categories",
 	"pricingTiers",
-	"registrationFormSchema",
 	"formSchema",
 ] as const;
 
