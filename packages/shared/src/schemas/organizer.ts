@@ -101,7 +101,7 @@ export type OrganizerUpdate = z.output<typeof organizerUpdateBaseSchema>;
 export const organizerProfileSchema = z.object({
 	id: z.string().uuid(),
 	userId: z.string().uuid(),
-	slug: z.string().nullable(),
+	slug: z.string(),
 	businessName: z.string(),
 	contactName: z.string(),
 	contactEmail: z.string(),

@@ -414,7 +414,7 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 		},
 	);
 
-	typedApp.put(
+	typedApp.patch(
 		"/:eventId/categories/:categoryId/capacity",
 		{
 			preHandler: [requireAuth, requireRole("organizer")],

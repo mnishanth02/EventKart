@@ -27,6 +27,7 @@ const mockGetPublishReadiness = vi.fn();
 const mockPublishEvent = vi.fn();
 const mockUnpublishEvent = vi.fn();
 const mockUpdatePublishedEvent = vi.fn();
+const mockUpdateEventCategoryCapacity = vi.fn();
 
 vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	const actual =
@@ -45,6 +46,8 @@ vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 		unpublishEvent: (...args: unknown[]) => mockUnpublishEvent(...args),
 		updatePublishedEvent: (...args: unknown[]) =>
 			mockUpdatePublishedEvent(...args),
+		updateEventCategoryCapacity: (...args: unknown[]) =>
+			mockUpdateEventCategoryCapacity(...args),
 		listEventPricing: (...args: unknown[]) => mockListEventPricing(...args),
 		listEventCategories: (...args: unknown[]) =>
 			mockListEventCategories(...args),
@@ -1246,6 +1249,76 @@ describe("PUT /api/v1/events/:eventId/categories", () => {
 			error: { code: "VALIDATION_ERROR" },
 		});
 		expect(mockReplaceEventCategories).not.toHaveBeenCalled();
+	});
+});
+
+describe("PATCH /api/v1/events/:eventId/categories/:categoryId/capacity", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockUpdateEventCategoryCapacity.mockReset();
+	});
+
+	it("patches category capacity for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		const updatedCategory = {
+			id: TEST_CATEGORY_5K_ID,
+			eventId: TEST_EVENT_ID,
+			name: "5K",
+			slug: "5k",
+			distanceMeters: 5000,
+			sortOrder: 0,
+			spotsTotal: 150,
+			spotsRemaining: 125,
+			createdAt: "2026-04-26T12:00:00.000Z",
+			updatedAt: "2026-04-26T12:05:00.000Z",
+		};
+		mockUpdateEventCategoryCapacity.mockResolvedValue(updatedCategory);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories/${TEST_CATEGORY_5K_ID}/capacity`,
+			...csrf,
+			payload: { spotsRemaining: 125 },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: updatedCategory,
+		});
+		expect(mockUpdateEventCategoryCapacity).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_USER_ID,
+			TEST_EVENT_ID,
+			TEST_CATEGORY_5K_ID,
+			{ spotsRemaining: 125 },
+		);
+	});
+
+	it("does not accept PUT for partial capacity updates", async () => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories/${TEST_CATEGORY_5K_ID}/capacity`,
+			...csrf,
+			payload: { spotsRemaining: 125 },
+		});
+
+		expect(response.statusCode).toBe(404);
+		expect(mockUpdateEventCategoryCapacity).not.toHaveBeenCalled();
 	});
 });
 

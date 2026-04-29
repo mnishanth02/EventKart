@@ -832,6 +832,29 @@ describe("updateDraftEvent", () => {
 		expect(update).not.toHaveBeenCalled();
 	});
 
+	it("directs low-risk published edits to the published patch endpoint", async () => {
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ status: "published" })],
+		]);
+
+		await expect(
+			updateDraftEvent(
+				{ db: asDatabase(db), log: { info: vi.fn() } },
+				TEST_USER_ID,
+				EVENT_ID,
+				{
+					description:
+						"Updated public event description that is safe for published pages.",
+				},
+			),
+		).rejects.toMatchObject({
+			code: "PUBLISHED_EVENT_LOW_RISK_PATCH_REQUIRED",
+			statusCode: 409,
+		});
+		expect(update).not.toHaveBeenCalled();
+	});
+
 	it.each([
 		[
 			"immutable city",

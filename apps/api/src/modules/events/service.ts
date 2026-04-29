@@ -313,9 +313,9 @@ async function selectUploadedHeroImageExists(
 
 /**
  * HIGH-RISK: This count drives the admin-review trigger. Once an organizer has
- * ever published a paid event, future paid events skip review. We use
- * `firstPublishedAt IS NOT NULL` (set once on first publish, never cleared)
- * instead of current `status` so an organizer cannot republish via
+ * more than 3 previously published paid events, future paid events skip review.
+ * We use `firstPublishedAt IS NOT NULL` (set once on first publish, never
+ * cleared) instead of current `status` so an organizer cannot republish via
  * unpublish→draft→publish to bypass admin review.
  */
 export async function getPublishedPaidEventCount(
@@ -367,6 +367,17 @@ function getPublishedHighRiskFields(input: unknown): string[] {
 	const providedKeys = new Set(getProvidedKeys(input));
 	return PUBLISHED_EVENT_HIGH_RISK_FIELDS.filter((field) =>
 		providedKeys.has(field),
+	);
+}
+
+function hasOnlyPublishedLowRiskFields(input: unknown): boolean {
+	const providedKeys = getProvidedKeys(input);
+	if (providedKeys.length === 0) {
+		return false;
+	}
+
+	return providedKeys.every((key) =>
+		PUBLISHED_EVENT_LOW_RISK_FIELDS.some((field) => field === key),
 	);
 }
 
@@ -1003,7 +1014,9 @@ export async function updateDraftEvent(
 ): Promise<Event> {
 	const parsedEventId = parseUuid(eventId, "event id");
 	const parsed = updateEventInputSchema.safeParse(input);
-	if (!parsed.success) {
+	const shouldCheckPublishedLowRiskConflict =
+		!parsed.success && hasOnlyPublishedLowRiskFields(input);
+	if (!parsed.success && !shouldCheckPublishedLowRiskConflict) {
 		throw new ValidationError(
 			"Invalid event details",
 			toValidationDetails(parsed.error),
@@ -1033,10 +1046,26 @@ export async function updateDraftEvent(
 			// Wave B: tiered edit flow — only "published" has a patch endpoint.
 			// Other non-draft states (under_review, completed, cancelled) are not editable.
 			if (currentEvent.status === "published") {
-				throwPublishedHighRiskEditConflict(getPublishedHighRiskFields(input));
+				const highRiskFields = getPublishedHighRiskFields(input);
+
+				if (highRiskFields.length > 0) {
+					throwPublishedHighRiskEditConflict(highRiskFields);
+				}
+
+				throw new ConflictError(
+					"Low-risk edits for published events must use the published patch endpoint",
+					"PUBLISHED_EVENT_LOW_RISK_PATCH_REQUIRED",
+				);
 			}
 			throw new ConflictError(
 				"Event details can only be updated while the event is in draft status",
+			);
+		}
+
+		if (!parsed.success) {
+			throw new ValidationError(
+				"Invalid event details",
+				toValidationDetails(parsed.error),
 			);
 		}
 
