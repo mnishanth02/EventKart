@@ -1,4 +1,4 @@
-import { and, type Database, eq, inArray, ne, sql } from "@repo/db";
+import { and, type Database, eq, ne, sql } from "@repo/db";
 import {
 	eventCategories,
 	eventImages,
@@ -12,6 +12,8 @@ import {
 	buildEmailIdempotencyKey,
 	DEFAULT_EVENT_STATUS,
 	EMAIL_JOB_NAMES,
+	PUBLISHED_EVENT_HIGH_RISK_FIELDS,
+	PUBLISHED_EVENT_LOW_RISK_FIELDS,
 } from "@repo/shared/constants";
 import type {
 	Event,
@@ -41,6 +43,7 @@ import {
 	eventRegistrationFormSchema,
 	eventSchema,
 	eventSlugSchema,
+	publishedEventLowRiskPatchSchema,
 	publishedEventPatchSchema,
 	updateEventInputSchema,
 	uuidSchema,
@@ -342,11 +345,42 @@ export async function requiresAdminReview(
 		db,
 		organizerId,
 	);
-	return publishedPaidEventCount < 3;
+	return publishedPaidEventCount <= 3;
 }
 
 function invalidateEventCache(_event: Event): void {
 	// TODO(I-2.4.2): Purge CDN/public-event cache on publish and unpublish.
+}
+
+const PUBLISHED_HIGH_RISK_EDIT_MESSAGE =
+	"High-risk fields require unpublishing the event. Unpublish first, edit in draft, then republish.";
+
+function getProvidedKeys(input: unknown): string[] {
+	if (typeof input !== "object" || input === null || Array.isArray(input)) {
+		return [];
+	}
+
+	return Object.keys(input);
+}
+
+function getPublishedHighRiskFields(input: unknown): string[] {
+	const providedKeys = new Set(getProvidedKeys(input));
+	return PUBLISHED_EVENT_HIGH_RISK_FIELDS.filter((field) =>
+		providedKeys.has(field),
+	);
+}
+
+function throwPublishedHighRiskEditConflict(
+	highRiskFields: readonly string[] = PUBLISHED_EVENT_HIGH_RISK_FIELDS,
+): never {
+	throw new ConflictError(
+		PUBLISHED_HIGH_RISK_EDIT_MESSAGE,
+		"PUBLISHED_EVENT_HIGH_RISK_EDIT_REQUIRES_UNPUBLISH",
+		{
+			requiresUnpublish: true,
+			highRiskFields: [...highRiskFields],
+		},
+	);
 }
 
 async function buildPublishReadinessForEvent(
@@ -999,13 +1033,7 @@ export async function updateDraftEvent(
 			// Wave B: tiered edit flow — only "published" has a patch endpoint.
 			// Other non-draft states (under_review, completed, cancelled) are not editable.
 			if (currentEvent.status === "published") {
-				throw new ConflictError(
-					"Published events cannot be edited via this endpoint. Use PATCH /events/:eventId/published for low-risk field edits, or unpublish first for structural changes.",
-					"EVENT_PUBLISHED_USE_PATCH",
-					{
-						hint: "PATCH /events/:eventId/published",
-					},
-				);
+				throwPublishedHighRiskEditConflict(getPublishedHighRiskFields(input));
 			}
 			throw new ConflictError(
 				"Event details can only be updated while the event is in draft status",
@@ -1142,10 +1170,7 @@ export async function updateEventPolicies(
 			throw new ForbiddenError("You do not have access to this event");
 		}
 
-		if (
-			event.status !== DEFAULT_EVENT_STATUS &&
-			event.status !== "published"
-		) {
+		if (event.status !== DEFAULT_EVENT_STATUS && event.status !== "published") {
 			throw new ConflictError(
 				"Event policies can only be updated while the event is in draft or published status",
 			);
@@ -1179,7 +1204,11 @@ export async function updateEventPolicies(
 
 		// Wave B: when editing a published event, write an audit row capturing
 		// only the metadata required by the spec — no raw policy text is logged.
-		if (event.status === "published" && deps.auditLogger && changedFields.length > 0) {
+		if (
+			event.status === "published" &&
+			deps.auditLogger &&
+			changedFields.length > 0
+		) {
 			await deps.auditLogger.log({
 				actorId: userId,
 				action: AUDIT_ACTIONS.EVENT_UPDATE_PUBLISHED,
@@ -1670,26 +1699,37 @@ export async function publishEvent(
 	// Wave B: log-only email stub. Failures must NEVER break the publish flow.
 	if (result.transition === "draft_to_under_review") {
 		try {
-			emitEmailStub({ log: deps.log }, {
-				jobName: EMAIL_JOB_NAMES.EVENT_REVIEW_SUBMITTED,
-				idempotencyKey: buildEmailIdempotencyKey.eventReviewSubmitted(
-					result.event.id,
-					new Date(result.event.submittedForReviewAt ?? Date.now()),
-				),
-				context: {
-					eventId: result.event.id,
-					organizerId: result.event.organizerId,
+			emitEmailStub(
+				{ log: deps.log },
+				{
+					jobName: EMAIL_JOB_NAMES.EVENT_REVIEW_SUBMITTED,
+					idempotencyKey: buildEmailIdempotencyKey.eventReviewSubmitted(
+						result.event.id,
+						new Date(result.event.submittedForReviewAt ?? Date.now()),
+					),
+					context: {
+						eventId: result.event.id,
+						organizerId: result.event.organizerId,
+					},
 				},
-			});
+			);
 		} catch (emailError) {
 			deps.log.info(
-				{ err: String(emailError), eventId: result.event.id, emailStubFailed: true },
+				{
+					err: String(emailError),
+					eventId: result.event.id,
+					emailStubFailed: true,
+				},
 				"event.review_submitted email stub failed (non-fatal)",
 			);
 		}
 	}
 
-	return { event: result.event, transition: result.transition, readiness: result.readiness };
+	return {
+		event: result.event,
+		transition: result.transition,
+		readiness: result.readiness,
+	};
 }
 
 export async function unpublishEvent(
@@ -1851,19 +1891,28 @@ export async function adminApproveEvent(
 
 	// Wave B: log-only email stub. Failures must NEVER break admin approval.
 	try {
-		emitEmailStub({ log: deps.log }, {
-			jobName: EMAIL_JOB_NAMES.EVENT_REVIEW_APPROVED,
-			idempotencyKey: buildEmailIdempotencyKey.eventReviewApproved(
-				result.event.id,
-				new Date(result.event.publishedAt ?? Date.now()),
-			),
-			context: {
-				eventId: result.event.id,
-				organizerId: result.event.organizerId,
+		emitEmailStub(
+			{ log: deps.log },
+			{
+				jobName: EMAIL_JOB_NAMES.EVENT_REVIEW_APPROVED,
+				idempotencyKey: buildEmailIdempotencyKey.eventReviewApproved(
+					result.event.id,
+					new Date(result.event.publishedAt ?? Date.now()),
+				),
+				context: {
+					eventId: result.event.id,
+					organizerId: result.event.organizerId,
+				},
 			},
-		});
+		);
 	} catch (emailError) {
-		deps.log.info({ err: String(emailError), eventId: result.event.id, emailStubFailed: true }, "event.admin_approved email stub failed (non-fatal)",
+		deps.log.info(
+			{
+				err: String(emailError),
+				eventId: result.event.id,
+				emailStubFailed: true,
+			},
+			"event.admin_approved email stub failed (non-fatal)",
 		);
 	}
 
@@ -1932,19 +1981,28 @@ export async function adminRejectEvent(
 	// Wave B: log-only email stub. Failures must NEVER break admin rejection.
 	if (result.organizerEmail) {
 		try {
-			emitEmailStub({ log: deps.log }, {
-				jobName: EMAIL_JOB_NAMES.EVENT_REVIEW_REJECTED,
-				idempotencyKey: buildEmailIdempotencyKey.eventReviewRejected(
-					result.event.id,
-					new Date(result.event.updatedAt),
-				),
-				context: {
-					eventId: result.event.id,
-					organizerId: result.event.organizerId,
+			emitEmailStub(
+				{ log: deps.log },
+				{
+					jobName: EMAIL_JOB_NAMES.EVENT_REVIEW_REJECTED,
+					idempotencyKey: buildEmailIdempotencyKey.eventReviewRejected(
+						result.event.id,
+						new Date(result.event.updatedAt),
+					),
+					context: {
+						eventId: result.event.id,
+						organizerId: result.event.organizerId,
+					},
 				},
-			});
+			);
 		} catch (emailError) {
-			deps.log.info({ err: String(emailError), eventId: result.event.id, emailStubFailed: true }, "event.admin_rejected email stub failed (non-fatal)",
+			deps.log.info(
+				{
+					err: String(emailError),
+					eventId: result.event.id,
+					emailStubFailed: true,
+				},
+				"event.admin_rejected email stub failed (non-fatal)",
 			);
 		}
 	}
@@ -2182,6 +2240,11 @@ export async function updatePublishedEvent(
 		);
 	}
 
+	const highRiskFields = getPublishedHighRiskFields(parsed.data);
+	if (highRiskFields.length > 0) {
+		throwPublishedHighRiskEditConflict(highRiskFields);
+	}
+
 	const organizer = await getOrganizerByUserId(deps.db as Database, userId);
 	if (!organizer) {
 		throw new NotFoundError(
@@ -2189,7 +2252,21 @@ export async function updatePublishedEvent(
 		);
 	}
 
-	const data = parsed.data;
+	const lowRiskPatch = Object.fromEntries(
+		PUBLISHED_EVENT_LOW_RISK_FIELDS.filter((field) => field in parsed.data).map(
+			(field) => [field, parsed.data[field]],
+		),
+	);
+	const lowRiskParsed =
+		publishedEventLowRiskPatchSchema.safeParse(lowRiskPatch);
+	if (!lowRiskParsed.success) {
+		throw new ValidationError(
+			"Invalid published event patch",
+			toValidationDetails(lowRiskParsed.error),
+		);
+	}
+
+	const data = lowRiskParsed.data;
 
 	const result = await deps.db.transaction(async (tx) => {
 		const event = await selectEventForCategories(tx, parsedEventId, {
@@ -2209,11 +2286,17 @@ export async function updatePublishedEvent(
 		const updateFields: Record<string, unknown> = { updatedAt: new Date() };
 		const changedFields: string[] = [];
 
-		if (data.description !== undefined && data.description !== event.description) {
+		if (
+			data.description !== undefined &&
+			data.description !== event.description
+		) {
 			updateFields.description = data.description;
 			changedFields.push("description");
 		}
-		if (data.routeDetails !== undefined && data.routeDetails !== event.routeDetails) {
+		if (
+			data.routeDetails !== undefined &&
+			data.routeDetails !== event.routeDetails
+		) {
 			updateFields.routeDetails = data.routeDetails;
 			changedFields.push("routeDetails");
 		}
@@ -2335,7 +2418,8 @@ export async function updateEventCategoryCapacity(
 
 		const nextTotal = parsed.data.spotsTotal ?? category.spotsTotal;
 		const nextRemaining =
-			parsed.data.spotsRemaining ?? Math.min(category.spotsRemaining, nextTotal);
+			parsed.data.spotsRemaining ??
+			Math.min(category.spotsRemaining, nextTotal);
 
 		if (nextRemaining > nextTotal) {
 			throw new ValidationError("spotsRemaining cannot exceed spotsTotal", {
@@ -2374,6 +2458,3 @@ export async function updateEventCategoryCapacity(
 
 	return result;
 }
-
-
-

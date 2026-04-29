@@ -51,7 +51,10 @@ async function organizerSlugExists(
 	options: Pick<ReserveOrganizerSlugOptions, "excludeOrganizerId">,
 ): Promise<boolean> {
 	const activeWhere = options.excludeOrganizerId
-		? and(eq(organizers.slug, slug), ne(organizers.id, options.excludeOrganizerId))
+		? and(
+				eq(organizers.slug, slug),
+				ne(organizers.id, options.excludeOrganizerId),
+			)
 		: eq(organizers.slug, slug);
 
 	const matches = await db
@@ -82,7 +85,9 @@ async function organizerSlugExists(
 	return redirects.length > 0;
 }
 
-function getMaxAttempts(maxAttempts = DEFAULT_ORGANIZER_SLUG_MAX_ATTEMPTS): number {
+function getMaxAttempts(
+	maxAttempts = DEFAULT_ORGANIZER_SLUG_MAX_ATTEMPTS,
+): number {
 	if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1) {
 		throw new RangeError("Slug maxAttempts must be a positive safe integer.");
 	}
@@ -125,8 +130,7 @@ export async function generateUniqueOrganizerSlug(
 }
 
 /**
- * Record an organizer slug redirect when an organizer explicitly renames their slug.
- * Currently unused (no rename endpoint); reserved for future explicit rename support.
+ * Record an organizer slug redirect when an organizer renames their public slug.
  */
 export async function recordOrganizerSlugRedirect(
 	db: OrganizerSlugStore,
@@ -176,8 +180,7 @@ export async function recordOrganizerSlugRedirect(
 
 /**
  * Helper for an explicit organizer rename — atomically reserves a new slug,
- * updates the organizer row, and records a redirect. Reserved for future
- * explicit-rename routes; not wired in Wave B.
+ * updates the organizer row, and records a redirect.
  */
 export async function renameOrganizerSlug(
 	db: Database,

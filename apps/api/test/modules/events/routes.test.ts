@@ -26,6 +26,7 @@ const mockDeleteEventImage = vi.fn();
 const mockGetPublishReadiness = vi.fn();
 const mockPublishEvent = vi.fn();
 const mockUnpublishEvent = vi.fn();
+const mockUpdatePublishedEvent = vi.fn();
 
 vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	const actual =
@@ -42,6 +43,8 @@ vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 			mockGetPublishReadiness(...args),
 		publishEvent: (...args: unknown[]) => mockPublishEvent(...args),
 		unpublishEvent: (...args: unknown[]) => mockUnpublishEvent(...args),
+		updatePublishedEvent: (...args: unknown[]) =>
+			mockUpdatePublishedEvent(...args),
 		listEventPricing: (...args: unknown[]) => mockListEventPricing(...args),
 		listEventCategories: (...args: unknown[]) =>
 			mockListEventCategories(...args),
@@ -650,6 +653,7 @@ describe("event publish workflow routes", () => {
 		mockGetPublishReadiness.mockReset();
 		mockPublishEvent.mockReset();
 		mockUnpublishEvent.mockReset();
+		mockUpdatePublishedEvent.mockReset();
 	});
 
 	it("returns publish readiness for an authenticated organizer without CSRF", async () => {
@@ -2243,5 +2247,162 @@ describe("DELETE /api/v1/events/:eventId/images/:imageId", () => {
 
 		expect(response.statusCode).toBe(403);
 		expect(mockDeleteEventImage).not.toHaveBeenCalled();
+	});
+});
+
+describe("PATCH /api/v1/events/:eventId/published", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockUpdatePublishedEvent.mockReset();
+	});
+
+	it("patches low-risk published event fields", async () => {
+		setupOrganizerSession(app);
+		mockUpdatePublishedEvent.mockResolvedValue({
+			...mockEvent,
+			description:
+				"Updated public event description that is safe for published pages.",
+		});
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			...csrf,
+			payload: {
+				description:
+					"Updated public event description that is safe for published pages.",
+			},
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			success: true,
+			data: {
+				id: TEST_EVENT_ID,
+				description:
+					"Updated public event description that is safe for published pages.",
+			},
+		});
+		expect(mockUpdatePublishedEvent).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_USER_ID,
+			TEST_EVENT_ID,
+			expect.objectContaining({ description: expect.any(String) }),
+		);
+	});
+
+	it("passes mixed low-risk plus high-risk event fields through to service for structured 409", async () => {
+		setupOrganizerSession(app);
+		mockUpdatePublishedEvent.mockRejectedValue(
+			new ConflictError(
+				"High-risk fields require unpublishing the event. Unpublish first, edit in draft, then republish.",
+				"PUBLISHED_EVENT_HIGH_RISK_EDIT_REQUIRES_UNPUBLISH",
+				{ requiresUnpublish: true, highRiskFields: ["title"] },
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			...csrf,
+			payload: {
+				description:
+					"Updated public event description that must not be persisted.",
+				title: "High Risk Title Change",
+			},
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: {
+				code: "PUBLISHED_EVENT_HIGH_RISK_EDIT_REQUIRES_UNPUBLISH",
+				details: {
+					requiresUnpublish: true,
+					highRiskFields: ["title"],
+				},
+			},
+		});
+	});
+
+	it("returns 401 when unauthenticated", async () => {
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			payload: { description: "Updated public event description text." },
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(mockUpdatePublishedEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 for a non-organizer role", async () => {
+		setupParticipantSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			...csrf,
+			payload: { description: "Updated public event description text." },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "INSUFFICIENT_ROLE" },
+		});
+		expect(mockUpdatePublishedEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when CSRF token is missing", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			payload: { description: "Updated public event description text." },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockUpdatePublishedEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when the service rejects a non-owner organizer", async () => {
+		setupOrganizerSession(app);
+		mockUpdatePublishedEvent.mockRejectedValue(
+			new ForbiddenError("You do not have access to this event"),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			...csrf,
+			payload: { description: "Updated public event description text." },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "FORBIDDEN" },
+		});
 	});
 });

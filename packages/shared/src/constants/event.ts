@@ -76,6 +76,43 @@ export const EVENT_PRICE_MIN_INR = EVENT_PRICING_MIN_PRICE_PAISE / 100;
 export const EVENT_PRICE_MAX_INR = EVENT_PRICING_MAX_PRICE_PAISE / 100;
 export const EVENT_POLICY_MAX_LENGTH = 2000;
 
+export const PUBLISHED_EVENT_LOW_RISK_FIELDS = [
+	"description",
+	"routeDetails",
+	"refundPolicy",
+	"cancellationPolicy",
+] as const;
+
+export const PUBLISHED_EVENT_HIGH_RISK_FIELDS = [
+	"title",
+	"eventType",
+	"sport",
+	"category",
+	"venueName",
+	"addressLine1",
+	"addressLine2",
+	"city",
+	"state",
+	"country",
+	"postalCode",
+	"timezone",
+	"startAt",
+	"endAt",
+	"registrationOpensAt",
+	"registrationClosesAt",
+	"isPaid",
+	"currency",
+	"categories",
+	"pricingTiers",
+	"registrationFormSchema",
+	"formSchema",
+] as const;
+
+export type PublishedEventLowRiskField =
+	(typeof PUBLISHED_EVENT_LOW_RISK_FIELDS)[number];
+export type PublishedEventHighRiskField =
+	(typeof PUBLISHED_EVENT_HIGH_RISK_FIELDS)[number];
+
 export const EVENT_IMAGE_KINDS = ["hero", "route_map"] as const;
 export type EventImageKind = (typeof EVENT_IMAGE_KINDS)[number];
 export const eventImageKindSchema = z.enum(EVENT_IMAGE_KINDS);

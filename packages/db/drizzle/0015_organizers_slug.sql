@@ -1,4 +1,5 @@
 ALTER TABLE "organizers" ADD COLUMN IF NOT EXISTS "slug" varchar(80);--> statement-breakpoint
+CREATE EXTENSION IF NOT EXISTS unaccent;--> statement-breakpoint
 -- Backfill: normalize businessName ordered by (created_at, id); on collision append -2, -3, ...; on empty use organizer-${id_prefix}
 -- Reserved slugs are also avoided in the uniqueness loop.
 DO $$
@@ -10,9 +11,10 @@ DECLARE
 	-- Hard-coded reserved slugs (mirrors RESERVED_ORGANIZER_SLUGS in shared constants).
 	-- Use a fixed list here so the migration is self-contained and replay-safe.
 	reserved TEXT[] := ARRAY[
-		'admin','api','www','app','help','support','organizer','organizers',
+		'admin','api','auth','www','app','help','health','support','ready','org',
+		'organizer','organizers',
 		'event','events','search','explore','dashboard','settings','profile',
-		'login','logout','register','signup'
+		'my','book','login','logout','lookup-booking','register','signup'
 	];
 BEGIN
 	FOR r IN
@@ -21,8 +23,9 @@ BEGIN
 		WHERE slug IS NULL
 		ORDER BY created_at, id
 	LOOP
-		-- Normalize: lowercase, replace non-alphanumeric runs with hyphens, trim hyphens, cap at 80
-		base_slug := lower(r.business_name);
+		-- Normalize with unaccent to mirror the shared TypeScript slug kernel's
+		-- NFKD/diacritic-removal behavior, then collapse non-ASCII runs.
+		base_slug := lower(unaccent(r.business_name));
 		base_slug := regexp_replace(base_slug, '[^a-z0-9]+', '-', 'g');
 		base_slug := btrim(base_slug, '-');
 		base_slug := left(base_slug, 80);
@@ -45,4 +48,5 @@ BEGIN
 		UPDATE organizers SET slug = candidate WHERE id = r.id;
 	END LOOP;
 END $$;--> statement-breakpoint
+ALTER TABLE "organizers" ALTER COLUMN "slug" SET NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "organizers_slug_unique" ON "organizers" ("slug");

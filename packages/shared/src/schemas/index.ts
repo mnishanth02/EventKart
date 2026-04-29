@@ -51,6 +51,7 @@ export type {
 	CreateEvent,
 	CreateEventInput,
 	Event,
+	PublishedEventLowRiskPatch,
 	PublishedEventPatch,
 	PublishedEventPatchInput,
 	UpdateEvent,
@@ -60,6 +61,7 @@ export {
 	createEventBaseSchema,
 	createEventInputSchema,
 	eventSchema,
+	publishedEventLowRiskPatchSchema,
 	publishedEventPatchSchema,
 	updateEventInputSchema,
 } from "./event.js";

@@ -56,6 +56,8 @@ export {
 	eventSportSchema,
 	eventStatusSchema,
 	eventTypeSchema,
+	PUBLISHED_EVENT_HIGH_RISK_FIELDS,
+	PUBLISHED_EVENT_LOW_RISK_FIELDS,
 	V1_EVENT_ALLOWED_VALUES,
 	V1_EVENT_CATEGORY,
 	V1_EVENT_CITY,
@@ -67,7 +69,6 @@ export {
 	V1_EVENT_TIMEZONE,
 	V1_EVENT_TYPE,
 } from "./event.js";
-export type { OtpDeliveryMode } from "./otp.js";
 export type { ReservedOrganizerSlug } from "./organizer.js";
 export {
 	ORGANIZER_SLUG_FALLBACK,
@@ -76,6 +77,7 @@ export {
 	ORGANIZER_SLUG_PATTERN,
 	RESERVED_ORGANIZER_SLUGS,
 } from "./organizer.js";
+export type { OtpDeliveryMode } from "./otp.js";
 export {
 	OTP_DELIVERY_MODES,
 	OTP_LENGTH,

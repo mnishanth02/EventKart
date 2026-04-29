@@ -1,15 +1,21 @@
 import type { Database } from "@repo/db";
 import { eq } from "@repo/db";
 import { organizers } from "@repo/db/schema";
+import {
+	buildEmailIdempotencyKey,
+	EMAIL_JOB_NAMES,
+} from "@repo/shared/constants";
 import type {
 	OrganizerRegistration,
 	OrganizerUpdate,
 } from "@repo/shared/schemas";
-import { buildEmailIdempotencyKey, EMAIL_JOB_NAMES } from "@repo/shared/constants";
 import type { FastifyBaseLogger } from "fastify";
 import { emitEmailStub } from "../../lib/email-stub.js";
 import { ConflictError } from "../../lib/errors.js";
-import { reserveUniqueOrganizerSlug } from "./slug-service.js";
+import {
+	recordOrganizerSlugRedirect,
+	reserveUniqueOrganizerSlug,
+} from "./slug-service.js";
 
 function isUniqueViolation(error: unknown): boolean {
 	return (
@@ -28,7 +34,7 @@ export interface RegisterOrganizerDeps {
 export interface OrganizerRow {
 	id: string;
 	userId: string;
-	slug: string | null;
+	slug: string;
 	businessName: string;
 	contactName: string;
 	contactEmail: string;
@@ -143,14 +149,21 @@ export async function registerOrganizer(
 
 	// Wave B: log-only email stub. Failures must NEVER break registration.
 	try {
-		emitEmailStub({ log }, {
-			jobName: EMAIL_JOB_NAMES.ORGANIZER_WELCOME,
-			idempotencyKey: buildEmailIdempotencyKey.organizerWelcome(inserted.id),
-			context: { organizerId: inserted.id },
-		});
+		emitEmailStub(
+			{ log },
+			{
+				jobName: EMAIL_JOB_NAMES.ORGANIZER_WELCOME,
+				idempotencyKey: buildEmailIdempotencyKey.organizerWelcome(inserted.id),
+				context: { organizerId: inserted.id },
+			},
+		);
 	} catch (emailError) {
 		log.info(
-			{ err: String(emailError), organizerId: inserted.id, emailStubFailed: true },
+			{
+				err: String(emailError),
+				organizerId: inserted.id,
+				emailStubFailed: true,
+			},
 			"organizer.registered email stub failed (non-fatal)",
 		);
 	}
@@ -177,7 +190,7 @@ export async function getOrganizerByUserId(db: Database, userId: string) {
 
 export interface UpdateOrganizerDeps {
 	db: Database;
-	log: FastifyBaseLogger;
+	log: Pick<FastifyBaseLogger, "info">;
 }
 
 /**
@@ -190,16 +203,6 @@ export async function updateOrganizer(
 	data: OrganizerUpdate,
 ) {
 	const { db, log } = deps;
-
-	const existing = await db
-		.select({ id: organizers.id })
-		.from(organizers)
-		.where(eq(organizers.userId, userId))
-		.limit(1);
-
-	if (existing.length === 0) {
-		return null;
-	}
 
 	const updateFields: Record<string, unknown> = {};
 	if (data.businessName !== undefined)
@@ -215,11 +218,56 @@ export async function updateOrganizer(
 		updateFields.description = data.description;
 	if (data.website !== undefined) updateFields.website = data.website;
 
-	const [updated] = await db
-		.update(organizers)
-		.set(updateFields)
-		.where(eq(organizers.userId, userId))
-		.returning();
+	const updated = await db.transaction(async (tx) => {
+		const [existing] = await tx
+			.select({
+				id: organizers.id,
+				slug: organizers.slug,
+				businessName: organizers.businessName,
+			})
+			.from(organizers)
+			.where(eq(organizers.userId, userId))
+			.limit(1);
+
+		if (!existing) {
+			return null;
+		}
+
+		if (
+			data.businessName !== undefined &&
+			data.businessName !== existing.businessName
+		) {
+			const newSlug = await reserveUniqueOrganizerSlug(tx, data.businessName, {
+				excludeOrganizerId: existing.id,
+			});
+			if (newSlug !== existing.slug) {
+				updateFields.slug = newSlug;
+			}
+		}
+
+		const [row] = await tx
+			.update(organizers)
+			.set(updateFields)
+			.where(eq(organizers.userId, userId))
+			.returning();
+
+		if (!row) {
+			return null;
+		}
+
+		if (
+			typeof updateFields.slug === "string" &&
+			existing.slug !== updateFields.slug
+		) {
+			await recordOrganizerSlugRedirect(tx, {
+				organizerId: existing.id,
+				oldSlug: existing.slug,
+				newSlug: updateFields.slug,
+			});
+		}
+
+		return row;
+	});
 
 	if (!updated) {
 		return null;
