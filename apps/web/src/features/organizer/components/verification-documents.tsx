@@ -40,7 +40,7 @@ function getStatusBadge(status: string) {
 		case "pending":
 			return <Badge variant="secondary">Uploading...</Badge>;
 		default:
-			return <Badge variant="outline">{ status }</Badge>;
+			return <Badge variant="outline">{status}</Badge>;
 	}
 }
 
@@ -75,10 +75,15 @@ function DocumentUploadCard({
 			});
 
 			// 2. Upload file directly to S3
+			const formData = new FormData();
+			for (const [key, value] of Object.entries(uploadUrl.fields)) {
+				formData.append(key, value);
+			}
+			formData.append("file", file);
+
 			const uploadResponse = await fetch(uploadUrl.url, {
 				method: uploadUrl.method,
-				headers: uploadUrl.headers,
-				body: file,
+				body: formData,
 			});
 
 			if (!uploadResponse.ok) {
@@ -160,52 +165,52 @@ function DocumentUploadCard({
 		<Card>
 			<CardHeader className="pb-3">
 				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-					<CardTitle className="text-base">{ documentLabel }</CardTitle>
-					{ existingDoc ? getStatusBadge(existingDoc.status) : null }
+					<CardTitle className="text-base">{documentLabel}</CardTitle>
+					{existingDoc ? getStatusBadge(existingDoc.status) : null}
 				</div>
-				{ isUploaded && existingDoc ? (
+				{isUploaded && existingDoc ? (
 					<CardDescription>
-						{ existingDoc.fileName } · { formatFileSize(existingDoc.fileSize) }
+						{existingDoc.fileName} · {formatFileSize(existingDoc.fileSize)}
 					</CardDescription>
-				) : null }
+				) : null}
 			</CardHeader>
 			<CardContent>
 				<Input
-					ref={ inputRef }
-					id={ inputId }
+					ref={inputRef}
+					id={inputId}
 					type="file"
 					className="hidden"
-					accept={ ACCEPT_STRING }
-					onChange={ handleFileSelect }
-					disabled={ isUploading || isDeleting }
-					tabIndex={ -1 }
+					accept={ACCEPT_STRING}
+					onChange={handleFileSelect}
+					disabled={isUploading || isDeleting}
+					tabIndex={-1}
 					aria-hidden="true"
 				/>
-				<span id={ fileInputDescriptionId } className="sr-only">
+				<span id={fileInputDescriptionId} className="sr-only">
 					Accepted formats: PDF, JPEG, PNG. Maximum file size: 10MB.
 				</span>
-				{ isUploaded && existingDoc ? (
+				{isUploaded && existingDoc ? (
 					<div className="flex flex-wrap gap-2">
 						<Button
 							type="button"
 							variant="outline"
 							size="sm"
-							disabled={ isUploading || isDeleting }
-							onClick={ () => inputRef.current?.click() }
-							aria-describedby={ fileInputDescriptionId }
-							aria-label={ `Replace ${documentLabel}` }
+							disabled={isUploading || isDeleting}
+							onClick={() => inputRef.current?.click()}
+							aria-describedby={fileInputDescriptionId}
+							aria-label={`Replace ${documentLabel}`}
 						>
-							{ isUploading ? "Replacing..." : "Replace" }
+							{isUploading ? "Replacing..." : "Replace"}
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
-							disabled={ isDeleting }
-							onClick={ () => deleteMutation.mutate(existingDoc.id) }
-							aria-label={ `Delete ${documentLabel}` }
+							disabled={isDeleting}
+							onClick={() => deleteMutation.mutate(existingDoc.id)}
+							aria-label={`Delete ${documentLabel}`}
 						>
-							{ isDeleting ? "Deleting..." : "Delete" }
+							{isDeleting ? "Deleting..." : "Delete"}
 						</Button>
 					</div>
 				) : (
@@ -213,21 +218,21 @@ function DocumentUploadCard({
 						type="button"
 						variant="outline"
 						size="sm"
-						disabled={ isUploading }
-						onClick={ () => inputRef.current?.click() }
-						aria-describedby={ fileInputDescriptionId }
-						aria-label={ `Upload ${documentLabel}` }
+						disabled={isUploading}
+						onClick={() => inputRef.current?.click()}
+						aria-describedby={fileInputDescriptionId}
+						aria-label={`Upload ${documentLabel}`}
 					>
-						{ isUploading ? "Uploading..." : "Upload" }
+						{isUploading ? "Uploading..." : "Upload"}
 					</Button>
-				) }
-				{ isUploading || isDeleting ? (
+				)}
+				{isUploading || isDeleting ? (
 					<p className="sr-only" role="status" aria-live="polite">
-						{ isUploading
+						{isUploading
 							? `${documentLabel} upload in progress`
-							: `${documentLabel} deletion in progress` }
+							: `${documentLabel} deletion in progress`}
 					</p>
-				) : null }
+				) : null}
 			</CardContent>
 		</Card>
 	);
@@ -281,7 +286,7 @@ export function VerificationDocuments() {
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<Button type="button" onClick={ () => refetch() }>
+					<Button type="button" onClick={() => refetch()}>
 						Retry
 					</Button>
 				</CardContent>
@@ -298,20 +303,20 @@ export function VerificationDocuments() {
 					All documents are encrypted at rest.
 				</p>
 				<p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
-					{ uploadedCount } of { totalRequired } documents uploaded
-					{ uploadedCount === totalRequired ? " ✓" : "" }
+					{uploadedCount} of {totalRequired} documents uploaded
+					{uploadedCount === totalRequired ? " ✓" : ""}
 				</p>
 			</div>
 
 			<div className="grid gap-4 sm:grid-cols-2">
-				{ VERIFICATION_DOCUMENT_TYPES.map((docType) => (
+				{VERIFICATION_DOCUMENT_TYPES.map((docType) => (
 					<DocumentUploadCard
-						key={ docType }
-						documentType={ docType }
-						existingDoc={ docsByType.get(docType) }
-						onUploadComplete={ handleUploadComplete }
+						key={docType}
+						documentType={docType}
+						existingDoc={docsByType.get(docType)}
+						onUploadComplete={handleUploadComplete}
 					/>
-				)) }
+				))}
 			</div>
 
 			<p className="text-xs text-muted-foreground">

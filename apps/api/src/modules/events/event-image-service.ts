@@ -204,6 +204,7 @@ export async function requestEventImageUpload(
 			ownerId: eventId,
 			extension: contentTypeToExtension(data.contentType),
 			contentType: data.contentType,
+			maxBytes: MAX_FILE_SIZES["event-image"],
 		});
 
 		const [image] = await tx
@@ -253,7 +254,7 @@ export async function requestEventImageUpload(
 		imageId: image.id,
 		url: uploadResult.url,
 		method: uploadResult.method,
-		headers: uploadResult.headers,
+		fields: uploadResult.fields,
 		key: uploadResult.key,
 		expiresAt: uploadResult.expiresAt.toISOString(),
 	};

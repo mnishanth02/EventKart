@@ -20,6 +20,13 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
 	getSignedUrl: vi.fn().mockResolvedValue("https://presigned.example.com"),
 }));
 
+vi.mock("@aws-sdk/s3-presigned-post", () => ({
+	createPresignedPost: vi.fn().mockResolvedValue({
+		url: "https://presigned.example.com",
+		fields: { "Content-Type": "application/pdf" },
+	}),
+}));
+
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../../src/app.js";
 
@@ -86,6 +93,7 @@ describe("Storage Plugin", () => {
 					ownerId: "user-1",
 					extension: "pdf",
 					contentType: "application/pdf",
+					maxBytes: 10 * 1024 * 1024,
 				}),
 			).rejects.toThrow("Object storage is not configured");
 		});

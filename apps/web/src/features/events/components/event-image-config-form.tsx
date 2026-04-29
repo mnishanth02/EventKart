@@ -108,10 +108,15 @@ export function ImageUploadCard({
 				},
 			});
 
+			const formData = new FormData();
+			for (const [key, value] of Object.entries(uploadUrl.fields)) {
+				formData.append(key, value);
+			}
+			formData.append("file", file);
+
 			const uploadResponse = await fetch(uploadUrl.url, {
 				method: uploadUrl.method,
-				headers: uploadUrl.headers,
-				body: file,
+				body: formData,
 			});
 
 			if (!uploadResponse.ok) {

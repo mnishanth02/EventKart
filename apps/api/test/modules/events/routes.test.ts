@@ -219,8 +219,8 @@ const mockEventImage = {
 const mockImageUploadUrl = {
 	imageId: TEST_IMAGE_ID,
 	url: "https://s3.example.com/event-image-upload",
-	method: "PUT" as const,
-	headers: { "Content-Type": "image/jpeg" },
+	method: "POST" as const,
+	fields: { "Content-Type": "image/jpeg" },
 	key: `events/images/${TEST_EVENT_ID}/hero.jpg`,
 	expiresAt: "2026-04-26T12:15:00.000Z",
 };

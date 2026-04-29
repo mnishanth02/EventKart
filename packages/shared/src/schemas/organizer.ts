@@ -146,8 +146,8 @@ export type DocumentUploadRequest = z.infer<typeof documentUploadRequestSchema>;
 export const presignedUploadUrlSchema = z.object({
 	documentId: z.string().uuid(),
 	url: z.string().url(),
-	method: z.literal("PUT"),
-	headers: z.record(z.string(), z.string()),
+	method: z.literal("POST"),
+	fields: z.record(z.string(), z.string()),
 	key: z.string(),
 	expiresAt: z.string(),
 });
