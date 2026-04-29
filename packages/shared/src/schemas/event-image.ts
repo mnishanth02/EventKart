@@ -44,8 +44,8 @@ export const eventImageUploadUrlRequestSchema = z.object({
 export const eventImageUploadUrlResponseSchema = z.object({
 	imageId: uuidSchema,
 	url: z.string().url(),
-	method: z.literal("POST"),
-	fields: z.record(z.string(), z.string()),
+	method: z.literal("PUT"),
+	headers: z.record(z.string(), z.string()),
 	key: z.string().min(1),
 	expiresAt: datetimeSchema,
 });

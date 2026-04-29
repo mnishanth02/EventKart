@@ -87,26 +87,26 @@ describe("eventImageUploadUrlRequestSchema", () => {
 });
 
 describe("eventImageUploadUrlResponseSchema", () => {
-	it("accepts presigned POST upload responses", () => {
+	it("accepts presigned PUT upload responses", () => {
 		const result = eventImageUploadUrlResponseSchema.parse({
 			imageId,
 			url: "https://storage.example.com/events/hero.jpg",
-			method: "POST",
-			fields: { "Content-Type": "image/jpeg", policy: "test-policy" },
+			method: "PUT",
+			headers: { "content-type": "image/jpeg" },
 			key: "events/event-1/hero.jpg",
 			expiresAt: createdAt,
 		});
 
-		expect(result.method).toBe("POST");
-		expect(result.fields["Content-Type"]).toBe("image/jpeg");
+		expect(result.method).toBe("PUT");
+		expect(result.headers["content-type"]).toBe("image/jpeg");
 	});
 
-	it("rejects non-POST upload methods", () => {
+	it("rejects non-PUT upload methods", () => {
 		const result = eventImageUploadUrlResponseSchema.safeParse({
 			imageId,
 			url: "https://storage.example.com/events/hero.jpg",
-			method: "PUT",
-			fields: {},
+			method: "POST",
+			headers: {},
 			key: "events/event-1/hero.jpg",
 			expiresAt: createdAt,
 		});
