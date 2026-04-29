@@ -313,10 +313,10 @@ async function selectUploadedHeroImageExists(
 
 /**
  * HIGH-RISK: This count drives the admin-review trigger. Once an organizer has
- * more than 3 previously published paid events, future paid events skip review.
- * We use `firstPublishedAt IS NOT NULL` (set once on first publish, never
- * cleared) instead of current `status` so an organizer cannot republish via
- * unpublish→draft→publish to bypass admin review.
+ * 4 or more previously published paid events (count > 3), future paid events
+ * skip review. We use `firstPublishedAt IS NOT NULL` (set once on first
+ * publish, never cleared) instead of current `status` so an organizer cannot
+ * republish via unpublish→draft→publish to bypass admin review.
  */
 export async function getPublishedPaidEventCount(
 	db: Pick<Database, "select">,
@@ -1020,9 +1020,9 @@ export async function updateDraftEvent(
 ): Promise<Event> {
 	const parsedEventId = parseUuid(eventId, "event id");
 	const parsed = updateEventInputSchema.safeParse(input);
-	const deferValidationForPublishedLowRisk =
+	const skipValidationErrorForLowRiskPublished =
 		!parsed.success && hasOnlyPublishedLowRiskFields(input);
-	if (!parsed.success && !deferValidationForPublishedLowRisk) {
+	if (!parsed.success && !skipValidationErrorForLowRiskPublished) {
 		throwInvalidEventDetails(parsed.error);
 	}
 
@@ -1066,6 +1066,8 @@ export async function updateDraftEvent(
 		}
 
 		if (!parsed.success) {
+			// Low-risk-only published payloads reach the status branch above so callers
+			// get the patch-endpoint conflict; draft events still return validation errors.
 			throwInvalidEventDetails(parsed.error);
 		}
 
