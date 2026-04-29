@@ -13,6 +13,7 @@ import {
 	eventPoliciesRecordSchema,
 	eventPricingConfigSchema,
 	eventPricingTierWithCategorySchema,
+	eventRegistrationFormSchema,
 	eventSchema,
 	publishEventResponseSchema,
 	publishReadinessResponseSchema,

@@ -23,12 +23,8 @@ vi.mock("@repo/ui/components/ui/card", () => ({
 	}: React.PropsWithChildren<Record<string, unknown>>) => (
 		<section {...props}>{children}</section>
 	),
-	CardContent: ({ children }: React.PropsWithChildren) => (
-		<div>{children}</div>
-	),
-	CardDescription: ({ children }: React.PropsWithChildren) => (
-		<p>{children}</p>
-	),
+	CardContent: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+	CardDescription: ({ children }: React.PropsWithChildren) => <p>{children}</p>,
 	CardHeader: ({ children }: React.PropsWithChildren) => (
 		<header>{children}</header>
 	),

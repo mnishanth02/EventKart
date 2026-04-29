@@ -6,8 +6,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@repo/ui/components/ui/card";
-import { createFileRoute } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authed/admin/")({
 	component: AdminDashboard,

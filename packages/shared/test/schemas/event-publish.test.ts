@@ -74,7 +74,11 @@ describe("event publish schemas", () => {
 			publishEventResponseSchema.parse({
 				success: true,
 				data: {
-					event: { ...event, status: "published", publishedAt: event.updatedAt },
+					event: {
+						...event,
+						status: "published",
+						publishedAt: event.updatedAt,
+					},
 					transition: "draft_to_published",
 					readiness,
 				},

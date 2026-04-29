@@ -67,11 +67,11 @@ vi.mock("../../../src/modules/events/event-image-service.js", () => ({
 	deleteEventImage: (...args: unknown[]) => mockDeleteEventImage(...args),
 }));
 
-import type { FastifyInstance } from "fastify";
 import {
 	defaultEventRegistrationFormSchema,
 	eventRegistrationFormSchema,
 } from "@repo/shared/schemas";
+import type { FastifyInstance } from "fastify";
 import {
 	ConflictError,
 	ForbiddenError,
@@ -1961,40 +1961,40 @@ describe("POST /api/v1/events/:eventId/images/upload-url", () => {
 		expect(mockRequestEventImageUpload).not.toHaveBeenCalled();
 	});
 
-	it.each(["published", "under_review"] as const)(
-		"returns 409 when the service rejects hero upload-url requests for %s events",
-		async (status) => {
-			setupOrganizerSession(app);
-			mockRequestEventImageUpload.mockRejectedValue(
-				new ConflictError(
+	it.each([
+		"published",
+		"under_review",
+	] as const)("returns 409 when the service rejects hero upload-url requests for %s events", async (status) => {
+		setupOrganizerSession(app);
+		mockRequestEventImageUpload.mockRejectedValue(
+			new ConflictError(
+				"Hero images can only be changed while the event is in draft status",
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
+			...csrf,
+			payload: { ...validImageUploadBody, kind: "hero" },
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: {
+				code: "CONFLICT",
+				message:
 					"Hero images can only be changed while the event is in draft status",
-				),
-			);
-			const csrf = buildCsrfHeaders();
-
-			const response = await app.inject({
-				method: "POST",
-				url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
-				...csrf,
-				payload: { ...validImageUploadBody, kind: "hero" },
-			});
-
-			expect(response.statusCode).toBe(409);
-			expect(response.json()).toMatchObject({
-				success: false,
-				error: {
-					code: "CONFLICT",
-					message:
-						"Hero images can only be changed while the event is in draft status",
-				},
-			});
-			expect(mockRequestEventImageUpload).toHaveBeenCalledOnce();
-			const [_deps, _userId, _eventId, body] = mockRequestEventImageUpload.mock
-				.calls[0] as [unknown, string, string, Record<string, unknown>];
-			expect(body).toEqual({ ...validImageUploadBody, kind: "hero" });
-			expect(status).toMatch(/published|under_review/);
-		},
-	);
+			},
+		});
+		expect(mockRequestEventImageUpload).toHaveBeenCalledOnce();
+		const [_deps, _userId, _eventId, body] = mockRequestEventImageUpload.mock
+			.calls[0] as [unknown, string, string, Record<string, unknown>];
+		expect(body).toEqual({ ...validImageUploadBody, kind: "hero" });
+		expect(status).toMatch(/published|under_review/);
+	});
 });
 
 describe("event image routes with disabled storage", () => {

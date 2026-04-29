@@ -1281,11 +1281,7 @@ describe("event registration form service", () => {
 			],
 		]);
 
-		const result = await getEventRegistrationForm(
-			db,
-			TEST_USER_ID,
-			EVENT_ID,
-		);
+		const result = await getEventRegistrationForm(db, TEST_USER_ID, EVENT_ID);
 
 		expect(result).toEqual({
 			eventId: EVENT_ID,

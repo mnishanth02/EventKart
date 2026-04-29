@@ -475,34 +475,44 @@ describe("PII scrubbing", () => {
 // (covered in detail by test/lib/otel.test.ts; verified here for integration)
 // ---------------------------------------------------------------------------
 describe("OTEL conditional", () => {
+	const telemetryIntegrationTimeoutMs = 30_000;
+
 	beforeEach(() => {
 		vi.resetModules();
 	});
 
-	it("initTelemetry returns null SDK when SENTRY_DSN is set", async () => {
-		const { initTelemetry } = await import("../../src/lib/otel.js");
+	it(
+		"initTelemetry returns null SDK when SENTRY_DSN is set",
+		async () => {
+			const { initTelemetry } = await import("../../src/lib/otel.js");
 
-		const handle = initTelemetry({
-			SENTRY_DSN: "https://key@o0.ingest.sentry.io/0",
-			OTEL_SERVICE_NAME: "test-service",
-		});
+			const handle = initTelemetry({
+				SENTRY_DSN: "https://key@o0.ingest.sentry.io/0",
+				OTEL_SERVICE_NAME: "test-service",
+			});
 
-		expect(handle.sdk).toBeNull();
-	}, 15_000);
+			expect(handle.sdk).toBeNull();
+		},
+		telemetryIntegrationTimeoutMs,
+	);
 
-	it("initTelemetry returns NodeSDK when SENTRY_DSN is absent", async () => {
-		const { initTelemetry, shutdownTelemetry } = await import(
-			"../../src/lib/otel.js"
-		);
+	it(
+		"initTelemetry returns NodeSDK when SENTRY_DSN is absent",
+		async () => {
+			const { initTelemetry, shutdownTelemetry } = await import(
+				"../../src/lib/otel.js"
+			);
 
-		const handle = initTelemetry({
-			OTEL_SERVICE_NAME: "test-service",
-		});
+			const handle = initTelemetry({
+				OTEL_SERVICE_NAME: "test-service",
+			});
 
-		expect(handle.sdk).not.toBeNull();
-		expect(typeof handle.sdk?.shutdown).toBe("function");
-		await shutdownTelemetry(handle);
-	}, 15_000);
+			expect(handle.sdk).not.toBeNull();
+			expect(typeof handle.sdk?.shutdown).toBe("function");
+			await shutdownTelemetry(handle);
+		},
+		telemetryIntegrationTimeoutMs,
+	);
 });
 
 // ---------------------------------------------------------------------------

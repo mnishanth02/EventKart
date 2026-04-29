@@ -1,11 +1,11 @@
 import {
+	adminApproveBodySchema,
 	adminEventApproveBodySchema,
 	adminEventRejectBodySchema,
 	adminEventReviewActionResponseSchema,
 	adminEventReviewDetailSchema,
 	adminEventReviewListItemSchema,
 	adminEventReviewListParamsSchema,
-	adminApproveBodySchema,
 	adminRejectBodySchema,
 	adminRetryRazorpayResponseSchema,
 	adminReviewActionResponseSchema,

@@ -2,12 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockQuit = vi.fn().mockResolvedValue("OK");
 const mockPing = vi.fn().mockResolvedValue("PONG");
+const mockConnect = vi.fn().mockResolvedValue(undefined);
+const mockDisconnect = vi.fn();
+const mockOn = vi.fn();
 const constructorCalls: Array<[string, Record<string, unknown>]> = [];
 
 vi.mock("ioredis", () => {
 	class MockRedis {
 		quit = mockQuit;
 		ping = mockPing;
+		connect = mockConnect;
+		disconnect = mockDisconnect;
+		on = mockOn;
 		options: Record<string, unknown>;
 
 		constructor(url: string, options?: Record<string, unknown>) {
@@ -23,6 +29,7 @@ import {
 	createBullMQConnection,
 	createRedisClient,
 	createRedisClients,
+	pingRedis,
 	REDIS_NAMESPACES,
 } from "../../src/lib/redis.js";
 
@@ -90,6 +97,21 @@ describe("Redis Library", () => {
 			expect(constructorCalls[0]?.[1].enableOfflineQueue).toBe(true);
 		});
 
+		it("allows startup-specific retry options", () => {
+			const retryStrategy = () => null;
+			createRedisClient("redis://localhost:6379", {
+				connectTimeout: 1000,
+				enableOfflineQueue: false,
+				maxRetriesPerRequest: 1,
+				retryStrategy,
+			});
+
+			expect(constructorCalls[0]?.[1].connectTimeout).toBe(1000);
+			expect(constructorCalls[0]?.[1].enableOfflineQueue).toBe(false);
+			expect(constructorCalls[0]?.[1].maxRetriesPerRequest).toBe(1);
+			expect(constructorCalls[0]?.[1].retryStrategy).toBeTypeOf("function");
+		});
+
 		it("retryStrategy returns exponential backoff capped at 2000ms", () => {
 			createRedisClient("redis://localhost:6379");
 			const retryStrategy = constructorCalls[0]?.[1].retryStrategy as (
@@ -100,6 +122,22 @@ describe("Redis Library", () => {
 			expect(retryStrategy(10)).toBe(500);
 			expect(retryStrategy(40)).toBe(2000);
 			expect(retryStrategy(100)).toBe(2000);
+		});
+	});
+
+	describe("pingRedis", () => {
+		it("pings Redis with fail-fast startup options", async () => {
+			await pingRedis("redis://localhost:6379");
+
+			expect(mockConnect).toHaveBeenCalledOnce();
+			expect(mockPing).toHaveBeenCalledOnce();
+			expect(mockDisconnect).toHaveBeenCalledOnce();
+			expect(constructorCalls[0]?.[1]).toMatchObject({
+				lazyConnect: true,
+				connectTimeout: 1000,
+				enableOfflineQueue: false,
+				maxRetriesPerRequest: 1,
+			});
 		});
 	});
 

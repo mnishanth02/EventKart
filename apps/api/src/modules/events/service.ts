@@ -15,8 +15,8 @@ import type {
 	EventPoliciesRecord,
 	EventPricingConfig,
 	EventPricingTierWithCategory,
-	EventRegistrationForm,
 	EventPublishTransition,
+	EventRegistrationForm,
 	EventSlug,
 	PublishReadiness,
 	PublishReadinessCheck,
@@ -25,6 +25,7 @@ import type {
 } from "@repo/shared/schemas";
 import {
 	createEventInputSchema,
+	defaultEventRegistrationFormSchema,
 	eventCategoriesConfigSchema,
 	eventCategoryRecordSchema,
 	eventPoliciesConfigSchema,
@@ -34,7 +35,6 @@ import {
 	eventRegistrationFormSchema,
 	eventSchema,
 	eventSlugSchema,
-	defaultEventRegistrationFormSchema,
 	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
@@ -305,11 +305,11 @@ export async function getPublishedPaidEventCount(
 		.select({ total: sql<number>`count(*)` })
 		.from(events)
 		.where(
-				and(
-					eq(events.organizerId, organizerId),
-					inArray(events.status, ["published", "completed"]),
-					eq(events.isPaid, true),
-				),
+			and(
+				eq(events.organizerId, organizerId),
+				inArray(events.status, ["published", "completed"]),
+				eq(events.isPaid, true),
+			),
 		)
 		.limit(1);
 

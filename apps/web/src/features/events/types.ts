@@ -6,6 +6,7 @@ import type {
 	EventImageUploadUrlResponse,
 	EventPoliciesRecord,
 	EventPricingTierWithCategory,
+	EventRegistrationForm,
 	PublishReadiness,
 } from "@repo/shared/schemas";
 

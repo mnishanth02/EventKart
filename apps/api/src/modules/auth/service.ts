@@ -85,8 +85,15 @@ export async function sendOtpForPhone(
 	let channel: "sms" | "whatsapp" | "log" = "log";
 
 	if (config.OTP_DELIVERY_MODE === "msg91") {
+		const authKey = config.MSG91_AUTH_KEY;
+		if (!authKey) {
+			throw new OtpDeliveryError("OTP delivery is not configured.", {
+				channel: "sms",
+			});
+		}
+
 		const msg91Config: Msg91Config = {
-			authKey: config.MSG91_AUTH_KEY!,
+			authKey,
 			templateId: config.MSG91_OTP_TEMPLATE_ID,
 		};
 
@@ -189,11 +196,12 @@ export async function verifyOtpAndCreateSession(
 	let userId: string;
 	let role: string;
 
-	if (insertResult.length > 0) {
+	const createdUser = insertResult[0];
+	if (createdUser) {
 		// New user created
 		isNewUser = true;
-		userId = insertResult[0]!.id;
-		role = insertResult[0]!.role;
+		userId = createdUser.id;
+		role = createdUser.role;
 		log.info({ userId, phone: `${phone.slice(0, 6)}****` }, "New user created");
 	} else {
 		// Existing user — fetch their current data

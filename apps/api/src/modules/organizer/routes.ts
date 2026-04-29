@@ -1,8 +1,12 @@
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from "@repo/shared/constants";
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { createAuditLogger } from "../../lib/audit.js";
-import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import {
+	NotFoundError,
+	UnauthorizedError,
+	ValidationError,
+} from "../../lib/errors.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { requireRole } from "../../middleware/require-role.js";
 import {
@@ -41,6 +45,15 @@ import {
 } from "./service.js";
 import { getVerificationStatus } from "./verification-status-service.js";
 
+function getAuthenticatedSession(request: FastifyRequest) {
+	const session = request.session;
+	if (!session) {
+		throw new UnauthorizedError();
+	}
+
+	return session;
+}
+
 const organizerRoutes: FastifyPluginAsync = async (app) => {
 	const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
@@ -66,9 +79,10 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request, reply) => {
+			const session = getAuthenticatedSession(request);
 			const profile = await registerOrganizer(
 				{ db: app.db, log: request.log },
-				request.session!.userId,
+				session.userId,
 				request.body,
 			);
 
@@ -96,10 +110,8 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
-			const profile = await getOrganizerByUserId(
-				app.db,
-				request.session!.userId,
-			);
+			const session = getAuthenticatedSession(request);
+			const profile = await getOrganizerByUserId(app.db, session.userId);
 
 			if (!profile) {
 				throw new NotFoundError("Organizer profile not found");
@@ -129,10 +141,8 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
-			const profile = await getOrganizerByUserId(
-				app.db,
-				request.session!.userId,
-			);
+			const session = getAuthenticatedSession(request);
+			const profile = await getOrganizerByUserId(app.db, session.userId);
 
 			if (!profile) {
 				throw new NotFoundError("Organizer profile not found");
@@ -140,7 +150,7 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 
 			const status = await getVerificationStatus(
 				app.db,
-				request.session!.userId,
+				session.userId,
 				profile.id,
 			);
 
@@ -167,6 +177,7 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
+			const session = getAuthenticatedSession(request);
 			if (!Object.values(request.body).some((v) => v !== undefined)) {
 				throw new ValidationError(
 					"At least one field must be provided for update",
@@ -175,7 +186,7 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 
 			const profile = await updateOrganizer(
 				{ db: app.db, log: request.log },
-				request.session!.userId,
+				session.userId,
 				request.body,
 			);
 
@@ -186,7 +197,7 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			const auditLogger = createAuditLogger(app.db, request.log);
 			await auditLogger.log({
 				action: AUDIT_ACTIONS.ORGANIZER_PROFILE_UPDATE,
-				actorId: request.session!.userId,
+				actorId: session.userId,
 				resourceType: AUDIT_RESOURCE_TYPES.ORGANIZER,
 				resourceId: profile.id,
 				ipAddress: request.ip,
@@ -214,19 +225,17 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
+			const session = getAuthenticatedSession(request);
 			const status = await acceptPolicies(
 				{ db: app.db, log: request.log },
-				request.session!.userId,
+				session.userId,
 				request.body.policies,
 				request.ip,
 			);
 
 			// Re-evaluate verification status after policy acceptance
 			// (handles the case where docs were uploaded first, then policies accepted)
-			const organizer = await getOrganizerByUserId(
-				app.db,
-				request.session!.userId,
-			);
+			const organizer = await getOrganizerByUserId(app.db, session.userId);
 			if (organizer) {
 				await maybeUpdateOrganizerVerificationStatus(
 					app.db,
@@ -255,7 +264,8 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
-			const status = await getPolicyStatus(app.db, request.session!.userId);
+			const session = getAuthenticatedSession(request);
+			const status = await getPolicyStatus(app.db, session.userId);
 
 			return { success: true as const, data: status };
 		},
@@ -283,16 +293,14 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
+			const session = getAuthenticatedSession(request);
 			if (!app.storage.enabled) {
 				throw new ValidationError(
 					"Document upload is not available at this time",
 				);
 			}
 
-			const organizer = await getOrganizerByUserId(
-				app.db,
-				request.session!.userId,
-			);
+			const organizer = await getOrganizerByUserId(app.db, session.userId);
 			if (!organizer) {
 				throw new NotFoundError(
 					"Organizer profile not found. Please register first.",
@@ -303,7 +311,7 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			const result = await requestDocumentUpload(
 				{ db: app.db, log: request.log, storage: app.storage, auditLogger },
 				organizer.id,
-				request.session!.userId,
+				session.userId,
 				request.body,
 				request.ip,
 			);
@@ -332,16 +340,14 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
+			const session = getAuthenticatedSession(request);
 			if (!app.storage.enabled) {
 				throw new ValidationError(
 					"Document upload is not available at this time",
 				);
 			}
 
-			const organizer = await getOrganizerByUserId(
-				app.db,
-				request.session!.userId,
-			);
+			const organizer = await getOrganizerByUserId(app.db, session.userId);
 			if (!organizer) {
 				throw new NotFoundError(
 					"Organizer profile not found. Please register first.",
@@ -352,7 +358,7 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			const result = await confirmDocumentUpload(
 				{ db: app.db, log: request.log, storage: app.storage, auditLogger },
 				organizer.id,
-				request.session!.userId,
+				session.userId,
 				request.params.documentId,
 				request.ip,
 			);
@@ -379,10 +385,8 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
-			const organizer = await getOrganizerByUserId(
-				app.db,
-				request.session!.userId,
-			);
+			const session = getAuthenticatedSession(request);
+			const organizer = await getOrganizerByUserId(app.db, session.userId);
 			if (!organizer) {
 				throw new NotFoundError(
 					"Organizer profile not found. Please register first.",
@@ -414,16 +418,14 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			},
 		},
 		async (request) => {
+			const session = getAuthenticatedSession(request);
 			if (!app.storage.enabled) {
 				throw new ValidationError(
 					"Document upload is not available at this time",
 				);
 			}
 
-			const organizer = await getOrganizerByUserId(
-				app.db,
-				request.session!.userId,
-			);
+			const organizer = await getOrganizerByUserId(app.db, session.userId);
 			if (!organizer) {
 				throw new NotFoundError(
 					"Organizer profile not found. Please register first.",
@@ -434,7 +436,7 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			await deleteVerificationDocument(
 				{ db: app.db, log: request.log, storage: app.storage, auditLogger },
 				organizer.id,
-				request.session!.userId,
+				session.userId,
 				request.params.documentId,
 				request.ip,
 			);

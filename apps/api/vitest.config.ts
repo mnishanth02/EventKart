@@ -4,6 +4,7 @@ export default defineConfig({
 	test: {
 		environment: "node",
 		include: ["test/**/*.test.ts"],
+		maxWorkers: 2,
 		setupFiles: ["test/setup.ts"],
 	},
 });
