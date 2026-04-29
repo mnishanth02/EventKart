@@ -111,7 +111,7 @@ export function PublicEventPricingBreakdown({
 										)}
 									</dd>
 								</div>
-								{tier !== undefined && hasValidEarlyBirdOffer(tier) ? (
+								{hasEarlyBird ? (
 									<div className="flex items-baseline justify-between gap-4">
 										<dt className="text-muted-foreground">Early bird</dt>
 										<dd className="text-right">
@@ -147,7 +147,7 @@ function EarlyBirdCell({ tier, timezone, now }: EarlyBirdCellProps) {
 	return (
 		<div className="space-y-1">
 			<div className="flex flex-wrap items-center gap-2">
-				<CurrencyINR value={tier.earlyBirdPrice as number} />
+				<CurrencyINR value={tier.earlyBirdPrice} />
 				{status === "active" ? (
 					<Badge variant="default">Active</Badge>
 				) : null}

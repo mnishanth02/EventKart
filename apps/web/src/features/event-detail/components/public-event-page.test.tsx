@@ -290,4 +290,49 @@ describe("PublicEventPage volatile pricing state (I-2.1.4)", () => {
 		expect(html).not.toContain(">Expired<");
 		expect(html).not.toContain('data-testid="price-from"');
 	});
+
+	it("treats earlyBirdPrice >= basePrice as no offer in both UI and CTA (legacy guard)", () => {
+		// Regression: previously the breakdown UI and the From INRX CTA could
+		// disagree because the helper applied the guard but the column did not.
+		// Now both surfaces route through hasValidEarlyBirdOffer.
+		const tenKTier = fixture.pricingTiers[0];
+		const fiveKTier = fixture.pricingTiers[1];
+		if (!tenKTier || !fiveKTier) {
+			throw new Error("test fixture must define both 10K and 5K tiers");
+		}
+		const legacyEvent: EventPublicDetail = {
+			...fixture,
+			pricingTiers: [
+				{ ...tenKTier },
+				{
+					categorySlug: fiveKTier.categorySlug,
+					basePrice: 79_900,
+					// Same as basePrice — the legacy guard must hide the offer.
+					earlyBirdPrice: 79_900,
+					earlyBirdDeadline: "2099-12-31T00:00:00.000Z",
+					currency: "INR",
+				},
+			],
+		};
+		renderAtTime(beforeDeadline, legacyEvent);
+
+		const breakdownTable = screen.getByRole("table", {
+			name: /race categories with distance and registration pricing/i,
+		});
+		// No tier has a valid early-bird offer, so the column is omitted.
+		expect(
+			within(breakdownTable).queryByRole("columnheader", { name: "Early bird" }),
+		).toBeNull();
+		expect(within(breakdownTable).queryByText("Active")).toBeNull();
+		expect(within(breakdownTable).queryByText("Expired")).toBeNull();
+
+		const fromBadges = screen.getAllByTestId("price-from");
+		expect(fromBadges.length).toBe(2);
+		for (const badge of fromBadges) {
+			expect(badge.textContent).toContain("From");
+			// Falls back to the cheapest base price (₹799) — never the bogus EB price.
+			expect(badge.textContent).toContain("₹799");
+			expect(badge.textContent).not.toContain("(early-bird)");
+		}
+	});
 });

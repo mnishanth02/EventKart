@@ -2,6 +2,16 @@ import type { EventPublicPricingTier } from "./types";
 
 export type EarlyBirdStatus = "active" | "expired" | "none";
 
+type EarlyBirdOfferFields = Pick<
+	EventPublicPricingTier,
+	"basePrice" | "earlyBirdPrice" | "earlyBirdDeadline"
+>;
+
+type TierWithValidEarlyBirdOffer<T extends EarlyBirdOfferFields> = T & {
+	earlyBirdPrice: number;
+	earlyBirdDeadline: string;
+};
+
 /**
  * Returns true when a tier has a usable early-bird offer at all (regardless
  * of whether the deadline has passed). Single source of truth for whether
@@ -11,13 +21,14 @@ export type EarlyBirdStatus = "active" | "expired" | "none";
  * shown in the breakdown table can never disagree with the "From INRX" CTA:
  * a tier whose `earlyBirdPrice >= basePrice` is treated as "no offer" by
  * both helpers, even if a future deadline is set.
+ *
+ * Acts as a TypeScript type predicate so callers can access
+ * `tier.earlyBirdPrice` and `tier.earlyBirdDeadline` as non-null after the
+ * check, without resorting to type assertions.
  */
-export function hasValidEarlyBirdOffer(
-	tier: Pick<
-		EventPublicPricingTier,
-		"basePrice" | "earlyBirdPrice" | "earlyBirdDeadline"
-	>,
-): boolean {
+export function hasValidEarlyBirdOffer<T extends EarlyBirdOfferFields>(
+	tier: T,
+): tier is TierWithValidEarlyBirdOffer<T> {
 	if (tier.earlyBirdPrice === null || tier.earlyBirdDeadline === null) {
 		return false;
 	}
@@ -29,34 +40,28 @@ export function hasValidEarlyBirdOffer(
 }
 
 export function getEarlyBirdStatus(
-	tier: Pick<
-		EventPublicPricingTier,
-		"basePrice" | "earlyBirdPrice" | "earlyBirdDeadline"
-	>,
+	tier: EarlyBirdOfferFields,
 	now: Date,
 ): EarlyBirdStatus {
 	if (!hasValidEarlyBirdOffer(tier)) {
 		return "none";
 	}
-	const deadlineMs = new Date(tier.earlyBirdDeadline as string).getTime();
+	const deadlineMs = new Date(tier.earlyBirdDeadline).getTime();
 	return now.getTime() < deadlineMs ? "active" : "expired";
 }
 
 export function getEffectivePricePaise(
-	tier: Pick<
-		EventPublicPricingTier,
-		"basePrice" | "earlyBirdPrice" | "earlyBirdDeadline"
-	>,
+	tier: EarlyBirdOfferFields,
 	now: Date,
 ): number {
 	if (!hasValidEarlyBirdOffer(tier)) {
 		return tier.basePrice;
 	}
-	const deadlineMs = new Date(tier.earlyBirdDeadline as string).getTime();
+	const deadlineMs = new Date(tier.earlyBirdDeadline).getTime();
 	if (now.getTime() >= deadlineMs) {
 		return tier.basePrice;
 	}
-	return tier.earlyBirdPrice as number;
+	return tier.earlyBirdPrice;
 }
 
 export interface StartingPrice {
