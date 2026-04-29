@@ -31,8 +31,8 @@ export function logEmailStub(
 			emailStub: true,
 			jobName: input.jobName,
 			idempotencyKey,
-			recipientEmail: input.recipientEmail,
-			...(input.context ?? {}),
+			// NOTE: recipientEmail intentionally omitted to avoid PII in logs.
+			// The idempotencyKey encodes resourceId for traceability.
 		},
 		`email-stub:${input.jobName}`,
 	);

@@ -31,6 +31,7 @@ const event = {
 	refundPolicy: "Refunds close seven days before the event.",
 	cancellationPolicy: "Organizer cancellations are fully refunded.",
 	publishedAt: null,
+	firstPublishedAt: null,
 	submittedForReviewAt: null,
 	isPaid: true,
 	currency: "INR",

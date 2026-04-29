@@ -7,7 +7,7 @@ import {
 	RESERVED_ORGANIZER_SLUGS,
 } from "@repo/shared/constants";
 import { appendSlugSuffix, normalizeSlug } from "@repo/shared/utils";
-import { ConflictError } from "../../lib/errors.js";
+import { ConflictError, NotFoundError } from "../../lib/errors.js";
 
 export const ORGANIZER_SLUG_RESOURCE_TYPE = "organizer";
 export const DEFAULT_ORGANIZER_SLUG_MAX_ATTEMPTS = 50;
@@ -191,7 +191,11 @@ export async function renameOrganizerSlug(
 			.where(eq(organizers.id, organizerId))
 			.limit(1);
 
-		const previousSlug = current?.slug ?? null;
+		if (!current) {
+			throw new NotFoundError("Organizer not found");
+		}
+
+		const previousSlug = current.slug ?? null;
 		const newSlug = await reserveUniqueOrganizerSlug(tx, newSlugCandidate, {
 			excludeOrganizerId: organizerId,
 		});

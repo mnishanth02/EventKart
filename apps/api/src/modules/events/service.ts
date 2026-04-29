@@ -990,16 +990,20 @@ export async function updateDraftEvent(
 		}
 
 		if (currentEvent.status !== DEFAULT_EVENT_STATUS) {
-			// Wave B: published events have a tiered post-publish edit flow.
-			// Direct PUT to the draft endpoint is rejected; clients must call
-			// PATCH /events/:eventId/published with the limited field set.
+			// HIGH-RISK: draft-only. For published events use updatePublishedEvent.
+			// Wave B: tiered edit flow — only "published" has a patch endpoint.
+			// Other non-draft states (under_review, completed, cancelled) are not editable.
+			if (currentEvent.status === "published") {
+				throw new ConflictError(
+					"Published events cannot be edited via this endpoint. Use PATCH /events/:eventId/published for low-risk field edits, or unpublish first for structural changes.",
+					"EVENT_PUBLISHED_USE_PATCH",
+					{
+						hint: "PATCH /events/:eventId/published",
+					},
+				);
+			}
 			throw new ConflictError(
-				"Published events cannot be edited via this endpoint. Use the published-event patch endpoint.",
-				"EVENT_PUBLISHED_USE_PATCH",
-				{
-					hint: "PATCH /events/:eventId/published",
-					status: currentEvent.status,
-				},
+				"Event details can only be updated while the event is in draft status",
 			);
 		}
 

@@ -116,9 +116,25 @@ export async function registerOrganizer(
 		}
 		inserted = row as OrganizerRow;
 	} catch (error: unknown) {
-		// Handle race condition: unique constraint on userId
+		// Handle race condition on userId uniqueness. If another constraint fires
+		// (e.g., slug collision from concurrent registration with same businessName),
+		// re-check whether the organizer row now exists for this userId before
+		// surfacing a misleading "already exists" error.
 		if (isUniqueViolation(error)) {
-			throw new ConflictError("Organizer profile already exists for this user");
+			const recheckRows = await db
+				.select({ id: organizers.id })
+				.from(organizers)
+				.where(eq(organizers.userId, userId))
+				.limit(1);
+			if (recheckRows.length > 0) {
+				throw new ConflictError(
+					"Organizer profile already exists for this user",
+				);
+			}
+			// Slug collision from concurrent registration — surface as a transient error
+			throw new ConflictError(
+				"Unable to reserve a unique organizer slug. Please try again.",
+			);
 		}
 		throw error;
 	}
