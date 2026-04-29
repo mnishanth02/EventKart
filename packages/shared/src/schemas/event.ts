@@ -5,6 +5,8 @@ import {
 	eventSportSchema,
 	eventStatusSchema,
 	eventTypeSchema,
+	PUBLISHED_EVENT_HIGH_RISK_FIELDS,
+	PUBLISHED_EVENT_LOW_RISK_FIELDS,
 	V1_EVENT_CATEGORY,
 	V1_EVENT_CITY,
 	V1_EVENT_COUNTRY,
@@ -15,6 +17,8 @@ import {
 	V1_EVENT_TIMEZONE,
 	V1_EVENT_TYPE,
 } from "../constants/event.js";
+import { EVENT_REGISTRATION_FORM_SCHEMA_VERSION } from "../constants/registration-form.js";
+import { eventRegistrationFormSchema } from "./event-registration-form.js";
 import { eventSlugSchema } from "./event-slug.js";
 
 const EVENT_TITLE_MAX_LENGTH = 200;
@@ -259,10 +263,15 @@ export const eventSchema = z.object({
 	refundPolicy: z.string().nullable(),
 	cancellationPolicy: z.string().nullable(),
 	publishedAt: eventDateTimeSchema.nullable(),
+	firstPublishedAt: eventDateTimeSchema.nullable(),
 	submittedForReviewAt: eventDateTimeSchema.nullable(),
 	isPaid: z.boolean(),
 	currency: eventCurrencySchema,
 	status: eventStatusSchema,
+	formSchema: eventRegistrationFormSchema.optional(),
+	formSchemaVersion: z
+		.literal(EVENT_REGISTRATION_FORM_SCHEMA_VERSION)
+		.optional(),
 	createdAt: eventDateTimeSchema,
 	updatedAt: eventDateTimeSchema,
 });
@@ -272,3 +281,80 @@ export type CreateEvent = z.output<typeof createEventInputSchema>;
 export type UpdateEventInput = z.input<typeof updateEventInputSchema>;
 export type UpdateEvent = z.output<typeof updateEventInputSchema>;
 export type Event = z.infer<typeof eventSchema>;
+
+const publishedEventLowRiskPatchShape = {
+	description: z
+		.string()
+		.min(20, "Event description must be at least 20 characters")
+		.max(
+			EVENT_DESCRIPTION_MAX_LENGTH,
+			`Event description must not exceed ${EVENT_DESCRIPTION_MAX_LENGTH} characters`,
+		)
+		.trim()
+		.optional(),
+	routeDetails: z
+		.string()
+		.min(10, "Route details must be at least 10 characters")
+		.max(
+			EVENT_ROUTE_DETAILS_MAX_LENGTH,
+			`Route details must not exceed ${EVENT_ROUTE_DETAILS_MAX_LENGTH} characters`,
+		)
+		.trim()
+		.optional(),
+	refundPolicy: z
+		.string()
+		.max(2000, "Refund policy must not exceed 2000 characters")
+		.trim()
+		.nullable()
+		.optional(),
+	cancellationPolicy: z
+		.string()
+		.max(2000, "Cancellation policy must not exceed 2000 characters")
+		.trim()
+		.nullable()
+		.optional(),
+} as const;
+
+export const publishedEventLowRiskPatchSchema = z
+	.object(publishedEventLowRiskPatchShape)
+	.strict()
+	.refine(
+		(value) => Object.values(value).some((entry) => entry !== undefined),
+		"At least one field must be provided",
+	);
+
+const publishedEventPatchShape = {
+	...Object.fromEntries(
+		PUBLISHED_EVENT_LOW_RISK_FIELDS.map((field) => [
+			field,
+			z.unknown().optional(),
+		]),
+	),
+	...Object.fromEntries(
+		PUBLISHED_EVENT_HIGH_RISK_FIELDS.map((field) => [
+			field,
+			z.unknown().optional(),
+		]),
+	),
+};
+
+/**
+ * Permissive boundary schema for published-event edits. It accepts known event
+ * fields so the service can return the structured 409 for high-risk keys before
+ * validating low-risk values.
+ */
+export const publishedEventPatchSchema = z
+	.object(publishedEventPatchShape)
+	.strict()
+	.refine(
+		(value) => Object.values(value).some((entry) => entry !== undefined),
+		"At least one field must be provided",
+	);
+
+export type PublishedEventPatch = z.infer<typeof publishedEventPatchSchema>;
+export type PublishedEventPatchInput = z.input<
+	typeof publishedEventPatchSchema
+>;
+export type PublishedEventLowRiskPatch = z.infer<
+	typeof publishedEventLowRiskPatchSchema
+>;

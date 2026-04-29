@@ -3,9 +3,9 @@ import {
 	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
-	PutObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
+import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // --- Storage categories ---
@@ -71,13 +71,14 @@ export interface UploadUrlParams {
 	ownerId: string;
 	extension: string;
 	contentType: string;
+	maxBytes: number;
 	expiresIn?: number;
 }
 
 export interface PresignedUploadResult {
 	url: string;
-	method: "PUT";
-	headers: Record<string, string>;
+	method: "POST";
+	fields: Record<string, string>;
 	key: string;
 	expiresAt: Date;
 }
@@ -164,27 +165,34 @@ export function createStorageClient(
 			);
 			const expiresIn = params.expiresIn ?? DEFAULT_UPLOAD_EXPIRY_SECONDS;
 			const useSSE = SSE_CATEGORIES.has(params.category);
-
-			const command = new PutObjectCommand({
-				Bucket: bucket,
-				Key: key,
-				ContentType: params.contentType,
-				...(useSSE ? { ServerSideEncryption: "AES256" as const } : {}),
-			});
-
-			const url = await getSignedUrl(s3, command, { expiresIn });
-
-			const headers: Record<string, string> = {
+			const fields: Record<string, string> = {
 				"Content-Type": params.contentType,
 			};
+			const conditions: (
+				| ["content-length-range", number, number]
+				| ["eq", string, string]
+			)[] = [
+				["content-length-range", 0, params.maxBytes],
+				["eq", "$Content-Type", params.contentType],
+			];
+
 			if (useSSE) {
-				headers["x-amz-server-side-encryption"] = "AES256";
+				fields["x-amz-server-side-encryption"] = "AES256";
+				conditions.push(["eq", "$x-amz-server-side-encryption", "AES256"]);
 			}
 
+			const presignedPost = await createPresignedPost(s3, {
+				Bucket: bucket,
+				Key: key,
+				Fields: fields,
+				Conditions: conditions,
+				Expires: expiresIn,
+			});
+
 			return {
-				url,
-				method: "PUT",
-				headers,
+				url: presignedPost.url,
+				method: "POST",
+				fields: presignedPost.fields,
 				key,
 				expiresAt: new Date(Date.now() + expiresIn * 1000),
 			};

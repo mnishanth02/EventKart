@@ -1,6 +1,5 @@
 import { hasMinimumRole } from "@repo/shared/constants/roles";
 import { ThemeToggle } from "@repo/ui/components/theme-toggle";
-import { cn } from "@repo/ui/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { SearchIcon } from "lucide-react";
 import * as React from "react";

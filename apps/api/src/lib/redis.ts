@@ -26,10 +26,15 @@ export interface RedisClients {
 export interface CreateRedisClientOptions {
 	keyPrefix?: string;
 	lazyConnect?: boolean;
+	connectTimeout?: number;
+	enableOfflineQueue?: boolean;
+	maxRetriesPerRequest?: number | null;
+	retryStrategy?: (times: number) => number | null;
 }
 
 const DEFAULT_RETRY_CAP_MS = 2000;
 const RETRY_BASE_MS = 50;
+const STARTUP_CONNECT_TIMEOUT_MS = 1000;
 
 export function createRedisClient(
 	url: string,
@@ -38,12 +43,45 @@ export function createRedisClient(
 	return new Redis(url, {
 		keyPrefix: options.keyPrefix,
 		lazyConnect: options.lazyConnect ?? false,
-		maxRetriesPerRequest: null,
+		connectTimeout: options.connectTimeout,
+		maxRetriesPerRequest: options.maxRetriesPerRequest ?? null,
 		retryStrategy(times: number) {
+			if (options.retryStrategy) {
+				return options.retryStrategy(times);
+			}
+
 			return Math.min(times * RETRY_BASE_MS, DEFAULT_RETRY_CAP_MS);
 		},
-		enableOfflineQueue: true,
+		enableOfflineQueue: options.enableOfflineQueue ?? true,
 	});
+}
+
+export async function pingRedis(url: string): Promise<void> {
+	const probe = createRedisClient(url, {
+		lazyConnect: true,
+		connectTimeout: STARTUP_CONNECT_TIMEOUT_MS,
+		enableOfflineQueue: false,
+		maxRetriesPerRequest: 1,
+		retryStrategy: () => null,
+	});
+	if (typeof probe.on === "function") {
+		probe.on("error", () => {
+			// The startup probe reports connection failures through the awaited command.
+		});
+	}
+
+	try {
+		if (typeof probe.connect === "function") {
+			await probe.connect();
+		}
+		await probe.ping();
+	} finally {
+		if (typeof probe.disconnect === "function") {
+			probe.disconnect();
+		} else {
+			void probe.quit();
+		}
+	}
 }
 
 export function createRedisClients(url: string): RedisClients {

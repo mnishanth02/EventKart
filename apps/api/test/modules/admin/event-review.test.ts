@@ -61,6 +61,7 @@ const mockEvent = {
 	refundPolicy: "Refunds are available until seven days before race day.",
 	cancellationPolicy: "Cancelled events are fully refunded.",
 	publishedAt: null,
+	firstPublishedAt: null,
 	submittedForReviewAt: "2026-04-26T12:00:00.000Z",
 	isPaid: true,
 	currency: "INR",

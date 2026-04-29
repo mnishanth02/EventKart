@@ -13,8 +13,8 @@ import {
 } from "@repo/ui/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { EventStatusBadge } from "#/features/events/components/event-status-badge";
 import { EventEditForm } from "#/features/events/components/event-edit-form";
+import { EventStatusBadge } from "#/features/events/components/event-status-badge";
 import { PublishAction } from "#/features/events/components/publish-action";
 import { PublishChecklist } from "#/features/events/components/publish-checklist";
 import { UnpublishAction } from "#/features/events/components/unpublish-action";
@@ -77,6 +77,10 @@ function ConfigurationNav({ eventId }: { eventId: string }) {
 		{
 			to: "/org/events/$eventId/configure-policies",
 			label: "Policies",
+		},
+		{
+			to: "/org/events/$eventId/configure-registration-fields",
+			label: "Registration fields",
 		},
 		{
 			to: "/org/events/$eventId/configure-images",

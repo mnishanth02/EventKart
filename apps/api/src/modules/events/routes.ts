@@ -15,6 +15,9 @@ import {
 	createEventResponseSchema,
 	eventCategoriesBodySchema,
 	eventCategoriesResponseSchema,
+	eventCategoryCapacityBodySchema,
+	eventCategoryCapacityResponseSchema,
+	eventCategoryIdParamsSchema,
 	eventErrorResponseSchema,
 	eventIdParamsSchema,
 	eventImageConfirmResponseSchema,
@@ -28,6 +31,10 @@ import {
 	eventPoliciesResponseSchema,
 	eventPricingBodySchema,
 	eventPricingResponseSchema,
+	eventRegistrationFormBodySchema,
+	eventRegistrationFormResponseSchema,
+	publishedEventPatchBodySchema,
+	publishedEventPatchResponseSchema,
 	publishEventResponseSchema,
 	publishReadinessResponseSchema,
 	unpublishEventResponseSchema,
@@ -38,6 +45,7 @@ import {
 	createDraftEvent,
 	getEvent,
 	getEventPolicies,
+	getEventRegistrationForm,
 	getPublishReadiness,
 	listEventCategories,
 	listEventPricing,
@@ -46,7 +54,10 @@ import {
 	replaceEventPricing,
 	unpublishEvent,
 	updateDraftEvent,
+	updateEventCategoryCapacity,
 	updateEventPolicies,
+	updateEventRegistrationForm,
+	updatePublishedEvent,
 } from "./service.js";
 
 const eventRoutes: FastifyPluginAsync = async (app) => {
@@ -351,13 +362,155 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			}
 
 			const policies = await updateEventPolicies(
-				{ db: app.db, log: request.log },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger: createAuditLogger(app.db, request.log),
+				},
 				session.userId,
 				request.params.eventId,
 				request.body,
 			);
 
 			return { success: true as const, data: policies };
+		},
+	);
+
+	typedApp.patch(
+		"/:eventId/published",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				body: publishedEventPatchBodySchema,
+				response: {
+					200: publishedEventPatchResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const event = await updatePublishedEvent(
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger: createAuditLogger(app.db, request.log),
+				},
+				session.userId,
+				request.params.eventId,
+				request.body,
+			);
+
+			return { success: true as const, data: event };
+		},
+	);
+
+	typedApp.patch(
+		"/:eventId/categories/:categoryId/capacity",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventCategoryIdParamsSchema,
+				body: eventCategoryCapacityBodySchema,
+				response: {
+					200: eventCategoryCapacityResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const category = await updateEventCategoryCapacity(
+				{ db: app.db, log: request.log },
+				session.userId,
+				request.params.eventId,
+				request.params.categoryId,
+				request.body,
+			);
+
+			return { success: true as const, data: category };
+		},
+	);
+
+	typedApp.get(
+		"/:eventId/registration-form",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				response: {
+					200: eventRegistrationFormResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const registrationForm = await getEventRegistrationForm(
+				app.db,
+				session.userId,
+				request.params.eventId,
+			);
+
+			return { success: true as const, data: registrationForm };
+		},
+	);
+
+	typedApp.put(
+		"/:eventId/registration-form",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				params: eventIdParamsSchema,
+				body: eventRegistrationFormBodySchema,
+				response: {
+					200: eventRegistrationFormResponseSchema,
+					400: eventErrorResponseSchema,
+					401: eventErrorResponseSchema,
+					403: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+					409: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const session = request.session;
+			if (!session) {
+				throw new UnauthorizedError();
+			}
+
+			const registrationForm = await updateEventRegistrationForm(
+				{ db: app.db, log: request.log },
+				session.userId,
+				request.params.eventId,
+				request.body,
+			);
+
+			return { success: true as const, data: registrationForm };
 		},
 	);
 

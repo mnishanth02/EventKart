@@ -25,12 +25,13 @@ import { Route as AuthedOrgVerificationRouteImport } from './routes/_authed/org/
 import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/register'
 import { Route as AuthedOrgProfileRouteImport } from './routes/_authed/org/profile'
 import { Route as AuthedOrgPoliciesRouteImport } from './routes/_authed/org/policies'
-import { Route as AuthedAdminEventReviewsIndexRouteImport } from './routes/_authed/admin/event-reviews/index'
 import { Route as AuthedAdminVerificationsIndexRouteImport } from './routes/_authed/admin/verifications/index'
+import { Route as AuthedAdminEventReviewsIndexRouteImport } from './routes/_authed/admin/event-reviews/index'
 import { Route as AuthedOrgEventsNewRouteImport } from './routes/_authed/org/events/new'
-import { Route as AuthedAdminEventReviewsEventIdRouteImport } from './routes/_authed/admin/event-reviews/$eventId'
 import { Route as AuthedAdminVerificationsOrganizerIdRouteImport } from './routes/_authed/admin/verifications/$organizerId'
+import { Route as AuthedAdminEventReviewsEventIdRouteImport } from './routes/_authed/admin/event-reviews/$eventId'
 import { Route as AuthedOrgEventsEventIdEditRouteImport } from './routes/_authed/org/events/$eventId/edit'
+import { Route as AuthedOrgEventsEventIdConfigureRegistrationFieldsRouteImport } from './routes/_authed/org/events/$eventId/configure-registration-fields'
 import { Route as AuthedOrgEventsEventIdConfigurePricingRouteImport } from './routes/_authed/org/events/$eventId/configure-pricing'
 import { Route as AuthedOrgEventsEventIdConfigurePoliciesRouteImport } from './routes/_authed/org/events/$eventId/configure-policies'
 import { Route as AuthedOrgEventsEventIdConfigureImagesRouteImport } from './routes/_authed/org/events/$eventId/configure-images'
@@ -114,16 +115,16 @@ const AuthedOrgPoliciesRoute = AuthedOrgPoliciesRouteImport.update({
   path: '/policies',
   getParentRoute: () => AuthedOrgRoute,
 } as any)
-const AuthedAdminEventReviewsIndexRoute =
-  AuthedAdminEventReviewsIndexRouteImport.update({
-    id: '/event-reviews/',
-    path: '/event-reviews/',
-    getParentRoute: () => AuthedAdminRoute,
-  } as any)
 const AuthedAdminVerificationsIndexRoute =
   AuthedAdminVerificationsIndexRouteImport.update({
     id: '/verifications/',
     path: '/verifications/',
+    getParentRoute: () => AuthedAdminRoute,
+  } as any)
+const AuthedAdminEventReviewsIndexRoute =
+  AuthedAdminEventReviewsIndexRouteImport.update({
+    id: '/event-reviews/',
+    path: '/event-reviews/',
     getParentRoute: () => AuthedAdminRoute,
   } as any)
 const AuthedOrgEventsNewRoute = AuthedOrgEventsNewRouteImport.update({
@@ -131,22 +132,28 @@ const AuthedOrgEventsNewRoute = AuthedOrgEventsNewRouteImport.update({
   path: '/events/new',
   getParentRoute: () => AuthedOrgRoute,
 } as any)
-const AuthedAdminEventReviewsEventIdRoute =
-  AuthedAdminEventReviewsEventIdRouteImport.update({
-    id: '/event-reviews/$eventId',
-    path: '/event-reviews/$eventId',
-    getParentRoute: () => AuthedAdminRoute,
-  } as any)
 const AuthedAdminVerificationsOrganizerIdRoute =
   AuthedAdminVerificationsOrganizerIdRouteImport.update({
     id: '/verifications/$organizerId',
     path: '/verifications/$organizerId',
     getParentRoute: () => AuthedAdminRoute,
   } as any)
+const AuthedAdminEventReviewsEventIdRoute =
+  AuthedAdminEventReviewsEventIdRouteImport.update({
+    id: '/event-reviews/$eventId',
+    path: '/event-reviews/$eventId',
+    getParentRoute: () => AuthedAdminRoute,
+  } as any)
 const AuthedOrgEventsEventIdEditRoute =
   AuthedOrgEventsEventIdEditRouteImport.update({
     id: '/events/$eventId/edit',
     path: '/events/$eventId/edit',
+    getParentRoute: () => AuthedOrgRoute,
+  } as any)
+const AuthedOrgEventsEventIdConfigureRegistrationFieldsRoute =
+  AuthedOrgEventsEventIdConfigureRegistrationFieldsRouteImport.update({
+    id: '/events/$eventId/configure-registration-fields',
+    path: '/events/$eventId/configure-registration-fields',
     getParentRoute: () => AuthedOrgRoute,
   } as any)
 const AuthedOrgEventsEventIdConfigurePricingRoute =
@@ -190,14 +197,15 @@ export interface FileRoutesByFullPath {
   '/my/': typeof AuthedMyIndexRoute
   '/org/': typeof AuthedOrgIndexRoute
   '/admin/event-reviews/$eventId': typeof AuthedAdminEventReviewsEventIdRoute
-  '/admin/event-reviews/': typeof AuthedAdminEventReviewsIndexRoute
   '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
   '/org/events/new': typeof AuthedOrgEventsNewRoute
+  '/admin/event-reviews/': typeof AuthedAdminEventReviewsIndexRoute
   '/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
   '/org/events/$eventId/configure-categories': typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
   '/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
   '/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   '/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  '/org/events/$eventId/configure-registration-fields': typeof AuthedOrgEventsEventIdConfigureRegistrationFieldsRoute
   '/org/events/$eventId/edit': typeof AuthedOrgEventsEventIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -213,14 +221,15 @@ export interface FileRoutesByTo {
   '/my': typeof AuthedMyIndexRoute
   '/org': typeof AuthedOrgIndexRoute
   '/admin/event-reviews/$eventId': typeof AuthedAdminEventReviewsEventIdRoute
-  '/admin/event-reviews': typeof AuthedAdminEventReviewsIndexRoute
   '/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
   '/org/events/new': typeof AuthedOrgEventsNewRoute
+  '/admin/event-reviews': typeof AuthedAdminEventReviewsIndexRoute
   '/admin/verifications': typeof AuthedAdminVerificationsIndexRoute
   '/org/events/$eventId/configure-categories': typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
   '/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
   '/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   '/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  '/org/events/$eventId/configure-registration-fields': typeof AuthedOrgEventsEventIdConfigureRegistrationFieldsRoute
   '/org/events/$eventId/edit': typeof AuthedOrgEventsEventIdEditRoute
 }
 export interface FileRoutesById {
@@ -242,14 +251,15 @@ export interface FileRoutesById {
   '/_authed/my/': typeof AuthedMyIndexRoute
   '/_authed/org/': typeof AuthedOrgIndexRoute
   '/_authed/admin/event-reviews/$eventId': typeof AuthedAdminEventReviewsEventIdRoute
-  '/_authed/admin/event-reviews/': typeof AuthedAdminEventReviewsIndexRoute
   '/_authed/admin/verifications/$organizerId': typeof AuthedAdminVerificationsOrganizerIdRoute
   '/_authed/org/events/new': typeof AuthedOrgEventsNewRoute
+  '/_authed/admin/event-reviews/': typeof AuthedAdminEventReviewsIndexRoute
   '/_authed/admin/verifications/': typeof AuthedAdminVerificationsIndexRoute
   '/_authed/org/events/$eventId/configure-categories': typeof AuthedOrgEventsEventIdConfigureCategoriesRoute
   '/_authed/org/events/$eventId/configure-images': typeof AuthedOrgEventsEventIdConfigureImagesRoute
   '/_authed/org/events/$eventId/configure-policies': typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   '/_authed/org/events/$eventId/configure-pricing': typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  '/_authed/org/events/$eventId/configure-registration-fields': typeof AuthedOrgEventsEventIdConfigureRegistrationFieldsRoute
   '/_authed/org/events/$eventId/edit': typeof AuthedOrgEventsEventIdEditRoute
 }
 export interface FileRouteTypes {
@@ -270,14 +280,15 @@ export interface FileRouteTypes {
     | '/my/'
     | '/org/'
     | '/admin/event-reviews/$eventId'
-    | '/admin/event-reviews/'
     | '/admin/verifications/$organizerId'
     | '/org/events/new'
+    | '/admin/event-reviews/'
     | '/admin/verifications/'
     | '/org/events/$eventId/configure-categories'
     | '/org/events/$eventId/configure-images'
     | '/org/events/$eventId/configure-policies'
     | '/org/events/$eventId/configure-pricing'
+    | '/org/events/$eventId/configure-registration-fields'
     | '/org/events/$eventId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -293,14 +304,15 @@ export interface FileRouteTypes {
     | '/my'
     | '/org'
     | '/admin/event-reviews/$eventId'
-    | '/admin/event-reviews'
     | '/admin/verifications/$organizerId'
     | '/org/events/new'
+    | '/admin/event-reviews'
     | '/admin/verifications'
     | '/org/events/$eventId/configure-categories'
     | '/org/events/$eventId/configure-images'
     | '/org/events/$eventId/configure-policies'
     | '/org/events/$eventId/configure-pricing'
+    | '/org/events/$eventId/configure-registration-fields'
     | '/org/events/$eventId/edit'
   id:
     | '__root__'
@@ -321,14 +333,15 @@ export interface FileRouteTypes {
     | '/_authed/my/'
     | '/_authed/org/'
     | '/_authed/admin/event-reviews/$eventId'
-    | '/_authed/admin/event-reviews/'
     | '/_authed/admin/verifications/$organizerId'
     | '/_authed/org/events/new'
+    | '/_authed/admin/event-reviews/'
     | '/_authed/admin/verifications/'
     | '/_authed/org/events/$eventId/configure-categories'
     | '/_authed/org/events/$eventId/configure-images'
     | '/_authed/org/events/$eventId/configure-policies'
     | '/_authed/org/events/$eventId/configure-pricing'
+    | '/_authed/org/events/$eventId/configure-registration-fields'
     | '/_authed/org/events/$eventId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -495,6 +508,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedOrgEventsEventIdEditRouteImport
       parentRoute: typeof AuthedOrgRoute
     }
+    '/_authed/org/events/$eventId/configure-registration-fields': {
+      id: '/_authed/org/events/$eventId/configure-registration-fields'
+      path: '/events/$eventId/configure-registration-fields'
+      fullPath: '/org/events/$eventId/configure-registration-fields'
+      preLoaderRoute: typeof AuthedOrgEventsEventIdConfigureRegistrationFieldsRouteImport
+      parentRoute: typeof AuthedOrgRoute
+    }
     '/_authed/org/events/$eventId/configure-pricing': {
       id: '/_authed/org/events/$eventId/configure-pricing'
       path: '/events/$eventId/configure-pricing'
@@ -529,17 +549,17 @@ declare module '@tanstack/react-router' {
 interface AuthedAdminRouteChildren {
   AuthedAdminIndexRoute: typeof AuthedAdminIndexRoute
   AuthedAdminEventReviewsEventIdRoute: typeof AuthedAdminEventReviewsEventIdRoute
-  AuthedAdminEventReviewsIndexRoute: typeof AuthedAdminEventReviewsIndexRoute
   AuthedAdminVerificationsOrganizerIdRoute: typeof AuthedAdminVerificationsOrganizerIdRoute
+  AuthedAdminEventReviewsIndexRoute: typeof AuthedAdminEventReviewsIndexRoute
   AuthedAdminVerificationsIndexRoute: typeof AuthedAdminVerificationsIndexRoute
 }
 
 const AuthedAdminRouteChildren: AuthedAdminRouteChildren = {
   AuthedAdminIndexRoute: AuthedAdminIndexRoute,
   AuthedAdminEventReviewsEventIdRoute: AuthedAdminEventReviewsEventIdRoute,
-  AuthedAdminEventReviewsIndexRoute: AuthedAdminEventReviewsIndexRoute,
   AuthedAdminVerificationsOrganizerIdRoute:
     AuthedAdminVerificationsOrganizerIdRoute,
+  AuthedAdminEventReviewsIndexRoute: AuthedAdminEventReviewsIndexRoute,
   AuthedAdminVerificationsIndexRoute: AuthedAdminVerificationsIndexRoute,
 }
 
@@ -570,6 +590,7 @@ interface AuthedOrgRouteChildren {
   AuthedOrgEventsEventIdConfigureImagesRoute: typeof AuthedOrgEventsEventIdConfigureImagesRoute
   AuthedOrgEventsEventIdConfigurePoliciesRoute: typeof AuthedOrgEventsEventIdConfigurePoliciesRoute
   AuthedOrgEventsEventIdConfigurePricingRoute: typeof AuthedOrgEventsEventIdConfigurePricingRoute
+  AuthedOrgEventsEventIdConfigureRegistrationFieldsRoute: typeof AuthedOrgEventsEventIdConfigureRegistrationFieldsRoute
   AuthedOrgEventsEventIdEditRoute: typeof AuthedOrgEventsEventIdEditRoute
 }
 
@@ -588,6 +609,8 @@ const AuthedOrgRouteChildren: AuthedOrgRouteChildren = {
     AuthedOrgEventsEventIdConfigurePoliciesRoute,
   AuthedOrgEventsEventIdConfigurePricingRoute:
     AuthedOrgEventsEventIdConfigurePricingRoute,
+  AuthedOrgEventsEventIdConfigureRegistrationFieldsRoute:
+    AuthedOrgEventsEventIdConfigureRegistrationFieldsRoute,
   AuthedOrgEventsEventIdEditRoute: AuthedOrgEventsEventIdEditRoute,
 }
 

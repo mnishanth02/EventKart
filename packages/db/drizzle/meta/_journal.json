@@ -1,104 +1,132 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1776841473042,
-      "tag": "0000_dark_adam_warlock",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1777016315936,
-      "tag": "0001_motionless_thor",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777017671542,
-      "tag": "0002_sharp_steve_rogers",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1777019793448,
-      "tag": "0003_lazy_wild_child",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1777020014606,
-      "tag": "0004_cool_thunderbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1777042209596,
-      "tag": "0005_empty_bishop",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1777091223997,
-      "tag": "0006_brief_slapstick",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1777208762853,
-      "tag": "0007_known_lucky_pierre",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1777213318022,
-      "tag": "0008_ambitious_raza",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1777216166641,
-      "tag": "0009_worried_masked_marvel",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1777224105201,
-      "tag": "0010_event_pricing_tiers",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1777224600000,
-      "tag": "0011_event_refund_policies",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1777253699618,
-      "tag": "0012_event_images",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1777282963500,
-      "tag": "0013_sour_cloak",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1776841473042,
+			"tag": "0000_dark_adam_warlock",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1777016315936,
+			"tag": "0001_motionless_thor",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1777017671542,
+			"tag": "0002_sharp_steve_rogers",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1777019793448,
+			"tag": "0003_lazy_wild_child",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1777020014606,
+			"tag": "0004_cool_thunderbird",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1777042209596,
+			"tag": "0005_empty_bishop",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1777091223997,
+			"tag": "0006_brief_slapstick",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1777208762853,
+			"tag": "0007_known_lucky_pierre",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1777213318022,
+			"tag": "0008_ambitious_raza",
+			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "7",
+			"when": 1777216166641,
+			"tag": "0009_worried_masked_marvel",
+			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1777224105201,
+			"tag": "0010_event_pricing_tiers",
+			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "7",
+			"when": 1777224600000,
+			"tag": "0011_event_refund_policies",
+			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "7",
+			"when": 1777253699618,
+			"tag": "0012_event_images",
+			"breakpoints": true
+		},
+		{
+			"idx": 13,
+			"version": "7",
+			"when": 1777282963500,
+			"tag": "0013_sour_cloak",
+			"breakpoints": true
+		},
+		{
+			"idx": 14,
+			"version": "7",
+			"when": 1777342927270,
+			"tag": "0014_robust_giant_girl",
+			"breakpoints": true
+		},
+		{
+			"idx": 15,
+			"version": "7",
+			"when": 1777400000000,
+			"tag": "0015_organizers_slug",
+			"breakpoints": true
+		},
+		{
+			"idx": 16,
+			"version": "7",
+			"when": 1777400000001,
+			"tag": "0016_event_categories_capacity",
+			"breakpoints": true
+		},
+		{
+			"idx": 17,
+			"version": "7",
+			"when": 1777400000002,
+			"tag": "0017_events_first_published_at",
+			"breakpoints": true
+		}
+	]
 }

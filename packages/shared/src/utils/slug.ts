@@ -3,7 +3,17 @@ export const EVENT_SLUG_MAX_LENGTH = 96;
 export const EVENT_SLUG_FALLBACK = "event";
 export const EVENT_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** Generic slug helpers — re-usable across event, organizer, and other resources. */
+export const SLUG_MIN_LENGTH = 1;
+export const SLUG_PATTERN = EVENT_SLUG_PATTERN;
+
 export interface EventSlugOptions {
+	fallback?: string;
+	maxLength?: number;
+}
+
+/** Generic slug options used by `normalizeSlug` / `appendSlugSuffix`. */
+export interface SlugOptions {
 	fallback?: string;
 	maxLength?: number;
 }
@@ -105,4 +115,36 @@ export function appendEventSlugSuffix(
 	});
 
 	return `${base}${suffixText}`;
+}
+
+/**
+ * Generic slug normalizer — same algorithm as `normalizeEventSlug` but with
+ * caller-supplied fallback and maxLength. Use for organizer, venue, or any
+ * other resource that needs slugified business names.
+ */
+export function normalizeSlug(
+	input: string,
+	options: SlugOptions = {},
+): string {
+	const fallback = options.fallback ?? EVENT_SLUG_FALLBACK;
+	return normalizeEventSlug(input, {
+		fallback,
+		maxLength: options.maxLength ?? EVENT_SLUG_MAX_LENGTH,
+	});
+}
+
+/**
+ * Generic suffix appender — same algorithm as `appendEventSlugSuffix` but with
+ * caller-supplied fallback and maxLength.
+ */
+export function appendSlugSuffix(
+	slug: string,
+	suffix: number,
+	options: SlugOptions = {},
+): string {
+	const fallback = options.fallback ?? EVENT_SLUG_FALLBACK;
+	return appendEventSlugSuffix(slug, suffix, {
+		fallback,
+		maxLength: options.maxLength ?? EVENT_SLUG_MAX_LENGTH,
+	});
 }

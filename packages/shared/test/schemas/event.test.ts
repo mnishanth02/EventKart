@@ -9,6 +9,7 @@ import {
 	eventSchema,
 	updateEventInputSchema,
 } from "../../src/schemas/event";
+import { defaultEventRegistrationFormSchema } from "../../src/schemas/event-registration-form";
 
 const validCreateEventInput = {
 	title: "Coimbatore City 10K",
@@ -211,13 +212,19 @@ describe("eventSchema", () => {
 			refundPolicy: null,
 			cancellationPolicy: null,
 			publishedAt: null,
+			firstPublishedAt: null,
 			submittedForReviewAt: null,
 			status: "draft",
+			formSchema: defaultEventRegistrationFormSchema,
+			formSchemaVersion: defaultEventRegistrationFormSchema.version,
 			createdAt: "2026-04-26T12:00:00.000Z",
 			updatedAt: "2026-04-26T12:00:00.000Z",
 		});
 
 		expect(result.city).toBe(V1_EVENT_CITY);
+		expect(result.formSchema?.version).toBe(
+			defaultEventRegistrationFormSchema.version,
+		);
 		expect(result.timezone).toBe(V1_EVENT_TIMEZONE);
 	});
 });

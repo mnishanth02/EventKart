@@ -86,19 +86,19 @@ function ConfigureEventPoliciesPage() {
 			{policiesQuery.data ? (
 				<Card className="border-dashed">
 					<CardHeader>
-						<CardTitle>Next: configure images</CardTitle>
+						<CardTitle>Next: configure registration fields</CardTitle>
 						<CardDescription>
-							Upload a hero image and route map before your event is ready for
-							review.
+							Choose standard and fitness-specific participant fields before
+							image setup.
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<Button asChild>
 							<Link
-								to="/org/events/$eventId/configure-images"
+								to="/org/events/$eventId/configure-registration-fields"
 								params={{ eventId }}
 							>
-								Configure images
+								Configure registration fields
 							</Link>
 						</Button>
 					</CardContent>

@@ -9,8 +9,8 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { type ReactNode, useEffect } from "react";
 import { NotFoundPage } from "#/components/error";
-import "#/integrations/sentry/client";
 import { publicEnv } from "#/lib/env/public";
 import PostHogProvider from "../integrations/posthog/provider";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
@@ -49,13 +49,24 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 function RootComponent() {
 	return (
 		<ThemeProvider>
+			<SentryClientInit />
 			<Outlet />
 			<Toaster position="bottom-right" toastOptions={{ duration: 4000 }} />
 		</ThemeProvider>
 	);
 }
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function SentryClientInit() {
+	useEffect(() => {
+		if (!import.meta.env.SSR) {
+			void import("#/integrations/sentry/client");
+		}
+	}, []);
+
+	return null;
+}
+
+function RootDocument({ children }: { children: ReactNode }) {
 	return (
 		<html lang="en-IN" suppressHydrationWarning>
 			<head>

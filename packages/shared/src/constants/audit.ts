@@ -31,6 +31,7 @@ export const AUDIT_ACTIONS = {
 	// Event
 	EVENT_CREATE: "event.create",
 	EVENT_UPDATE: "event.update",
+	EVENT_UPDATE_PUBLISHED: "event.update_published",
 	EVENT_PUBLISH_REQUESTED: "event.publish_requested",
 	EVENT_PUBLISH: "event.publish",
 	EVENT_SUBMIT_FOR_REVIEW: "event.submit_for_review",

@@ -1,5 +1,7 @@
 import { z } from "zod/v4";
 import {
+	EVENT_CATEGORY_DEFAULT_SPOTS,
+	EVENT_CATEGORY_MIN_SPOTS,
 	EVENT_DISTANCE_CATEGORY_MAX_DISTANCE_METERS,
 	EVENT_DISTANCE_CATEGORY_MAX_PER_EVENT,
 	EVENT_DISTANCE_CATEGORY_MAX_SORT_ORDER,
@@ -124,9 +126,35 @@ export const eventCategoriesConfigSchema = z
 export const eventCategoryRecordSchema = eventCategoryConfigSchema.extend({
 	id: uuidSchema,
 	eventId: uuidSchema,
+	spotsTotal: z.number().int().min(EVENT_CATEGORY_MIN_SPOTS),
+	spotsRemaining: z.number().int().min(0),
 	createdAt: datetimeSchema,
 	updatedAt: datetimeSchema,
 });
+
+/**
+ * Capacity update schema for PATCH /events/:eventId/categories/:categoryId/capacity.
+ * Both fields optional but at least one must be provided. spotsRemaining is
+ * additionally validated against spotsTotal in the service layer.
+ */
+export const eventCategoryCapacityUpdateSchema = z
+	.object({
+		spotsTotal: z
+			.number()
+			.int("Spots total must be an integer")
+			.min(EVENT_CATEGORY_MIN_SPOTS, "Spots total must be at least 1")
+			.optional(),
+		spotsRemaining: z
+			.number()
+			.int("Spots remaining must be an integer")
+			.min(0, "Spots remaining must be zero or greater")
+			.optional(),
+	})
+	.strict()
+	.refine(
+		(value) => Object.values(value).some((entry) => entry !== undefined),
+		"At least one capacity field must be provided",
+	);
 
 export const defaultEventCategoriesConfig = {
 	categories: EVENT_DISTANCE_CATEGORY_PRESETS.map((preset, index) => ({
@@ -149,3 +177,9 @@ export type EventCategoriesConfig = z.output<
 	typeof eventCategoriesConfigSchema
 >;
 export type EventCategoryRecord = z.infer<typeof eventCategoryRecordSchema>;
+export type EventCategoryCapacityUpdateInput = z.input<
+	typeof eventCategoryCapacityUpdateSchema
+>;
+export type EventCategoryCapacityUpdate = z.output<
+	typeof eventCategoryCapacityUpdateSchema
+>;

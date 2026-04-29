@@ -1,12 +1,23 @@
 import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 
-import { closeRedisClients, createRedisClients } from "../lib/redis.js";
+import {
+	closeRedisClients,
+	createRedisClients,
+	pingRedis,
+} from "../lib/redis.js";
 
 const redisPlugin: FastifyPluginAsync = async (fastify) => {
-	const clients = createRedisClients(fastify.config.REDIS_URL);
+	try {
+		await pingRedis(fastify.config.REDIS_URL);
+	} catch (error) {
+		throw new Error(
+			"Redis connection failed. Ensure Redis is running and REDIS_URL is reachable before starting the API.",
+			{ cause: error },
+		);
+	}
 
-	await clients.base.ping();
+	const clients = createRedisClients(fastify.config.REDIS_URL);
 	fastify.log.info("Redis connection established");
 
 	fastify.decorate("redis", clients);

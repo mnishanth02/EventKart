@@ -1,6 +1,7 @@
 import {
 	EVENT_CATEGORIES,
 	EVENT_CURRENCIES,
+	EVENT_REGISTRATION_FORM_SCHEMA_VERSION,
 	EVENT_SPORTS,
 	EVENT_STATUSES,
 	EVENT_TYPES,
@@ -14,11 +15,15 @@ import {
 	V1_EVENT_TIMEZONE,
 	V1_EVENT_TYPE,
 } from "@repo/shared/constants";
+import type { EventRegistrationForm } from "@repo/shared/schemas";
+import { defaultEventRegistrationFormSchema } from "@repo/shared/schemas";
 import { sql } from "drizzle-orm";
 import {
 	boolean,
 	check,
 	index,
+	integer,
+	jsonb,
 	pgEnum,
 	pgTable,
 	text,
@@ -75,6 +80,7 @@ export const events = pgTable(
 		refundPolicy: text("refund_policy"),
 		cancellationPolicy: text("cancellation_policy"),
 		publishedAt: timestamp("published_at", { withTimezone: true }),
+		firstPublishedAt: timestamp("first_published_at", { withTimezone: true }),
 		submittedForReviewAt: timestamp("submitted_for_review_at", {
 			withTimezone: true,
 		}),
@@ -83,6 +89,13 @@ export const events = pgTable(
 			.notNull()
 			.default(V1_EVENT_CURRENCY),
 		status: eventStatusEnum("status").notNull().default("draft"),
+		formSchema: jsonb("form_schema")
+			.$type<EventRegistrationForm>()
+			.notNull()
+			.default(defaultEventRegistrationFormSchema),
+		formSchemaVersion: integer("form_schema_version")
+			.notNull()
+			.default(EVENT_REGISTRATION_FORM_SCHEMA_VERSION),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
@@ -95,6 +108,11 @@ export const events = pgTable(
 		uniqueIndex("events_slug_unique").on(table.slug),
 		index("events_organizer_id_idx").on(table.organizerId),
 		index("events_status_idx").on(table.status),
+		index("events_organizer_first_published_paid_idx")
+			.on(table.organizerId, table.firstPublishedAt)
+			.where(
+				sql`${table.firstPublishedAt} IS NOT NULL AND ${table.isPaid} = true`,
+			),
 		check("events_v1_city_check", sql.raw(`"city" = '${V1_EVENT_CITY}'`)),
 		check("events_v1_state_check", sql.raw(`"state" = '${V1_EVENT_STATE}'`)),
 		check(
@@ -106,5 +124,11 @@ export const events = pgTable(
 			sql.raw(`"timezone" = '${V1_EVENT_TIMEZONE}'`),
 		),
 		check("events_v1_paid_check", sql.raw('"is_paid" = true')),
+		check(
+			"events_form_schema_version_check",
+			sql.raw(
+				`"form_schema" ? 'version' AND ("form_schema"->>'version')::integer = "form_schema_version"`,
+			),
+		),
 	],
 );

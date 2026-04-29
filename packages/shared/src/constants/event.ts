@@ -68,11 +68,49 @@ export const EVENT_DISTANCE_CATEGORY_MIN_DISTANCE_METERS = 1;
 export const EVENT_DISTANCE_CATEGORY_MAX_DISTANCE_METERS = 100_000;
 export const EVENT_DISTANCE_CATEGORY_MAX_SORT_ORDER = 100;
 export const EVENT_DISTANCE_CATEGORY_MAX_PER_EVENT = 10;
+export const EVENT_CATEGORY_DEFAULT_SPOTS = 100;
+export const EVENT_CATEGORY_MIN_SPOTS = 1;
 export const EVENT_PRICING_MIN_PRICE_PAISE = 100;
 export const EVENT_PRICING_MAX_PRICE_PAISE = 10_000_000;
 export const EVENT_PRICE_MIN_INR = EVENT_PRICING_MIN_PRICE_PAISE / 100;
 export const EVENT_PRICE_MAX_INR = EVENT_PRICING_MAX_PRICE_PAISE / 100;
 export const EVENT_POLICY_MAX_LENGTH = 2000;
+
+export const PUBLISHED_EVENT_LOW_RISK_FIELDS = [
+	"description",
+	"routeDetails",
+	"refundPolicy",
+	"cancellationPolicy",
+] as const;
+
+export const PUBLISHED_EVENT_HIGH_RISK_FIELDS = [
+	"title",
+	"eventType",
+	"sport",
+	"category",
+	"venueName",
+	"addressLine1",
+	"addressLine2",
+	"city",
+	"state",
+	"country",
+	"postalCode",
+	"timezone",
+	"startAt",
+	"endAt",
+	"registrationOpensAt",
+	"registrationClosesAt",
+	"isPaid",
+	"currency",
+	"categories",
+	"pricingTiers",
+	"formSchema",
+] as const;
+
+export type PublishedEventLowRiskField =
+	(typeof PUBLISHED_EVENT_LOW_RISK_FIELDS)[number];
+export type PublishedEventHighRiskField =
+	(typeof PUBLISHED_EVENT_HIGH_RISK_FIELDS)[number];
 
 export const EVENT_IMAGE_KINDS = ["hero", "route_map"] as const;
 export type EventImageKind = (typeof EVENT_IMAGE_KINDS)[number];

@@ -15,6 +15,8 @@ const mockListEventPricing = vi.fn();
 const mockListEventCategories = vi.fn();
 const mockGetEventPolicies = vi.fn();
 const mockUpdateEventPolicies = vi.fn();
+const mockGetEventRegistrationForm = vi.fn();
+const mockUpdateEventRegistrationForm = vi.fn();
 const mockReplaceEventPricing = vi.fn();
 const mockReplaceEventCategories = vi.fn();
 const mockRequestEventImageUpload = vi.fn();
@@ -24,6 +26,8 @@ const mockDeleteEventImage = vi.fn();
 const mockGetPublishReadiness = vi.fn();
 const mockPublishEvent = vi.fn();
 const mockUnpublishEvent = vi.fn();
+const mockUpdatePublishedEvent = vi.fn();
+const mockUpdateEventCategoryCapacity = vi.fn();
 
 vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	const actual =
@@ -40,11 +44,19 @@ vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 			mockGetPublishReadiness(...args),
 		publishEvent: (...args: unknown[]) => mockPublishEvent(...args),
 		unpublishEvent: (...args: unknown[]) => mockUnpublishEvent(...args),
+		updatePublishedEvent: (...args: unknown[]) =>
+			mockUpdatePublishedEvent(...args),
+		updateEventCategoryCapacity: (...args: unknown[]) =>
+			mockUpdateEventCategoryCapacity(...args),
 		listEventPricing: (...args: unknown[]) => mockListEventPricing(...args),
 		listEventCategories: (...args: unknown[]) =>
 			mockListEventCategories(...args),
 		updateEventPolicies: (...args: unknown[]) =>
 			mockUpdateEventPolicies(...args),
+		getEventRegistrationForm: (...args: unknown[]) =>
+			mockGetEventRegistrationForm(...args),
+		updateEventRegistrationForm: (...args: unknown[]) =>
+			mockUpdateEventRegistrationForm(...args),
 		replaceEventPricing: (...args: unknown[]) =>
 			mockReplaceEventPricing(...args),
 		replaceEventCategories: (...args: unknown[]) =>
@@ -61,6 +73,10 @@ vi.mock("../../../src/modules/events/event-image-service.js", () => ({
 	deleteEventImage: (...args: unknown[]) => mockDeleteEventImage(...args),
 }));
 
+import {
+	defaultEventRegistrationFormSchema,
+	eventRegistrationFormSchema,
+} from "@repo/shared/schemas";
 import type { FastifyInstance } from "fastify";
 import {
 	ConflictError,
@@ -135,6 +151,7 @@ const mockEvent = {
 	refundPolicy: null,
 	cancellationPolicy: null,
 	publishedAt: null,
+	firstPublishedAt: null,
 	submittedForReviewAt: null,
 	isPaid: true,
 	currency: "INR",
@@ -208,8 +225,8 @@ const mockEventImage = {
 const mockImageUploadUrl = {
 	imageId: TEST_IMAGE_ID,
 	url: "https://s3.example.com/event-image-upload",
-	method: "PUT" as const,
-	headers: { "Content-Type": "image/jpeg" },
+	method: "POST" as const,
+	fields: { "Content-Type": "image/jpeg" },
 	key: `events/images/${TEST_EVENT_ID}/hero.jpg`,
 	expiresAt: "2026-04-26T12:15:00.000Z",
 };
@@ -217,6 +234,29 @@ const mockImageUploadUrl = {
 const mockPolicies = {
 	eventId: TEST_EVENT_ID,
 	...validPoliciesBody,
+	updatedAt: "2026-04-26T12:00:00.000Z",
+};
+
+const validRegistrationFormBody = eventRegistrationFormSchema.parse({
+	...defaultEventRegistrationFormSchema,
+	fields: defaultEventRegistrationFormSchema.fields.map((field) =>
+		field.fieldId === "blood_group"
+			? {
+					...field,
+					enabled: true,
+					required: true,
+					safetyCritical: true,
+					safetyCriticalReason:
+						"Blood group helps on-site medical staff during emergencies.",
+				}
+			: field,
+	),
+});
+
+const mockRegistrationForm = {
+	eventId: TEST_EVENT_ID,
+	formSchema: validRegistrationFormBody,
+	formSchemaVersion: validRegistrationFormBody.version,
 	updatedAt: "2026-04-26T12:00:00.000Z",
 };
 
@@ -228,6 +268,8 @@ const mockCategories = [
 		slug: "5k",
 		distanceMeters: 5000,
 		sortOrder: 0,
+		spotsTotal: 100,
+		spotsRemaining: 100,
 		createdAt: "2026-04-26T12:00:00.000Z",
 		updatedAt: "2026-04-26T12:00:00.000Z",
 	},
@@ -238,6 +280,8 @@ const mockCategories = [
 		slug: "10k",
 		distanceMeters: 10000,
 		sortOrder: 1,
+		spotsTotal: 100,
+		spotsRemaining: 100,
 		createdAt: "2026-04-26T12:00:00.000Z",
 		updatedAt: "2026-04-26T12:00:00.000Z",
 	},
@@ -612,6 +656,7 @@ describe("event publish workflow routes", () => {
 		mockGetPublishReadiness.mockReset();
 		mockPublishEvent.mockReset();
 		mockUnpublishEvent.mockReset();
+		mockUpdatePublishedEvent.mockReset();
 	});
 
 	it("returns publish readiness for an authenticated organizer without CSRF", async () => {
@@ -1207,6 +1252,76 @@ describe("PUT /api/v1/events/:eventId/categories", () => {
 	});
 });
 
+describe("PATCH /api/v1/events/:eventId/categories/:categoryId/capacity", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockUpdateEventCategoryCapacity.mockReset();
+	});
+
+	it("patches category capacity for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		const updatedCategory = {
+			id: TEST_CATEGORY_5K_ID,
+			eventId: TEST_EVENT_ID,
+			name: "5K",
+			slug: "5k",
+			distanceMeters: 5000,
+			sortOrder: 0,
+			spotsTotal: 150,
+			spotsRemaining: 125,
+			createdAt: "2026-04-26T12:00:00.000Z",
+			updatedAt: "2026-04-26T12:05:00.000Z",
+		};
+		mockUpdateEventCategoryCapacity.mockResolvedValue(updatedCategory);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories/${TEST_CATEGORY_5K_ID}/capacity`,
+			...csrf,
+			payload: { spotsRemaining: 125 },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: updatedCategory,
+		});
+		expect(mockUpdateEventCategoryCapacity).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_USER_ID,
+			TEST_EVENT_ID,
+			TEST_CATEGORY_5K_ID,
+			{ spotsRemaining: 125 },
+		);
+	});
+
+	it("does not accept PUT for partial capacity updates", async () => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/categories/${TEST_CATEGORY_5K_ID}/capacity`,
+			...csrf,
+			payload: { spotsRemaining: 125 },
+		});
+
+		expect(response.statusCode).toBe(404);
+		expect(mockUpdateEventCategoryCapacity).not.toHaveBeenCalled();
+	});
+});
+
 describe("GET /api/v1/events/:eventId/policies", () => {
 	let app: FastifyInstance;
 
@@ -1435,6 +1550,172 @@ describe("PUT /api/v1/events/:eventId/policies", () => {
 			error: { code: "VALIDATION_ERROR" },
 		});
 		expect(mockUpdateEventPolicies).not.toHaveBeenCalled();
+	});
+});
+
+describe("event registration form routes", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockGetEventRegistrationForm.mockReset();
+		mockUpdateEventRegistrationForm.mockReset();
+	});
+
+	it("returns the registration form for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		mockGetEventRegistrationForm.mockResolvedValue(mockRegistrationForm);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: mockRegistrationForm,
+		});
+		expect(mockGetEventRegistrationForm).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_USER_ID,
+			TEST_EVENT_ID,
+		);
+	});
+
+	it("returns 401 when reading without a session", async () => {
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "UNAUTHORIZED" },
+		});
+		expect(mockGetEventRegistrationForm).not.toHaveBeenCalled();
+	});
+
+	it("updates the registration form for an authenticated organizer", async () => {
+		setupOrganizerSession(app);
+		mockUpdateEventRegistrationForm.mockResolvedValue(mockRegistrationForm);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			...csrf,
+			payload: validRegistrationFormBody,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: mockRegistrationForm,
+		});
+		expect(mockUpdateEventRegistrationForm).toHaveBeenCalledOnce();
+		const [_deps, userId, eventId, body] = mockUpdateEventRegistrationForm.mock
+			.calls[0] as [unknown, string, string, Record<string, unknown>];
+		expect(userId).toBe(TEST_USER_ID);
+		expect(eventId).toBe(TEST_EVENT_ID);
+		expect(body).toEqual(validRegistrationFormBody);
+	});
+
+	it("rejects sensitive required fields without a safety-critical reason through shared validation", async () => {
+		setupOrganizerSession(app);
+		const csrf = buildCsrfHeaders();
+		const payload = {
+			...defaultEventRegistrationFormSchema,
+			fields: defaultEventRegistrationFormSchema.fields.map((field) =>
+				field.fieldId === "date_of_birth"
+					? { ...field, enabled: true, required: true }
+					: field,
+			),
+		};
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			...csrf,
+			payload,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "VALIDATION_ERROR" },
+		});
+		expect(mockUpdateEventRegistrationForm).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when another organizer cannot access the form", async () => {
+		setupOrganizerSession(app);
+		mockGetEventRegistrationForm.mockRejectedValue(
+			new ForbiddenError("You do not have access to this event"),
+		);
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "FORBIDDEN" },
+		});
+	});
+
+	it("requires CSRF for registration form updates", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			payload: validRegistrationFormBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockUpdateEventRegistrationForm).not.toHaveBeenCalled();
+	});
+
+	it("returns 409 when updating a published event registration form", async () => {
+		setupOrganizerSession(app);
+		mockUpdateEventRegistrationForm.mockRejectedValue(
+			new ConflictError(
+				"Event registration form can only be updated while the event is in draft status",
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PUT",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/registration-form`,
+			...csrf,
+			payload: validRegistrationFormBody,
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CONFLICT" },
+		});
 	});
 });
 
@@ -1762,40 +2043,40 @@ describe("POST /api/v1/events/:eventId/images/upload-url", () => {
 		expect(mockRequestEventImageUpload).not.toHaveBeenCalled();
 	});
 
-	it.each(["published", "under_review"] as const)(
-		"returns 409 when the service rejects hero upload-url requests for %s events",
-		async (status) => {
-			setupOrganizerSession(app);
-			mockRequestEventImageUpload.mockRejectedValue(
-				new ConflictError(
+	it.each([
+		"published",
+		"under_review",
+	] as const)("returns 409 when the service rejects hero upload-url requests for %s events", async (status) => {
+		setupOrganizerSession(app);
+		mockRequestEventImageUpload.mockRejectedValue(
+			new ConflictError(
+				"Hero images can only be changed while the event is in draft status",
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
+			...csrf,
+			payload: { ...validImageUploadBody, kind: "hero" },
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: {
+				code: "CONFLICT",
+				message:
 					"Hero images can only be changed while the event is in draft status",
-				),
-			);
-			const csrf = buildCsrfHeaders();
-
-			const response = await app.inject({
-				method: "POST",
-				url: `${EVENTS_URL}/${TEST_EVENT_ID}/images/upload-url`,
-				...csrf,
-				payload: { ...validImageUploadBody, kind: "hero" },
-			});
-
-			expect(response.statusCode).toBe(409);
-			expect(response.json()).toMatchObject({
-				success: false,
-				error: {
-					code: "CONFLICT",
-					message:
-						"Hero images can only be changed while the event is in draft status",
-				},
-			});
-			expect(mockRequestEventImageUpload).toHaveBeenCalledOnce();
-			const [_deps, _userId, _eventId, body] = mockRequestEventImageUpload.mock
-				.calls[0] as [unknown, string, string, Record<string, unknown>];
-			expect(body).toEqual({ ...validImageUploadBody, kind: "hero" });
-			expect(status).toMatch(/published|under_review/);
-		},
-	);
+			},
+		});
+		expect(mockRequestEventImageUpload).toHaveBeenCalledOnce();
+		const [_deps, _userId, _eventId, body] = mockRequestEventImageUpload.mock
+			.calls[0] as [unknown, string, string, Record<string, unknown>];
+		expect(body).toEqual({ ...validImageUploadBody, kind: "hero" });
+		expect(status).toMatch(/published|under_review/);
+	});
 });
 
 describe("event image routes with disabled storage", () => {
@@ -2039,5 +2320,162 @@ describe("DELETE /api/v1/events/:eventId/images/:imageId", () => {
 
 		expect(response.statusCode).toBe(403);
 		expect(mockDeleteEventImage).not.toHaveBeenCalled();
+	});
+});
+
+describe("PATCH /api/v1/events/:eventId/published", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		getSessionRedisMock(app).mockReset();
+		mockUpdatePublishedEvent.mockReset();
+	});
+
+	it("patches low-risk published event fields", async () => {
+		setupOrganizerSession(app);
+		mockUpdatePublishedEvent.mockResolvedValue({
+			...mockEvent,
+			description:
+				"Updated public event description that is safe for published pages.",
+		});
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			...csrf,
+			payload: {
+				description:
+					"Updated public event description that is safe for published pages.",
+			},
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			success: true,
+			data: {
+				id: TEST_EVENT_ID,
+				description:
+					"Updated public event description that is safe for published pages.",
+			},
+		});
+		expect(mockUpdatePublishedEvent).toHaveBeenCalledWith(
+			expect.anything(),
+			TEST_USER_ID,
+			TEST_EVENT_ID,
+			expect.objectContaining({ description: expect.any(String) }),
+		);
+	});
+
+	it("passes mixed low-risk plus high-risk event fields through to service for structured 409", async () => {
+		setupOrganizerSession(app);
+		mockUpdatePublishedEvent.mockRejectedValue(
+			new ConflictError(
+				"High-risk fields require unpublishing the event. Unpublish first, edit in draft, then republish.",
+				"PUBLISHED_EVENT_HIGH_RISK_EDIT_REQUIRES_UNPUBLISH",
+				{ requiresUnpublish: true, highRiskFields: ["title"] },
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			...csrf,
+			payload: {
+				description:
+					"Updated public event description that must not be persisted.",
+				title: "High Risk Title Change",
+			},
+		});
+
+		expect(response.statusCode).toBe(409);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: {
+				code: "PUBLISHED_EVENT_HIGH_RISK_EDIT_REQUIRES_UNPUBLISH",
+				details: {
+					requiresUnpublish: true,
+					highRiskFields: ["title"],
+				},
+			},
+		});
+	});
+
+	it("returns 401 when unauthenticated", async () => {
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			payload: { description: "Updated public event description text." },
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(mockUpdatePublishedEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 for a non-organizer role", async () => {
+		setupParticipantSession(app);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			...csrf,
+			payload: { description: "Updated public event description text." },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "INSUFFICIENT_ROLE" },
+		});
+		expect(mockUpdatePublishedEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when CSRF token is missing", async () => {
+		setupOrganizerSession(app);
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			payload: { description: "Updated public event description text." },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "CSRF_VALIDATION_FAILED" },
+		});
+		expect(mockUpdatePublishedEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when the service rejects a non-owner organizer", async () => {
+		setupOrganizerSession(app);
+		mockUpdatePublishedEvent.mockRejectedValue(
+			new ForbiddenError("You do not have access to this event"),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "PATCH",
+			url: `${EVENTS_URL}/${TEST_EVENT_ID}/published`,
+			...csrf,
+			payload: { description: "Updated public event description text." },
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "FORBIDDEN" },
+		});
 	});
 });

@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
 import {
 	V1_EVENT_ALLOWED_VALUES,
 	V1_EVENT_CITY,
 	V1_EVENT_TIMEZONE,
 } from "@repo/shared/constants";
 import { eventSchema } from "@repo/shared/schemas";
+import { describe, expect, it } from "vitest";
 import {
 	coimbatoreDateTimeLocalToIso,
 	eventEditValuesSchema,
@@ -58,11 +58,12 @@ describe("event form values", () => {
 				registrationOpensAt: null,
 				registrationClosesAt: null,
 				routeDetails: "Single-loop route through Race Course Road.",
-			refundPolicy: null,
-			cancellationPolicy: null,
-			publishedAt: null,
-			submittedForReviewAt: null,
-			isPaid: true,
+				refundPolicy: null,
+				cancellationPolicy: null,
+				publishedAt: null,
+				firstPublishedAt: null,
+				submittedForReviewAt: null,
+				isPaid: true,
 				currency: "INR",
 				status: "draft",
 				createdAt: "2026-04-26T12:00:00.000Z",

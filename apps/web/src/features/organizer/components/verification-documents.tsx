@@ -75,10 +75,15 @@ function DocumentUploadCard({
 			});
 
 			// 2. Upload file directly to S3
+			const formData = new FormData();
+			for (const [key, value] of Object.entries(uploadUrl.fields)) {
+				formData.append(key, value);
+			}
+			formData.append("file", file);
+
 			const uploadResponse = await fetch(uploadUrl.url, {
 				method: uploadUrl.method,
-				headers: uploadUrl.headers,
-				body: file,
+				body: formData,
 			});
 
 			if (!uploadResponse.ok) {
@@ -108,8 +113,9 @@ function DocumentUploadCard({
 	const deleteMutation = useMutation({
 		mutationFn: async (documentId: string) => {
 			await deleteDocument({ data: { documentId } });
+			return undefined;
 		},
-		onSuccess: (_data: void, documentId: string) => {
+		onSuccess: (_data: undefined, _documentId: string) => {
 			toastUndo(`${VERIFICATION_DOCUMENT_TYPE_LABELS[documentType]} deleted`, {
 				// Full undo would re-upload the file, but we no longer have
 				// the blob after deletion. Reload to let the user re-upload.

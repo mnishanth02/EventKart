@@ -71,8 +71,8 @@ const mockOrganizerProfile = {
 const mockUploadUrlResult = {
 	documentId: TEST_DOCUMENT_ID,
 	url: "https://s3.example.com/presigned-url",
-	method: "PUT" as const,
-	headers: {
+	method: "POST" as const,
+	fields: {
 		"Content-Type": "application/pdf",
 		"x-amz-server-side-encryption": "AES256",
 	},

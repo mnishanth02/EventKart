@@ -20,12 +20,12 @@ You are running inside the existing **Anvil** agent. Execute the full EventKart 
 
 When the runtime supports model switching, use:
 
-| Phase | Preferred model |
-| ----- | --------------- |
-| Planning | Opus 4.6 |
-| Plan review | GPT-5.5 |
-| Implementation | GPT-5.5 |
-| Code review | GPT-5.5 |
+| Phase          | Preferred model |
+| -------------- | --------------- |
+| Planning       | Opus 4.6        |
+| Plan review    | GPT-5.5         |
+| Implementation | GPT-5.5         |
+| Code review    | GPT-5.5         |
 
 Prompt files cannot guarantee mid-run model switching. If switching is unavailable, continue with the current Anvil model and record the limitation in the run ledger and final summary. Never stop solely because model switching is unavailable.
 
@@ -33,13 +33,13 @@ Prompt files cannot guarantee mid-run model switching. If switching is unavailab
 
 EventKart is a pnpm + Turborepo monorepo for an event ticketing platform.
 
-| Area | Location | Rules |
-| ---- | -------- | ----- |
-| Frontend | `apps\web` | TanStack Start, React 19, Vite. Feature-first under `apps\web\src\features\<domain>\`. |
-| Backend | `apps\api` | Fastify v5 TypeScript API. Modular monolith under `apps\api\src\modules\<domain>\`. |
-| Shared contracts | `packages\shared` | Zod schemas, shared types, constants, and cross-workspace API contracts. |
-| Database | `packages\db` | Drizzle schema, migrations, seeds, and database helpers. |
-| Shared UI | `packages\ui` | shadcn/ui components, shared hooks, utilities, and reusable UI primitives. |
+| Area             | Location          | Rules                                                                                  |
+| ---------------- | ----------------- | -------------------------------------------------------------------------------------- |
+| Frontend         | `apps\web`        | TanStack Start, React 19, Vite. Feature-first under `apps\web\src\features\<domain>\`. |
+| Backend          | `apps\api`        | Fastify v5 TypeScript API. Modular monolith under `apps\api\src\modules\<domain>\`.    |
+| Shared contracts | `packages\shared` | Zod schemas, shared types, constants, and cross-workspace API contracts.               |
+| Database         | `packages\db`     | Drizzle schema, migrations, seeds, and database helpers.                               |
+| Shared UI        | `packages\ui`     | shadcn/ui components, shared hooks, utilities, and reusable UI primitives.             |
 
 Hard boundaries:
 
@@ -109,12 +109,12 @@ For non-feature work, define the smallest safe scope that satisfies the request 
 
 Classify the task before planning:
 
-| Tier | Examples | Required behavior |
-| ---- | -------- | ----------------- |
-| Small | Documentation-only change, typo, one-file config tweak, narrow non-risky fix | Compact inline plan, targeted validation, concise review. |
-| Medium | Single feature slice, bug fix with tests, moderate refactor, one workspace plus shared contracts | Plan, plan review, implementation, validation/evidence, code review, fix loop. |
-| Large | Multi-workspace feature, major refactor, broad UI/API change, queue or integration work | Full gates, baseline capture, detailed plan, stricter plan review, multiple validation signals, independent review. |
-| Red | Auth, payments, personal/sensitive data, public API surface, database migrations, data deletion, concurrency, security controls | Treat as Large even if the diff is small; use stricter review and rollback checks. |
+| Tier   | Examples                                                                                                                        | Required behavior                                                                                                   |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Small  | Documentation-only change, typo, one-file config tweak, narrow non-risky fix                                                    | Compact inline plan, targeted validation, concise review.                                                           |
+| Medium | Single feature slice, bug fix with tests, moderate refactor, one workspace plus shared contracts                                | Plan, plan review, implementation, validation/evidence, code review, fix loop.                                      |
+| Large  | Multi-workspace feature, major refactor, broad UI/API change, queue or integration work                                         | Full gates, baseline capture, detailed plan, stricter plan review, multiple validation signals, independent review. |
+| Red    | Auth, payments, personal/sensitive data, public API surface, database migrations, data deletion, concurrency, security controls | Treat as Large even if the diff is small; use stricter review and rollback checks.                                  |
 
 If in doubt, choose the higher tier.
 

@@ -124,7 +124,7 @@ Read the relevant local docs before coding:
 | File                                                     | Purpose                                          |
 | -------------------------------------------------------- | ------------------------------------------------ |
 | `.github\copilot-instructions.md`                        | Repo-wide rules.                                 |
-| `.github\prompts\eventkart-dev-workflow.prompt.md`      | Canonical Anvil single-prompt feature workflow.  |
+| `.github\prompts\eventkart-dev-workflow.prompt.md`       | Canonical Anvil single-prompt feature workflow.  |
 | `.github\instructions\fastify-backend.instructions.md`   | API patterns, auth, validation, testing.         |
 | `.github\instructions\tanstack-start.instructions.md`    | Web patterns, SSR modes, routing, data loading.  |
 | `.github\instructions\progress-tracking.instructions.md` | Progress tracking rules.                         |

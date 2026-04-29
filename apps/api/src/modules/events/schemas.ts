@@ -1,6 +1,7 @@
 import {
 	createEventInputSchema,
 	eventCategoriesConfigSchema,
+	eventCategoryCapacityUpdateSchema,
 	eventCategoryRecordSchema,
 	eventImageConfirmRequestSchema,
 	eventImageDeleteRequestSchema,
@@ -13,7 +14,9 @@ import {
 	eventPoliciesRecordSchema,
 	eventPricingConfigSchema,
 	eventPricingTierWithCategorySchema,
+	eventRegistrationFormSchema,
 	eventSchema,
+	publishedEventPatchSchema,
 	publishEventResponseSchema,
 	publishReadinessResponseSchema,
 	unpublishEventResponseSchema,
@@ -51,6 +54,26 @@ export const eventCategoriesBodySchema = eventCategoriesConfigSchema;
 
 export const eventPoliciesBodySchema = eventPoliciesConfigSchema;
 
+export const eventCategoryIdParamsSchema = eventIdParamsSchema.extend({
+	categoryId: uuidSchema,
+});
+
+export const eventCategoryCapacityBodySchema = eventCategoryCapacityUpdateSchema;
+
+export const eventCategoryCapacityResponseSchema = z.object({
+	success: z.literal(true),
+	data: eventCategoryRecordSchema,
+});
+
+export const publishedEventPatchBodySchema = publishedEventPatchSchema;
+
+export const publishedEventPatchResponseSchema = z.object({
+	success: z.literal(true),
+	data: eventSchema,
+});
+
+export const eventRegistrationFormBodySchema = eventRegistrationFormSchema;
+
 export const eventPricingBodySchema = eventPricingConfigSchema;
 
 export const eventImageUploadBodySchema = eventImageUploadUrlRequestSchema;
@@ -74,6 +97,16 @@ export const eventPricingResponseSchema = z.object({
 export const eventPoliciesResponseSchema = z.object({
 	success: z.literal(true),
 	data: eventPoliciesRecordSchema,
+});
+
+export const eventRegistrationFormResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.object({
+		eventId: uuidSchema,
+		formSchema: eventRegistrationFormSchema,
+		formSchemaVersion: eventRegistrationFormSchema.shape.version,
+		updatedAt: z.string().datetime(),
+	}),
 });
 
 export const eventImageUploadResponseSchema = z.object({

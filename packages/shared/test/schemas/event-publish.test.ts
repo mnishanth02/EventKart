@@ -31,6 +31,7 @@ const event = {
 	refundPolicy: "Refunds close seven days before the event.",
 	cancellationPolicy: "Organizer cancellations are fully refunded.",
 	publishedAt: null,
+	firstPublishedAt: null,
 	submittedForReviewAt: null,
 	isPaid: true,
 	currency: "INR",
@@ -74,7 +75,11 @@ describe("event publish schemas", () => {
 			publishEventResponseSchema.parse({
 				success: true,
 				data: {
-					event: { ...event, status: "published", publishedAt: event.updatedAt },
+					event: {
+						...event,
+						status: "published",
+						publishedAt: event.updatedAt,
+					},
 					transition: "draft_to_published",
 					readiness,
 				},

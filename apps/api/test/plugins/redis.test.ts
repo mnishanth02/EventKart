@@ -1,12 +1,18 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const mockPing = vi.fn().mockResolvedValue("PONG");
+const mockConnect = vi.fn().mockResolvedValue(undefined);
 const mockQuit = vi.fn().mockResolvedValue("OK");
+const mockDisconnect = vi.fn();
+const mockOn = vi.fn();
 
 vi.mock("ioredis", () => {
 	class MockRedis {
 		ping = mockPing;
+		connect = mockConnect;
 		quit = mockQuit;
+		disconnect = mockDisconnect;
+		on = mockOn;
 		options: Record<string, unknown>;
 
 		constructor(_url: string, options?: Record<string, unknown>) {

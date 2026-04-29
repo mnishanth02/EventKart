@@ -200,13 +200,14 @@ These are the features that make an organizer say, “EventKart helped this even
 
 4. **Saved participant profile + fast repeat booking**
    - OTP-based identity at booking time only
-   - Save core details: name, age, blood group, emergency contact, T-shirt size
-   - Pre-filled repeat booking for returning participants
+   - Save core profile fields (name, age, gender, city, T-shirt size, phone) and pre-fill them on repeat booking
+   - **Sensitive fields are saved separately and re-collected each booking** (blood group, emergency contact, medical conditions): they are stored only for the duration the organizer needs them on event day and are **never auto-filled on a new booking** — this is a v2.2 privacy-first decision (DEC-1) aligned with DPDPA §13. Fast repeat booking still removes ~40-50% of form friction.
 
 5. **QR check-in with offline fallback**
    - QR scan for booking and payment verification
    - Manual search fallback for poor connectivity scenarios
    - Exportable roster as offline backup
+   - **Capacity is per category, not per event** (v2.2 — DEC-3): each distance/category sells out independently; "sold out" applies to a single category, not the whole event
 
 6. **Post-event follow-up and repeat-booking nudge**
    - Follow-up email after the event
@@ -278,6 +279,7 @@ V1 uses **payment-time split with organizer-linked settlement** as the commercia
 - If the organizer cancels and refundable funds are still under platform or provider control, EventKart initiates the refund workflow
 - If funds have already settled, the organizer remains economically responsible and EventKart mediates support and enforcement
 - Target dispute first-response SLA: **2 business days** during the pilot
+- **Refund processing target:** EventKart initiates gateway-controlled refunds within the **support SLA defined in the operational playbook** (separate from the dispute first-response SLA above). Already-settled refunds are organizer-responsible with EventKart mediation and have no automated reversal SLA. Concrete numbers live in the operational playbook so they can evolve with provider behaviour without amending this plan.
 
 ---
 
@@ -435,13 +437,13 @@ This section defines the target V1 posture. Legal and policy review should valid
 
 ### Data classes
 
-| Data class                       | Examples                                           | Access                                              | Target retention                                                        |
-| -------------------------------- | -------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Participant profile**          | Name, phone, email, age, gender, city              | Participant + booked organizers                     | Until account deletion or 3 years of inactivity                         |
-| **Booking data**                 | Event, category, payment status, QR ticket         | Participant + organizer + EventKart ops             | 5 years for financial and audit needs                                   |
-| **Sensitive participant fields** | Emergency contact, blood group, medical conditions | Participant + organizer on event-day workflows only | Delete 30 days after event completion unless legally required otherwise |
-| **Payment data**                 | Transaction ID, amount, split details              | EventKart ops + payment gateway                     | 5 years for financial and audit needs                                   |
-| **Organizer verification docs**  | Aadhaar, PAN, GST certificate, bank proof          | EventKart ops only                                  | Until 1 year after organizer account closure                            |
+| Data class                       | Examples                                           | Access                                              | Target retention                                                           |
+| -------------------------------- | -------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Participant profile**          | Name, phone, email, age, gender, city              | Participant + booked organizers                     | Until account deletion or 3 years of inactivity                            |
+| **Booking data**                 | Event, category, payment status, QR ticket         | Participant + organizer + EventKart ops             | 5 years for financial and audit needs                                      |
+| **Sensitive participant fields** | Emergency contact, blood group, medical conditions | Participant + organizer on event-day workflows only | Delete 30 days after event completion unless legally required otherwise    |
+| **Payment data**                 | Transaction ID, amount, split details              | EventKart ops + payment gateway                     | 5 years for financial and audit needs                                      |
+| **Organizer verification docs**  | Aadhaar, PAN, GST certificate, bank proof          | EventKart ops only                                  | Until 1 year after organizer account closure (see "Account closure" below) |
 
 ### Core rules
 
@@ -459,6 +461,10 @@ This section defines the target V1 posture. Legal and policy review should valid
 - Medical disclosures appear on offline rosters only if marked safety-critical
 - Offline roster exports should carry a delete-after-event instruction
 - QR check-in should not expose sensitive fields by default on-screen
+
+### Account closure
+
+"Organizer account closure" is the event that starts the 1-year retention clock for KYC documents. For V1, an organizer account is considered closed when the organizer requests account deletion (self-service or support-initiated) and EventKart sets a soft-delete timestamp on the organizer record. Cleanup jobs operate on `closure_timestamp + 1 year < now()`. Inactive but un-closed accounts follow the standard 3-year inactivity rule applied to participant data.
 
 ### Incident posture
 
@@ -479,5 +485,9 @@ This section defines the target V1 posture. Legal and policy review should valid
 - **Results scope is locked:** first-party results publishing and certificates are deferred; post-event emails may include organizer-provided or timing-partner links when available
 - **Event-size rule is locked:** no hard minimum event size, but best-fit early events remain roughly 50-2,000 participants with manual onboarding
 - **Tech stack is not a product-plan blocker:** implementation should optimize for speed to market, but the product plan does not depend on a specific stack decision
+- **Sensitive participant fields are never auto-filled across bookings (DEC-1, v2.2):** blood group, emergency contact, and medical conditions are stored only as long as the organizer needs them and are re-collected on every booking; "fast repeat booking" applies to non-sensitive profile fields only
+- **Capacity is per category, not per event (DEC-3, v2.2):** each event distance/category has independent spot counts; sold out is per-category
+- **Cross-organizer next-event discovery is deferred (DEC-5):** in V1, the post-event next-event prompt only links to the same organizer's next event
+- **Refund SLA wording is locked to the operational playbook:** the product plan states the dispute first-response SLA (2 business days); concrete refund-processing numbers are owned by the operational playbook so they can be tuned without product-plan amendments
 
 This version is the finalized V1 plan. Remaining work is implementation, vendor selection inside the chosen model, and legal/commercial operationalization — not further scope definition.

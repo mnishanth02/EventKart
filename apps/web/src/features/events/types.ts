@@ -6,6 +6,7 @@ import type {
 	EventImageUploadUrlResponse,
 	EventPoliciesRecord,
 	EventPricingTierWithCategory,
+	EventRegistrationForm,
 	PublishReadiness,
 } from "@repo/shared/schemas";
 
@@ -22,6 +23,7 @@ export type {
 	EventPoliciesRecord,
 	EventPricingConfig,
 	EventPricingTierWithCategory,
+	EventRegistrationForm,
 	PublishEventResponse,
 	PublishReadiness,
 	UnpublishEventResponse,
@@ -49,6 +51,16 @@ export type EventPricingResponse = {
 export type EventPoliciesResponse = {
 	success: true;
 	data: EventPoliciesRecord;
+};
+
+export type EventRegistrationFormResponse = {
+	success: true;
+	data: {
+		eventId: string;
+		formSchema: EventRegistrationForm;
+		formSchemaVersion: EventRegistrationForm["version"];
+		updatedAt: string;
+	};
 };
 
 export type EventImagesResponse = {
