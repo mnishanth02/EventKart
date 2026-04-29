@@ -11,6 +11,7 @@ import { datetimeSchema } from "./date.js";
 import { eventCategorySlugSchema } from "./event-category.js";
 import { eventPriceSchema } from "./event-pricing.js";
 import { eventSlugSchema } from "./event-slug.js";
+import { organizerSlugSchema } from "./organizer-slug.js";
 
 /**
  * Public-facing image entry rendered on `/events/:slug`.
@@ -33,12 +34,19 @@ export type EventPublicImage = z.infer<typeof eventPublicImageSchema>;
 /**
  * Public organizer summary embedded in the event detail. Carries only
  * fields that are safe to expose anonymously.
+ *
+ * `description` is the organizer's self-authored "about" copy. It is
+ * nullable; the API normalizes empty/whitespace-only stored values to
+ * `null` and defensively truncates to 2000 characters before parsing
+ * (the underlying DB column is unbounded `text`, so untrusted lengths
+ * must not be allowed to break the public event response).
  */
 export const eventPublicOrganizerSummarySchema = z.object({
-	slug: z.string().min(1),
+	slug: organizerSlugSchema,
 	businessName: z.string().min(1),
 	isVerified: z.boolean(),
 	city: z.string().min(1),
+	description: z.string().max(2000).nullable(),
 });
 
 export type EventPublicOrganizerSummary = z.infer<

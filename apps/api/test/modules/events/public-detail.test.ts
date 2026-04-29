@@ -127,12 +127,15 @@ function buildEventRow(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-function buildOrganizerSummaryRow() {
+function buildOrganizerSummaryRow(overrides: Record<string, unknown> = {}) {
 	return {
 		slug: "coimbatorerunners",
 		businessName: "Coimbatore Runners",
 		isVerified: true,
 		city: "Coimbatore",
+		description:
+			"Coimbatore Runners organizes community-first endurance events across Tamil Nadu.",
+		...overrides,
 	};
 }
 
@@ -207,10 +210,13 @@ function buildImageRow(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-function publicDetailRows(eventOverrides: Record<string, unknown> = {}) {
+function publicDetailRows(
+	eventOverrides: Record<string, unknown> = {},
+	organizerOverrides: Record<string, unknown> = {},
+) {
 	return [
 		[buildEventRow(eventOverrides)],
-		[buildOrganizerSummaryRow()],
+		[buildOrganizerSummaryRow(organizerOverrides)],
 		buildCategoryRows(),
 		buildPricingRows(),
 		[],
@@ -259,6 +265,8 @@ describe("GET /api/v1/events/by-slug/:slug", () => {
 						businessName: "Coimbatore Runners",
 						isVerified: true,
 						city: "Coimbatore",
+						description:
+							"Coimbatore Runners organizes community-first endurance events across Tamil Nadu.",
 					},
 					heroImage: null,
 					routeMapImage: null,
@@ -281,6 +289,85 @@ describe("GET /api/v1/events/by-slug/:slug", () => {
 				categorySlugs.has(tier.categorySlug),
 			),
 		).toBe(true);
+	});
+
+	it("includes a verified organizer description verbatim", async () => {
+		const description =
+			"Race Coimbatore Collective produces the city's flagship endurance events.";
+		const { db } = createMockDb(
+			publicDetailRows({}, { isVerified: true, description }),
+		);
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data.data.organizer).toMatchObject({
+			isVerified: true,
+			description,
+		});
+	});
+
+	it("returns null organizer description when the database value is null", async () => {
+		const { db } = createMockDb(publicDetailRows({}, { description: null }));
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data.data.organizer.description).toBeNull();
+	});
+
+	it("normalizes an empty organizer description to null", async () => {
+		const { db } = createMockDb(publicDetailRows({}, { description: "" }));
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data.data.organizer.description).toBeNull();
+	});
+
+	it("normalizes a whitespace-only organizer description to null", async () => {
+		const { db } = createMockDb(publicDetailRows({}, { description: "   \n  " }));
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data.data.organizer.description).toBeNull();
+	});
+
+	it("truncates organizer descriptions longer than 2000 characters", async () => {
+		const { db } = createMockDb(
+			publicDetailRows({}, { description: "a".repeat(2500) }),
+		);
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		const description = response.json().data.data.organizer.description;
+		expect(description).toHaveLength(2000);
+		expect(description).toBe("a".repeat(2000));
+	});
+
+	it("does not split a UTF-16 surrogate pair when truncating long descriptions", async () => {
+		// `\u{1F3C3}` (emoji "🏃") encodes as a high+low surrogate pair (2 code
+		// units). With 1999 ASCII chars + the runner emoji, the raw code-unit
+		// length is 2001. A naive `slice(0, 2000)` would cut between the
+		// surrogates and leak an unpaired high surrogate to the public payload.
+		const padded = "a".repeat(1999) + "\u{1F3C3}";
+		const { db } = createMockDb(publicDetailRows({}, { description: padded }));
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		const description: string = response.json().data.data.organizer.description;
+		expect(description.length).toBeLessThanOrEqual(2000);
+		const lastCodeUnit = description.charCodeAt(description.length - 1);
+		expect(lastCodeUnit).toBeLessThan(0xd800);
 	});
 
 	it("returns full public detail for a completed event", async () => {

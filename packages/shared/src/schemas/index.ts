@@ -209,6 +209,8 @@ export {
 	verificationDocumentSchema,
 	verificationStatusResponseSchema,
 } from "./organizer.js";
+export type { OrganizerSlug, OrganizerSlugInput } from "./organizer-slug.js";
+export { organizerSlugSchema } from "./organizer-slug.js";
 export type {
 	OtpSendData,
 	OtpSendRequest,
