@@ -14,7 +14,9 @@ import {
 	eventPoliciesRecordSchema,
 	eventPricingConfigSchema,
 	eventPricingTierWithCategorySchema,
+	eventPublicLookupResponseSchema,
 	eventRegistrationFormSchema,
+	eventSlugSchema,
 	eventSchema,
 	publishedEventPatchSchema,
 	publishEventResponseSchema,
@@ -33,6 +35,10 @@ export const eventIdParamsSchema = z.object({
 	eventId: uuidSchema,
 });
 
+export const eventSlugParamsSchema = z.object({
+	slug: eventSlugSchema,
+});
+
 export const eventImageIdParamsSchema = eventIdParamsSchema.extend({
 	imageId: eventImageConfirmRequestSchema.shape.imageId,
 });
@@ -43,6 +49,11 @@ export const createEventResponseSchema = z.object({
 });
 
 export const updateEventResponseSchema = createEventResponseSchema;
+
+export const eventPublicLookupHttpResponseSchema = z.object({
+	success: z.literal(true),
+	data: eventPublicLookupResponseSchema,
+});
 
 export {
 	publishEventResponseSchema,
@@ -58,7 +69,8 @@ export const eventCategoryIdParamsSchema = eventIdParamsSchema.extend({
 	categoryId: uuidSchema,
 });
 
-export const eventCategoryCapacityBodySchema = eventCategoryCapacityUpdateSchema;
+export const eventCategoryCapacityBodySchema =
+	eventCategoryCapacityUpdateSchema;
 
 export const eventCategoryCapacityResponseSchema = z.object({
 	success: z.literal(true),
