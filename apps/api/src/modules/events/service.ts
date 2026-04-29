@@ -354,6 +354,9 @@ function invalidateEventCache(_event: Event): void {
 
 const PUBLISHED_HIGH_RISK_EDIT_MESSAGE =
 	"High-risk fields require unpublishing the event. Unpublish first, edit in draft, then republish.";
+const PUBLISHED_EVENT_LOW_RISK_FIELD_SET = new Set<string>(
+	PUBLISHED_EVENT_LOW_RISK_FIELDS,
+);
 
 function getProvidedKeys(input: unknown): string[] {
 	if (typeof input !== "object" || input === null || Array.isArray(input)) {
@@ -376,9 +379,7 @@ function hasOnlyPublishedLowRiskFields(input: unknown): boolean {
 		return false;
 	}
 
-	return providedKeys.every((key) =>
-		PUBLISHED_EVENT_LOW_RISK_FIELDS.some((field) => field === key),
-	);
+	return providedKeys.every((key) => PUBLISHED_EVENT_LOW_RISK_FIELD_SET.has(key));
 }
 
 function throwPublishedHighRiskEditConflict(
@@ -1020,9 +1021,8 @@ export async function updateDraftEvent(
 ): Promise<Event> {
 	const parsedEventId = parseUuid(eventId, "event id");
 	const parsed = updateEventInputSchema.safeParse(input);
-	const skipValidationErrorForLowRiskPublished =
-		!parsed.success && hasOnlyPublishedLowRiskFields(input);
-	if (!parsed.success && !skipValidationErrorForLowRiskPublished) {
+	const isLowRiskOnlyPayload = hasOnlyPublishedLowRiskFields(input);
+	if (!parsed.success && !isLowRiskOnlyPayload) {
 		throwInvalidEventDetails(parsed.error);
 	}
 
