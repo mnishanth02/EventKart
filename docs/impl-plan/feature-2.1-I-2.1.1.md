@@ -63,7 +63,7 @@ Public, anonymous, SSR event detail page at `/events/:slug` rendered for events 
 - **No `Vary: Cookie`** on the public route — the response is identical for all callers; adding `Vary: Cookie` would destroy CDN hit rate.
 - **Mobile-first design** subsumes I-2.1.8 — the layout is built mobile-first and progressively enhanced for `md:`+ viewports.
 - **Phase 2 deferrals tracked separately:**
-  - I-2.1.2 — Organizer verification badge (organizer info section is present in stub form for I-2.1.1; full badge wiring lands with I-2.1.2).
+  - I-2.1.2 — Organizer verification badge — ✅ Resolved 2026-04-30 (see [feature-2.1-I-2.1.2](feature-2.1-I-2.1.2.md), now archived).
   - I-2.1.3 — Policy display tabs/sections beyond plain prose (I-2.1.1 displays refund/cancellation policy text).
   - I-2.1.5 — Open Graph meta tags.
   - I-2.1.6 — JSON-LD Event schema.

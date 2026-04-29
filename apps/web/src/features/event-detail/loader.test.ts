@@ -5,7 +5,7 @@ import { resolvePublicEventLoader } from "./loader";
 import { eventPublicDetailSchema } from "@repo/shared/schemas";
 import type { EventPublicDetail, EventPublicLookupResponse } from "./types";
 
-const eventDetail: EventPublicDetail = eventPublicDetailSchema.parse({
+const eventDetailInput = {
 	slug: "coimbatore-city-10k",
 	title: "Coimbatore City 10K",
 	description: "A public running event through Race Course.",
@@ -34,12 +34,21 @@ const eventDetail: EventPublicDetail = eventPublicDetailSchema.parse({
 		businessName: "Race Coimbatore",
 		isVerified: true,
 		city: "Coimbatore",
+		description: null,
 	},
 	heroImage: null,
 	routeMapImage: null,
 	categories: [],
 	pricingTiers: [],
-});
+};
+const parsedEventDetail = eventPublicDetailSchema.parse(eventDetailInput);
+const eventDetail: EventPublicDetail = {
+	...parsedEventDetail,
+	organizer: {
+		...parsedEventDetail.organizer,
+		description: eventDetailInput.organizer.description,
+	},
+};
 
 function queryClientReturning(payload: EventPublicLookupResponse): QueryClient {
 	return {

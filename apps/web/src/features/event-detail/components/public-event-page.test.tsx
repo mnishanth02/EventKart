@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { eventPublicDetailSchema } from "@repo/shared/schemas";
 import type { EventPublicDetail } from "../types";
+import { PublicEventOrganizerCard } from "./public-event-organizer-card";
 import { PublicEventPage } from "./public-event-page";
 
 vi.mock("@number-flow/react", () => ({
@@ -19,8 +20,10 @@ const cancellationPolicy =
 	"If the race is cancelled, all registered runners receive a transfer option.";
 const heroImageUrl = "https://cdn.example.com/events/coimbatore-hero.jpg";
 const routeMapImageUrl = "https://cdn.example.com/events/coimbatore-route.png";
+const organizerDescription =
+	"Race Coimbatore Collective produces the city's flagship endurance events.";
 
-const fixture: EventPublicDetail = eventPublicDetailSchema.parse({
+const fixtureInput = {
 	slug: "coimbatore-city-10k",
 	title: "Coimbatore City 10K",
 	description:
@@ -51,6 +54,7 @@ const fixture: EventPublicDetail = eventPublicDetailSchema.parse({
 		businessName: "Race Coimbatore Collective",
 		isVerified: true,
 		city: "Coimbatore",
+		description: organizerDescription,
 	},
 	heroImage: {
 		kind: "hero",
@@ -94,7 +98,21 @@ const fixture: EventPublicDetail = eventPublicDetailSchema.parse({
 			currency: "INR",
 		},
 	],
-});
+};
+
+function buildFixture(
+	organizerOverrides: Partial<EventPublicDetail["organizer"]> = {},
+): EventPublicDetail {
+	return eventPublicDetailSchema.parse({
+		...fixtureInput,
+		organizer: {
+			...fixtureInput.organizer,
+			...organizerOverrides,
+		},
+	});
+}
+
+const fixture = buildFixture();
 
 describe("PublicEventPage", () => {
 	it("renders the title and hero imagery with accessible alternatives", () => {
@@ -160,7 +178,7 @@ describe("PublicEventPage", () => {
 
 		expect(screen.getByText(refundPolicy)).toBeTruthy();
 		expect(screen.getByText(cancellationPolicy)).toBeTruthy();
-		expect(screen.getByText("Verified organizer")).toBeTruthy();
+		expect(screen.getByLabelText("Verified organizer")).toBeTruthy();
 
 		rerender(
 			<PublicEventPage
@@ -175,7 +193,7 @@ describe("PublicEventPage", () => {
 
 		expect(screen.queryByText(refundPolicy)).toBeNull();
 		expect(screen.queryByText(cancellationPolicy)).toBeNull();
-		expect(screen.queryByText("Verified organizer")).toBeNull();
+		expect(screen.queryByLabelText("Verified organizer")).toBeNull();
 	});
 
 	it("renders CTA copy and organizer summary", () => {
@@ -188,9 +206,76 @@ describe("PublicEventPage", () => {
 			screen.getAllByText("Booking opens with our launch — check back soon.")
 				.length,
 		).toBeGreaterThan(0);
+		expect(screen.getByText("About the organizer")).toBeTruthy();
 		expect(screen.getByText("Race Coimbatore Collective")).toBeTruthy();
-		expect(screen.getByText(/Organized by/).textContent).toContain(
-			"Coimbatore",
+		expect(screen.getByText("Based in Coimbatore")).toBeTruthy();
+		expect(
+			screen
+				.getByRole("link", {
+					name: "View profile of Race Coimbatore Collective",
+				})
+				.getAttribute("href"),
+		).toBe("/organizers/race-coimbatore");
+	});
+});
+
+describe("PublicEventOrganizerCard", () => {
+	it("links to the organizer profile", () => {
+		render(<PublicEventOrganizerCard organizer={buildFixture().organizer} />);
+
+		const profileLink = screen.getByRole("link", {
+			name: /View profile of Race Coimbatore Collective/i,
+		});
+		expect(profileLink.getAttribute("href")).toBe(
+			"/organizers/race-coimbatore",
 		);
+	});
+
+	it("renders the organizer description when non-null", () => {
+		render(<PublicEventOrganizerCard organizer={buildFixture().organizer} />);
+
+		expect(screen.getByText(organizerDescription)).toBeTruthy();
+	});
+
+	it("hides the organizer description when null", () => {
+		const { rerender } = render(
+			<PublicEventOrganizerCard organizer={buildFixture().organizer} />,
+		);
+
+		expect(screen.getByText(organizerDescription)).toBeTruthy();
+
+		rerender(
+			<PublicEventOrganizerCard
+				organizer={buildFixture({ description: null }).organizer}
+			/>,
+		);
+
+		expect(screen.queryByText(organizerDescription)).toBeNull();
+	});
+
+	it("renders organizer descriptions as escaped text", () => {
+		const xssDescription =
+			"Trusted <script>alert(1)</script> & <b>fast</b> races";
+		const { container } = render(
+			<PublicEventOrganizerCard
+				organizer={buildFixture({ description: xssDescription }).organizer}
+			/>,
+		);
+
+		expect(screen.getByText(xssDescription)).toBeTruthy();
+		expect(container.querySelectorAll("script")).toHaveLength(0);
+		expect(container.querySelectorAll("b")).toHaveLength(0);
+	});
+
+	it("renders a maximum-length organizer description", () => {
+		const longDescription = "a".repeat(2000);
+		render(
+			<PublicEventOrganizerCard
+				organizer={buildFixture({ description: longDescription }).organizer}
+			/>,
+		);
+
+		const paragraph = screen.getByText(longDescription);
+		expect(paragraph.textContent).toHaveLength(2000);
 	});
 });
