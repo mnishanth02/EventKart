@@ -1,3 +1,4 @@
+import { eventPublicOrganizerSummarySchema } from "@repo/shared/schemas";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { EventPublicOrganizerSummary } from "../types";
@@ -7,12 +8,14 @@ afterEach(() => {
 	cleanup();
 });
 
-const baseOrganizer: EventPublicOrganizerSummary = {
-	slug: "race-coimbatore",
-	businessName: "Race Coimbatore Collective",
-	isVerified: true,
-	city: "Coimbatore",
-};
+const baseOrganizer: EventPublicOrganizerSummary =
+	eventPublicOrganizerSummarySchema.parse({
+		slug: "race-coimbatore",
+		businessName: "Race Coimbatore Collective",
+		isVerified: true,
+		city: "Coimbatore",
+		description: null,
+	});
 
 const REFUND = "Refunds are available until 14 days before race day.";
 const CANCEL =
