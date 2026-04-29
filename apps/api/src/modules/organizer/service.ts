@@ -5,11 +5,11 @@ import type {
 	OrganizerRegistration,
 	OrganizerUpdate,
 } from "@repo/shared/schemas";
+import { buildEmailIdempotencyKey, EMAIL_JOB_NAMES } from "@repo/shared/constants";
 import type { FastifyBaseLogger } from "fastify";
-import { logEmailStub } from "../../lib/email-stub.js";
+import { emitEmailStub } from "../../lib/email-stub.js";
 import { ConflictError } from "../../lib/errors.js";
 import { reserveUniqueOrganizerSlug } from "./slug-service.js";
-import { EMAIL_JOB_NAMES } from "@repo/shared/constants";
 
 function isUniqueViolation(error: unknown): boolean {
 	return (
@@ -143,10 +143,10 @@ export async function registerOrganizer(
 
 	// Wave B: log-only email stub. Failures must NEVER break registration.
 	try {
-		logEmailStub(log, {
-			jobName: EMAIL_JOB_NAMES.ORGANIZER_REGISTRATION,
-			recipientEmail: inserted.contactEmail,
-			resourceId: inserted.id,
+		emitEmailStub({ log }, {
+			jobName: EMAIL_JOB_NAMES.ORGANIZER_WELCOME,
+			idempotencyKey: buildEmailIdempotencyKey.organizerWelcome(inserted.id),
+			context: { organizerId: inserted.id },
 		});
 	} catch (emailError) {
 		log.info(

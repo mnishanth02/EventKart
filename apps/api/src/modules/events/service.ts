@@ -7,7 +7,12 @@ import {
 	organizers,
 	slugRedirects,
 } from "@repo/db/schema";
-import { AUDIT_ACTIONS, DEFAULT_EVENT_STATUS, EMAIL_JOB_NAMES } from "@repo/shared/constants";
+import {
+	AUDIT_ACTIONS,
+	buildEmailIdempotencyKey,
+	DEFAULT_EVENT_STATUS,
+	EMAIL_JOB_NAMES,
+} from "@repo/shared/constants";
 import type {
 	Event,
 	EventCategoryRecord,
@@ -43,7 +48,7 @@ import {
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
 import type { FastifyBaseLogger } from "fastify";
 import type { AuditLogger } from "../../lib/audit.js";
-import { logEmailStub } from "../../lib/email-stub.js";
+import { emitEmailStub } from "../../lib/email-stub.js";
 import {
 	AppError,
 	ConflictError,
@@ -1663,16 +1668,23 @@ export async function publishEvent(
 	);
 
 	// Wave B: log-only email stub. Failures must NEVER break the publish flow.
-	if (result.transition === "draft_to_published") {
+	if (result.transition === "draft_to_under_review") {
 		try {
-			logEmailStub(deps.log, {
-				jobName: EMAIL_JOB_NAMES.EVENT_PUBLISHED,
-				recipientEmail: result.organizer.contactEmail,
-				resourceId: result.event.id,
-				suffix: "published",
+			emitEmailStub({ log: deps.log }, {
+				jobName: EMAIL_JOB_NAMES.EVENT_REVIEW_SUBMITTED,
+				idempotencyKey: buildEmailIdempotencyKey.eventReviewSubmitted(
+					result.event.id,
+					new Date(result.event.submittedForReviewAt ?? Date.now()),
+				),
+				context: {
+					eventId: result.event.id,
+					organizerId: result.event.organizerId,
+				},
 			});
 		} catch (emailError) {
-			deps.log.info({ err: String(emailError), eventId: result.event.id, emailStubFailed: true }, "event.published email stub failed (non-fatal)",
+			deps.log.info(
+				{ err: String(emailError), eventId: result.event.id, emailStubFailed: true },
+				"event.review_submitted email stub failed (non-fatal)",
 			);
 		}
 	}
@@ -1839,11 +1851,16 @@ export async function adminApproveEvent(
 
 	// Wave B: log-only email stub. Failures must NEVER break admin approval.
 	try {
-		logEmailStub(deps.log, {
-			jobName: EMAIL_JOB_NAMES.EVENT_ADMIN_APPROVED,
-			recipientEmail: result.organizer.contactEmail,
-			resourceId: result.event.id,
-			suffix: "approved",
+		emitEmailStub({ log: deps.log }, {
+			jobName: EMAIL_JOB_NAMES.EVENT_REVIEW_APPROVED,
+			idempotencyKey: buildEmailIdempotencyKey.eventReviewApproved(
+				result.event.id,
+				new Date(result.event.publishedAt ?? Date.now()),
+			),
+			context: {
+				eventId: result.event.id,
+				organizerId: result.event.organizerId,
+			},
 		});
 	} catch (emailError) {
 		deps.log.info({ err: String(emailError), eventId: result.event.id, emailStubFailed: true }, "event.admin_approved email stub failed (non-fatal)",
@@ -1915,11 +1932,16 @@ export async function adminRejectEvent(
 	// Wave B: log-only email stub. Failures must NEVER break admin rejection.
 	if (result.organizerEmail) {
 		try {
-			logEmailStub(deps.log, {
-				jobName: EMAIL_JOB_NAMES.EVENT_ADMIN_REJECTED,
-				recipientEmail: result.organizerEmail,
-				resourceId: result.event.id,
-				suffix: "rejected",
+			emitEmailStub({ log: deps.log }, {
+				jobName: EMAIL_JOB_NAMES.EVENT_REVIEW_REJECTED,
+				idempotencyKey: buildEmailIdempotencyKey.eventReviewRejected(
+					result.event.id,
+					new Date(result.event.updatedAt),
+				),
+				context: {
+					eventId: result.event.id,
+					organizerId: result.event.organizerId,
+				},
 			});
 		} catch (emailError) {
 			deps.log.info({ err: String(emailError), eventId: result.event.id, emailStubFailed: true }, "event.admin_rejected email stub failed (non-fatal)",

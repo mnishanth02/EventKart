@@ -1,39 +1,30 @@
-import {
-	buildEmailIdempotencyKey,
-	type EmailJobName,
-} from "@repo/shared/constants";
+import type { EmailJobName } from "@repo/shared/constants";
 import type { FastifyBaseLogger } from "fastify";
 
-export interface EmailStubInput {
+export interface EmailStubParams {
 	jobName: EmailJobName;
-	recipientEmail: string;
-	resourceId: string;
-	suffix?: string;
 	context?: Record<string, unknown>;
+	idempotencyKey: string;
 }
 
 /**
  * Wave B: log-only email job stub. Replace with the real queue producer when
- * the email worker ships. Callers MUST wrap calls in try/catch so an email
- * failure never breaks the parent operation.
+ * the email worker ships. Stub logging is defensive and never throws.
  */
-export function logEmailStub(
-	log: Pick<FastifyBaseLogger, "info">,
-	input: EmailStubInput,
+export function emitEmailStub(
+	fastify: { log: Pick<FastifyBaseLogger, "info"> },
+	params: EmailStubParams,
 ): void {
-	const idempotencyKey = buildEmailIdempotencyKey(
-		input.jobName,
-		input.resourceId,
-		input.suffix,
-	);
-	log.info(
-		{
-			emailStub: true,
-			jobName: input.jobName,
-			idempotencyKey,
-			// NOTE: recipientEmail intentionally omitted to avoid PII in logs.
-			// The idempotencyKey encodes resourceId for traceability.
-		},
-		`email-stub:${input.jobName}`,
-	);
+	try {
+		fastify.log.info(
+			{
+				jobName: params.jobName,
+				idempotencyKey: params.idempotencyKey,
+				...params.context,
+			},
+			"email enqueue point (Phase 3)",
+		);
+	} catch {
+		// Stub logging must never break a successful product flow.
+	}
 }

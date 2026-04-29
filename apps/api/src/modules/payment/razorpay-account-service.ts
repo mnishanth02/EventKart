@@ -2,10 +2,15 @@ import type { Database } from "@repo/db";
 import { and, eq, inArray } from "@repo/db";
 import { organizers } from "@repo/db/schema";
 import type { RazorpayAccountStatus } from "@repo/shared/constants";
-import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES, EMAIL_JOB_NAMES } from "@repo/shared/constants";
+import {
+	AUDIT_ACTIONS,
+	AUDIT_RESOURCE_TYPES,
+	buildEmailIdempotencyKey,
+	EMAIL_JOB_NAMES,
+} from "@repo/shared/constants";
 import type { FastifyBaseLogger } from "fastify";
 import { createAuditLogger } from "../../lib/audit.js";
-import { logEmailStub } from "../../lib/email-stub.js";
+import { emitEmailStub } from "../../lib/email-stub.js";
 import { NotFoundError } from "../../lib/errors.js";
 import type { RazorpayClient } from "../../lib/razorpay.js";
 
@@ -175,11 +180,13 @@ export async function createLinkedAccount(
 		// Failures must NEVER break the account-creation flow.
 		if (mappedStatus === "active") {
 			try {
-				logEmailStub(log, {
-					jobName: EMAIL_JOB_NAMES.RAZORPAY_ACCOUNT_ACTIVE,
-					recipientEmail: org.contactEmail,
-					resourceId: organizerId,
-					suffix: "razorpay_active",
+				emitEmailStub({ log }, {
+					jobName: EMAIL_JOB_NAMES.ORGANIZER_RAZORPAY_READY,
+					idempotencyKey: buildEmailIdempotencyKey.razorpayReady(
+						organizerId,
+						now,
+					),
+					context: { organizerId },
 				});
 			} catch (emailError) {
 				log.info(

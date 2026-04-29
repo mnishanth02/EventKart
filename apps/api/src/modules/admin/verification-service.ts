@@ -1,10 +1,15 @@
 import type { Database } from "@repo/db";
 import { and, eq, inArray, sql } from "@repo/db";
 import { auditLog, organizers, verificationDocuments } from "@repo/db/schema";
-import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES, EMAIL_JOB_NAMES } from "@repo/shared/constants";
+import {
+	AUDIT_ACTIONS,
+	AUDIT_RESOURCE_TYPES,
+	buildEmailIdempotencyKey,
+	EMAIL_JOB_NAMES,
+} from "@repo/shared/constants";
 import type { AdminVerificationListParams } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
-import { logEmailStub } from "../../lib/email-stub.js";
+import { emitEmailStub } from "../../lib/email-stub.js";
 import { ConflictError, NotFoundError } from "../../lib/errors.js";
 import type { AppQueues } from "../../lib/queue.js";
 import type { StorageClient } from "../../lib/storage.js";
@@ -325,11 +330,13 @@ export async function approveOrganizer(
 			.where(eq(organizers.id, organizerId))
 			.limit(1);
 		if (orgRow) {
-			logEmailStub(log, {
-				jobName: EMAIL_JOB_NAMES.ORGANIZER_APPROVED,
-				recipientEmail: orgRow.contactEmail,
-				resourceId: organizerId,
-				suffix: "approved",
+			emitEmailStub({ log }, {
+				jobName: EMAIL_JOB_NAMES.ORGANIZER_VERIFICATION_APPROVED,
+				idempotencyKey: buildEmailIdempotencyKey.verificationApproved(
+					organizerId,
+					new Date(result.reviewedAt),
+				),
+				context: { organizerId },
 			});
 		}
 	} catch (emailError) {
@@ -426,11 +433,13 @@ export async function rejectOrganizer(
 			.where(eq(organizers.id, organizerId))
 			.limit(1);
 		if (orgRow) {
-			logEmailStub(log, {
-				jobName: EMAIL_JOB_NAMES.ORGANIZER_REJECTED,
-				recipientEmail: orgRow.contactEmail,
-				resourceId: organizerId,
-				suffix: "rejected",
+			emitEmailStub({ log }, {
+				jobName: EMAIL_JOB_NAMES.ORGANIZER_VERIFICATION_REJECTED,
+				idempotencyKey: buildEmailIdempotencyKey.verificationRejected(
+					organizerId,
+					new Date(result.reviewedAt),
+				),
+				context: { organizerId },
 			});
 		}
 	} catch (emailError) {
