@@ -717,6 +717,12 @@ function toValidationDetails(error: {
 	};
 }
 
+function throwInvalidEventDetails(
+	error: Parameters<typeof toValidationDetails>[0],
+): never {
+	throw new ValidationError("Invalid event details", toValidationDetails(error));
+}
+
 async function selectEventForCategories(
 	db: EventLookupStore,
 	eventId: string,
@@ -1014,13 +1020,10 @@ export async function updateDraftEvent(
 ): Promise<Event> {
 	const parsedEventId = parseUuid(eventId, "event id");
 	const parsed = updateEventInputSchema.safeParse(input);
-	const shouldCheckPublishedLowRiskConflict =
+	const deferValidationForPublishedLowRisk =
 		!parsed.success && hasOnlyPublishedLowRiskFields(input);
-	if (!parsed.success && !shouldCheckPublishedLowRiskConflict) {
-		throw new ValidationError(
-			"Invalid event details",
-			toValidationDetails(parsed.error),
-		);
+	if (!parsed.success && !deferValidationForPublishedLowRisk) {
+		throwInvalidEventDetails(parsed.error);
 	}
 
 	const { db, log } = deps;
@@ -1063,10 +1066,7 @@ export async function updateDraftEvent(
 		}
 
 		if (!parsed.success) {
-			throw new ValidationError(
-				"Invalid event details",
-				toValidationDetails(parsed.error),
-			);
+			throwInvalidEventDetails(parsed.error);
 		}
 
 		const data: UpdateEvent = parsed.data;
