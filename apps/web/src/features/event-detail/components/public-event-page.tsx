@@ -6,7 +6,7 @@ import { PublicEventDetailsSection } from "./public-event-details-section";
 import { PublicEventHero } from "./public-event-hero";
 import { PublicEventLocationCard } from "./public-event-location-card";
 import { PublicEventOrganizerCard } from "./public-event-organizer-card";
-import { PublicEventPolicyText } from "./public-event-policy-text";
+import { PublicEventPolicySection } from "./public-event-policy-section";
 import { PublicEventPricingTable } from "./public-event-pricing-table";
 import { PublicEventRegisterCta } from "./public-event-register-cta";
 
@@ -25,9 +25,10 @@ export function PublicEventPage({ event }: PublicEventPageProps) {
 						<PublicEventCategoriesTable categories={event.categories} />
 						<PublicEventPricingTable event={event} />
 					</div>
-					<PublicEventPolicyText
+					<PublicEventPolicySection
 						refundPolicy={event.refundPolicy}
 						cancellationPolicy={event.cancellationPolicy}
+						organizer={event.organizer}
 					/>
 				</main>
 				<aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">

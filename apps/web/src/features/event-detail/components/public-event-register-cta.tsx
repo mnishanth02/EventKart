@@ -2,6 +2,7 @@ import { Button } from "@repo/ui/components/ui/button";
 import {
 	Card,
 	CardContent,
+	CardFooter,
 	CardHeader,
 	CardTitle,
 } from "@repo/ui/components/ui/card";
@@ -20,6 +21,14 @@ export function PublicEventRegisterCta() {
 					<a href="#register-coming-soon">Registration coming soon</a>
 				</Button>
 			</CardContent>
+			<CardFooter>
+				<a
+					href="#policies"
+					className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+				>
+					Review refund &amp; cancellation policies
+				</a>
+			</CardFooter>
 		</Card>
 	);
 }
