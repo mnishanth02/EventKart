@@ -15,7 +15,6 @@ This file covers **repo-wide** rules only.
 
 For feature implementation from `docs/impl-plan/` or `docs/v1-implementation-plan.md`, use the existing Anvil agent/autopilot workflow with the single prompt at `.github/prompts/eventkart-dev-workflow.prompt.md`.
 
-
 ## Package Boundaries
 
 | Package                      | Purpose                                   | Import as                                                     |
@@ -46,13 +45,13 @@ If something close already exists, **extend it**. Never duplicate.
 
 **Rule 2 — Where new code goes.** Use this decision tree:
 
-| What you're adding                                   | Goes in                                                  |
-| ---------------------------------------------------- | -------------------------------------------------------- |
-| A generic shadcn primitive (no app-specific logic)   | `packages/ui/src/components/ui/`                         |
-| A generic, reusable hook or util (no app deps)       | `packages/ui/src/hooks/` or `packages/ui/src/lib/`       |
-| An app-level design-system primitive (composes shadcn, no domain logic) | `apps/web/src/components/design-system/` |
-| App chrome (header, footer, sidebar, error/loading)  | `apps/web/src/components/{layout,error,loading}/`        |
-| A component tied to one domain (events, organizer, …)| `apps/web/src/features/<domain>/components/`             |
+| What you're adding                                                      | Goes in                                            |
+| ----------------------------------------------------------------------- | -------------------------------------------------- |
+| A generic shadcn primitive (no app-specific logic)                      | `packages/ui/src/components/ui/`                   |
+| A generic, reusable hook or util (no app deps)                          | `packages/ui/src/hooks/` or `packages/ui/src/lib/` |
+| An app-level design-system primitive (composes shadcn, no domain logic) | `apps/web/src/components/design-system/`           |
+| App chrome (header, footer, sidebar, error/loading)                     | `apps/web/src/components/{layout,error,loading}/`  |
+| A component tied to one domain (events, organizer, …)                   | `apps/web/src/features/<domain>/components/`       |
 
 **Hard rule:** `packages/ui` is for code that could plausibly ship to a second
 app. App-specific composites, domain logic, and route-aware components do

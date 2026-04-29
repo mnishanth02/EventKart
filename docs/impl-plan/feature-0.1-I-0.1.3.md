@@ -42,6 +42,8 @@ Persistent session records (runtime sessions cached in Redis).
 
 DPDPA-compliant consent tracking.
 
+> **Phase 3 extension (v2.2):** This feature shipped the original Phase 0 schema documented below. A Phase 3 migration extends the table to add the `parental` consent type, `booking_id` (nullable FK), and `guardian_email` + `guardian_name` columns to support I-3.1.6 / I-3.1.7. See `docs/v1-implementation-plan.md` "Database Table Overview → Core (Phase 0)" for the canonical post-Phase-3 schema. Do not duplicate the schema in any later impl-plan doc.
+
 - `id` UUID PK (gen_random_uuid)
 - `participant_id` UUID NOT NULL FK → users(id) (no cascade — retained for compliance)
 - `consent_type` consent_type ENUM NOT NULL (booking_terms, data_usage, marketing)

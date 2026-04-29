@@ -62,13 +62,13 @@ features/<domain>/
 
 **Where new code goes:**
 
-| Adding…                                                     | Goes in                                                  |
-| ----------------------------------------------------------- | -------------------------------------------------------- |
-| Generic shadcn primitive (no app-specific logic)            | `packages/ui/src/components/ui/`                         |
-| Generic hook or util (no app deps, ships to any app)        | `packages/ui/src/hooks/` or `packages/ui/src/lib/`       |
-| App-level DS primitive (composes shadcn, no domain logic)   | `apps/web/src/components/design-system/`                 |
-| App chrome (header, footer, sidebar, error/loading states)  | `apps/web/src/components/{layout,error,loading}/`        |
-| Component tied to one domain (events, organizer, payments…) | `apps/web/src/features/<domain>/components/`             |
+| Adding…                                                     | Goes in                                            |
+| ----------------------------------------------------------- | -------------------------------------------------- |
+| Generic shadcn primitive (no app-specific logic)            | `packages/ui/src/components/ui/`                   |
+| Generic hook or util (no app deps, ships to any app)        | `packages/ui/src/hooks/` or `packages/ui/src/lib/` |
+| App-level DS primitive (composes shadcn, no domain logic)   | `apps/web/src/components/design-system/`           |
+| App chrome (header, footer, sidebar, error/loading states)  | `apps/web/src/components/{layout,error,loading}/`  |
+| Component tied to one domain (events, organizer, payments…) | `apps/web/src/features/<domain>/components/`       |
 
 **Hard rule:** `packages/ui` is for code that could plausibly ship to a second
 app. App-specific composites, route-aware components, and any code that

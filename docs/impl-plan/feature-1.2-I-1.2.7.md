@@ -27,14 +27,14 @@
 
 ## Tasks
 
-| Task | Status | Notes |
-| --- | --- | --- |
-| Shared admin event-review contracts | ✅ | List/detail/action schemas added. |
-| Publish-time first-3 paid event policy | ✅ | Counts previously `published` paid events for the organizer. |
-| Admin event-review API | ✅ | List/detail/approve/reject endpoints added with admin RBAC. |
-| Admin event-review UI | ✅ | Queue/detail pages added under `/admin/event-reviews`. |
-| Tests | ✅ | Focused API service/route and web component tests added. |
-| Progress docs | ✅ | `progress.md`, v1 plan, and this active plan updated. |
+| Task                                   | Status | Notes                                                        |
+| -------------------------------------- | ------ | ------------------------------------------------------------ |
+| Shared admin event-review contracts    | ✅     | List/detail/action schemas added.                            |
+| Publish-time first-3 paid event policy | ✅     | Counts previously `published` paid events for the organizer. |
+| Admin event-review API                 | ✅     | List/detail/approve/reject endpoints added with admin RBAC.  |
+| Admin event-review UI                  | ✅     | Queue/detail pages added under `/admin/event-reviews`.       |
+| Tests                                  | ✅     | Focused API service/route and web component tests added.     |
+| Progress docs                          | ✅     | `progress.md`, v1 plan, and this active plan updated.        |
 
 ## Validation
 

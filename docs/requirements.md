@@ -194,7 +194,7 @@ The phases below are ordered by what must exist before the next layer can work. 
 #### Module 1.2: Event Creation & Management
 
 - **F-1.2.1** — Event creation form for V1-allowed events only (single-day, paid running events in the launch city) with name, date, time, location, description, and route details
-- **F-1.2.2** — Event category and distance configuration (5K, 10K, half-marathon, etc.)
+- **F-1.2.2** — Event category and distance configuration (5K, 10K, half-marathon, etc.) with **per-category capacity** (each category sells out independently — DEC-3 v2.2; sold out is per-category, not per-event)
 - **F-1.2.3** — Pricing configuration (per category, early-bird support)
 - **F-1.2.4** — Registration form field configuration (standard fields + fitness-specific: blood group, T-shirt size, emergency contact), with sensitive fields optional by default unless a safety-critical reason is provided
 - **F-1.2.5** — Refund and cancellation policy capture per event
@@ -251,6 +251,7 @@ The phases below are ordered by what must exist before the next layer can work. 
 - **F-3.1.4** — Auto-fill from saved participant profile for returning participants
 - **F-3.1.5** — Form validation with clear error messaging
 - **F-3.1.6** — Consent capture at submission (data usage, event policies)
+- **F-3.1.7** — Parental consent for minor participants (age < 18): server-side gate that requires a parent/guardian name + email and a parental consent checkbox before a booking can be submitted; stored as a fourth `parental` consent type in `consent_records` (DPDPA pre-launch gate, v2.2)
 
 #### Module 3.2: Payment Integration
 
@@ -337,8 +338,10 @@ The phases below are ordered by what must exist before the next layer can work. 
 
 #### Module 6.1: Transactional Emails
 
-- **F-6.1.1** — Email service integration and template system
-- **F-6.1.2** — Booking confirmation email (event details, QR ticket, policies)
+> **Note (v2.2 relocation):** F-6.1.1 (email service integration) and F-6.1.2 (booking confirmation email) have been moved to **Phase 3 Module 3.3** as `I-3.3.1` and `I-3.3.5` because they are on the critical path for booking confirmation. They are listed below for traceability only — do not schedule them under Phase 6.
+
+- **F-6.1.1** — _[Moved to Phase 3 — see I-3.3.1]_ Email service integration and template system
+- **F-6.1.2** — _[Moved to Phase 3 — see I-3.3.5]_ Booking confirmation email (event details, QR ticket, policies)
 - **F-6.1.3** — Event reminder email (1-2 days before event)
 - **F-6.1.4** — Booking cancellation/refund confirmation email
 
