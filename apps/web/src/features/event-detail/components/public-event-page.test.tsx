@@ -57,6 +57,7 @@ const fixture: EventPublicDetail = eventPublicDetailSchema.parse({
 		businessName: "Race Coimbatore Collective",
 		isVerified: true,
 		city: "Coimbatore",
+		description: null,
 	},
 	heroImage: {
 		kind: "hero",
