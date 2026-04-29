@@ -1,8 +1,8 @@
 ---
 title: EventKart V1 — Comprehensive Implementation Plan
-version: 2.1
+version: 2.2
 date_created: 2026-04-21
-last_updated: 2026-04-21
+last_updated: 2026-04-22
 derived_from:
   - docs/product-plan.md (v2.1)
   - docs/requirements.md (v1.1)
@@ -13,6 +13,7 @@ reviewed_by:
   - Claude Opus 4.6 (v2.0 review + v2.1 final review)
   - GPT-5.4 (v2.0 review + v2.1 final review)
   - Claude Sonnet 4.6 (v2.0 review)
+  - Claude Opus 4.7 high (v2.2 product/impl-plan gap audit)
 owner: Engineering / Founding Team
 tags: [implementation, roadmap, v1]
 ---
@@ -21,7 +22,7 @@ tags: [implementation, roadmap, v1]
 
 This document translates the product plan, requirements document, and architecture decisions into a sequenced, phase-wise implementation roadmap. It defines **what** to build and **in what order** — not how to implement it.
 
-**Feature ID convention:** This plan uses its own feature IDs (e.g., `I-0.1.1`) that are more granular than the requirements document's feature IDs (e.g., `F-0.1.1`). The requirements document defines 103 features; this plan decomposes them into 143 implementation items (including infrastructure, security, observability, and data lifecycle work not in the requirements). A complete cross-reference table mapping every requirements F-ID to implementation I-IDs is provided in [Appendix A](#appendix-a-requirements-to-implementation-id-mapping).
+**Feature ID convention:** This plan uses its own feature IDs (e.g., `I-0.1.1`) that are more granular than the requirements document's feature IDs (e.g., `F-0.1.1`). The requirements document defines 103 features; this plan decomposes them into 181 implementation items (including infrastructure, security, observability, public chrome, transactional emails, admin notifications, and data lifecycle work not in the requirements). A complete cross-reference table mapping every requirements F-ID to implementation I-IDs is provided in [Appendix A](#appendix-a-requirements-to-implementation-id-mapping).
 
 ---
 
@@ -68,6 +69,10 @@ The following foundation work is already complete or in progress:
 
 | I-1.1.5: Admin verification review API (backend) | ✅ Complete | 5 REST endpoints under `/api/v1/admin`: list verifications (paginated), detail, document view URL, approve, reject. Admin service with Drizzle transactions, audit logging. 26 admin tests passing. |
 | I-1.1.5: Admin verification review UI (frontend) | ✅ Complete | Admin feature module with server functions, query options. VerificationQueue (paginated table with status filter), VerificationReviewDetail (org info, doc viewer with presigned URLs, policy status, SLA info), ReviewActionDialog (approve/reject with validation). Routes: `/admin/verifications` (queue), `/admin/verifications/$organizerId` (detail). 514 total API tests passing. |
+| I-1.1.2: Verification document upload | ✅ Complete | Upload to S3/R2 via presigned URLs, server-side encryption at rest, access logged. Shared document type/size schemas. `POST /api/v1/organizers/{organizerId}/documents/request`, `POST /api/v1/organizers/{organizerId}/documents/{documentId}/confirm`, `DELETE /api/v1/organizers/{organizerId}/documents/{documentId}`. `verification_documents` table + migration. File types: PDF/JPEG/PNG, max 10MB. 15 document tests passing. |
+| I-1.1.3: Policy acceptance workflow | ✅ Complete | Consent versioning, no pre-checked boxes. `CURRENT_POLICY_VERSIONS` stamped server-side. Idempotent acceptance. Uses `consent_records` table from Phase 0. Platform terms + refund policy framework. `POST /api/v1/organizers/{organizerId}/policies/accept`, `GET /api/v1/organizers/{organizerId}/policies/status`. Shared `OrganizerPolicyType` enum. 16 policy tests passing. |
+| I-1.1.6: Verification badge assignment on approval | ✅ Complete | `VerifiedBadge` component in `packages/ui`. Publishing eligibility gated by `isVerified && razorpayAccountStatus === "active"`. Badge shown in organizer dashboard, profile, admin detail. Verification state from `verification_status` endpoint. Audit logged on approval. (Behavior covered by I-1.1.4/I-1.1.5 tests.) |
+| I-1.1.7: Razorpay Route linked-account creation + KYC sync | ✅ Complete | Async BullMQ job triggered on admin approval (I-1.1.5). Razorpay client lib, Fastify plugin. Maps Razorpay API status (created→pending, activated→active, suspended→suspended, etc.) to app status enum. Idempotent: skips if account already exists in non-retryable state. Publishing gate enforced: `canPublishPaidEvents = isVerified && razorpayAccountStatus === "active"`. Admin retry endpoint. 7 razorpay-account tests passing. |
 | I-1.2.10: Event slug generation API service | ✅ Complete | Shared slug utilities, database slug fields/redirect table foundation, and API slug service for unique URL-safe event slugs and redirect recording. |
 | I-1.2.1: Event creation form | ✅ Complete | Events table expanded with V1 event creation fields, shared Zod schemas/constants, `POST /api/v1/events` with organizer auth + CSRF, and `/org/events/new` TanStack Form UI for draft single-day paid running events in Coimbatore. |
 | I-1.2.2: Event category & distance configuration | ✅ Complete | `event_categories` table + migration/rollback, shared 5K/10K/half-marathon defaults and Zod schemas, `GET/PUT /api/v1/events/:eventId/categories`, and `/org/events/$eventId/configure-categories` UI with event creation redirect. 47 event API tests, 12 shared schema tests, 12 DB schema tests, 9 targeted web tests, and web check-types passing. |
@@ -79,6 +84,12 @@ The following foundation work is already complete or in progress:
 | I-1.2.5: Refund & cancellation policy capture | ✅ Complete | Event-level refund/cancellation policy storage, shared policy schema, API get/update routes, organizer UI for policy capture before booking, and publish readiness integration. |
 
 **What remains:** Module 1.2 (Event Creation & Management) is ✅ Complete — all 10 implementation items (I-1.2.1 through I-1.2.10, including I-1.2.4 registration form field configuration) are done. Module 1.1 (Organizer Signup & Verification) is also ✅ Complete — all 8 features (I-1.1.1 through I-1.1.8) are done. Downstream public listing, booking, and participant flows continue in later modules.
+
+**v2.2 known follow-ups (not blocking Phase 2):**
+
+- **2 failing tests** in the auth/config layer — `apps/api/test/app.test.ts` "treats a blank internal api key as unset" and `apps/api/test/plugins/internal-key.test.ts` "returns 401 when X-Internal-Key header is sent". Tracked as I-0.2.14 and I-0.2.15.
+- **Capacity columns deferred** — `event_categories.spots_total` and `spots_remaining` are NOT yet in the schema. Per-category capacity is added with I-3.2.10 and the schema migration in I-1.2.2 is being amended (see Appendix B v2.2 entry).
+- **Per-category capacity model** is the V1 commitment — event-level capacity has been removed from the plan (was in the v2.1 Database Table Overview by mistake).
 
 ---
 
@@ -153,20 +164,23 @@ _Covers requirements F-0.2.1 through F-0.2.4_
 
 **Implementation order:** Items are sequenced by dependency. Cross-module dependencies noted explicitly.
 
-| Order | ID       | Feature                                                                               | Backend | Frontend | Shared | Depends on                    | Notes                                                                                                                           |
-| ----- | -------- | ------------------------------------------------------------------------------------- | ------- | -------- | ------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| 1 ✅  | I-0.2.12 | Security headers — CSP, X-Frame-Options, X-Content-Type-Options                       | ✦       | ✦        | —      | —                             | Fastify helmet plugin + TanStack Start response headers. No auth deps, do first.                                                |
-| 2 ✅  | I-0.2.1  | OTP send (phone → MSG91) with WhatsApp OTP fallback                                   | ✦       | —        | ✦      | **I-0.1.1**, **I-0.1.5**      | Rate limited: 1/phone/60s. Redis OTP storage with 5-min TTL. WhatsApp OTP delivery as fallback for SMS failures.                |
-| 3 ✅  | I-0.2.2  | OTP verify → session creation                                                         | ✦       | —        | ✦      | I-0.2.1, **I-0.1.5**          | Redis session (sess:), cookie: `kiran_session`, HttpOnly, Secure, SameSite=Lax, Domain=.eventkart.app, 30-day TTL               |
-| 4 ✅  | I-0.2.3  | Session middleware — decorates `request.session`                                      | ✦       | —        | —      | I-0.2.2                       | Fastify plugin, session from Redis                                                                                              |
-| 5 ✅  | I-0.2.8  | Logout endpoint — clear session                                                       | ✦       | —        | —      | I-0.2.3                       | `POST /api/v1/auth/logout`. Simple, build alongside session middleware.                                                         |
-| 6 ✅  | I-0.2.11 | CSRF protection — anti-CSRF token on state-changing requests                          | ✦       | ✦        | —      | I-0.2.3                       | SameSite cookies + CSRF token validation                                                                                        |
-| 7 ✅  | I-0.2.4  | Role-based access control (public, participant, organizer, admin)                     | ✦       | —        | ✦      | I-0.2.3, **I-0.1.3**          | `requireAuth`, `requireRole('organizer')`, `requireRole('admin')` middleware. Needs users table.                                |
-| 8 ✅  | I-0.2.10 | Internal API key for server-to-server calls                                           | ✦       | ✦        | —      | I-0.2.3                       | `X-Internal-Key` header, higher rate limits (1000/min)                                                                          |
-| 9 ✅  | I-0.2.6  | Admin IP allowlist middleware                                                         | ✦       | —        | —      | I-0.2.4                       | Architecture §6: "Admin: Phone OTP + IP allowlist during pilot." Configurable allowlist via env var.                            |
-| 10 ✅ | I-0.2.5  | Organizer email verification                                                          | ✦       | ✦        | ✦      | I-0.2.4                       | Architecture §6: "Organizer: Phone OTP + email verification." Elevated role assigned after email verification + admin approval. |
-| 11 ✅ | I-0.2.9  | Session forwarding for SSR — TanStack Start forwards cookie in server-to-server calls | —       | ✦        | —      | I-0.2.3, **I-0.3.6**          | `X-Request-ID` propagation, `INTERNAL_API_URL` for SSR. **Cross-dep on Module 0.3 API client.**                                 |
-| 12 ✅ | I-0.2.7  | Deferred authentication pattern — browsing unauthenticated, OTP at booking            | ✦       | ✦        | —      | I-0.2.1, I-0.2.2, **I-0.3.1** | Frontend routing respects auth state; booking flow triggers OTP. **Cross-dep on Module 0.3 layout shell.**                      |
+| Order | ID       | Feature                                                                               | Backend | Frontend | Shared | Depends on                    | Notes                                                                                                                                                                                                                                                                                                                                   |
+| ----- | -------- | ------------------------------------------------------------------------------------- | ------- | -------- | ------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 ✅  | I-0.2.12 | Security headers — CSP, X-Frame-Options, X-Content-Type-Options                       | ✦       | ✦        | —      | —                             | Fastify helmet plugin + TanStack Start response headers. No auth deps, do first.                                                                                                                                                                                                                                                        |
+| 2 ✅  | I-0.2.1  | OTP send (phone → MSG91) with WhatsApp OTP fallback                                   | ✦       | —        | ✦      | **I-0.1.1**, **I-0.1.5**      | Rate limited: 1/phone/60s. Redis OTP storage with 5-min TTL. WhatsApp OTP delivery as fallback for SMS failures.                                                                                                                                                                                                                        |
+| 3 ✅  | I-0.2.2  | OTP verify → session creation                                                         | ✦       | —        | ✦      | I-0.2.1, **I-0.1.5**          | Redis session (sess:), cookie: `kiran_session`, HttpOnly, Secure, SameSite=Lax, Domain=.eventkart.app, 30-day TTL                                                                                                                                                                                                                       |
+| 4 ✅  | I-0.2.3  | Session middleware — decorates `request.session`                                      | ✦       | —        | —      | I-0.2.2                       | Fastify plugin, session from Redis                                                                                                                                                                                                                                                                                                      |
+| 5 ✅  | I-0.2.8  | Logout endpoint — clear session                                                       | ✦       | —        | —      | I-0.2.3                       | `POST /api/v1/auth/logout`. Simple, build alongside session middleware.                                                                                                                                                                                                                                                                 |
+| 6 ✅  | I-0.2.11 | CSRF protection — anti-CSRF token on state-changing requests                          | ✦       | ✦        | —      | I-0.2.3                       | SameSite cookies + CSRF token validation                                                                                                                                                                                                                                                                                                |
+| 7 ✅  | I-0.2.4  | Role-based access control (public, organizer, admin)                                  | ✦       | —        | ✦      | I-0.2.3, **I-0.1.3**          | `requireAuth`, `requireRole('organizer')`, `requireRole('admin')` middleware. Needs users table. **V1 scope:** persistent roles are public, organizer, admin. "Participant" is OTP-verified per booking, not a persistent user role.                                                                                                    |
+| 8 ✅  | I-0.2.10 | Internal API key for server-to-server calls                                           | ✦       | ✦        | —      | I-0.2.3                       | `X-Internal-Key` header, higher rate limits (1000/min)                                                                                                                                                                                                                                                                                  |
+| 9 ✅  | I-0.2.6  | Admin IP allowlist middleware                                                         | ✦       | —        | —      | I-0.2.4                       | Architecture §6: "Admin: Phone OTP + IP allowlist during pilot." Configurable allowlist via env var.                                                                                                                                                                                                                                    |
+| 10 ✅ | I-0.2.5  | Organizer email verification                                                          | ✦       | ✦        | ✦      | I-0.2.4                       | Architecture §6: "Organizer: Phone OTP + email verification." Elevated role assigned after email verification + admin approval.                                                                                                                                                                                                         |
+| 11 ✅ | I-0.2.9  | Session forwarding for SSR — TanStack Start forwards cookie in server-to-server calls | —       | ✦        | —      | I-0.2.3, **I-0.3.6**          | `X-Request-ID` propagation, `INTERNAL_API_URL` for SSR. **Cross-dep on Module 0.3 API client.**                                                                                                                                                                                                                                         |
+| 12 ✅ | I-0.2.7  | Deferred authentication pattern — browsing unauthenticated, OTP at booking            | ✦       | ✦        | —      | I-0.2.1, I-0.2.2, **I-0.3.1** | Frontend routing respects auth state; booking flow triggers OTP. **Cross-dep on Module 0.3 layout shell.**                                                                                                                                                                                                                              |
+| 13    | I-0.2.13 | Secret rotation runbook + automated reminder                                          | ✦       | —        | —      | I-0.2.2, I-0.2.10             | Architecture §6: rotation procedure for `SESSION_SECRET`, `CSRF_SECRET`, `HMAC_TICKET_SECRET`, `INTERNAL_API_KEY`, `RAZORPAY_WEBHOOK_SECRET`. Runbook in `docs/runbooks/secret-rotation.md` + 90-day BullMQ reminder job that opens an admin notification.                                                                              |
+| 14    | I-0.2.14 | INTERNAL_API_KEY blank-string handling fix (test hotfix)                              | ✦       | —        | —      | I-0.2.10                      | Config validation in `apps/api/src/lib/config.ts` must coerce empty `INTERNAL_API_KEY` to `undefined` before SHA256 hash. Fixes failing test `apps/api/test/app.test.ts > buildApp > treats a blank internal api key as unset`.                                                                                                         |
+| 15    | I-0.2.15 | Internal-key plugin error message differentiation (test hotfix)                       | ✦       | —        | —      | I-0.2.10                      | `apps/api/src/plugins/internal-key.ts` must distinguish "Internal API key not configured" (when key absent) from "Invalid internal API key" (when key wrong). Fixes failing test `apps/api/test/plugins/internal-key.test.ts > internal-key plugin > INTERNAL_API_KEY not configured > returns 401 when X-Internal-Key header is sent`. |
 
 **Deliverables:**
 
@@ -181,6 +195,7 @@ _Covers requirements F-0.2.1 through F-0.2.4_
 - SSR session forwarding from TanStack Start
 - Deferred auth pattern for unauthenticated browsing
 - Auth-related Zod schemas in `packages/shared`
+- Secret rotation runbook + reminder job (I-0.2.13) and INTERNAL_API_KEY hotfixes (I-0.2.14, I-0.2.15) before V1 launch
 
 ### Module 0.3: Design System & App Shell
 
@@ -215,14 +230,15 @@ _Covers infrastructure requirements from architecture §4.3, §4.4, §4.5_
 
 **Implementation order:** Steps 1–2 have no cross-module dependencies and can start in parallel with Modules 0.2/0.3. Steps 3–6 require Module 0.1 infrastructure.
 
-| Order | ID      | Feature                                                                                                                | Backend | Frontend | Shared | Depends on               | Notes                                                                                                                                                                                                                                             |
-| ----- | ------- | ---------------------------------------------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 ✅  | I-0.4.2 | Pino structured logging with request correlation IDs + OpenTelemetry bridge                                            | ✦       | —        | —      | —                        | ✅ `X-Request-ID` in every log line. Pino + OpenTelemetry bridge for log↔trace correlation. Foundation for all observability.                                                                                                                     |
-| 2 ✅  | I-0.4.1 | Sentry integration — separate projects for client-side, SSR server, API server                                         | ✦       | ✦        | —      | —                        | ✅ @sentry/node for API (conditional OTEL, PII scrubbing, 5xx capture). @sentry/tanstackstart-react for web (browserTracing, replay, error boundaries). Graceful no-op when DSN unset.                                                            |
-| 3 ✅  | I-0.4.3 | Health check endpoints — Fastify (`GET /health`, `GET /ready`) + TanStack Start (`GET /health`, `GET /ready`)          | ✦       | ✦        | —      | **I-0.1.2**, **I-0.1.5** | ✅ Fastify: liveness + readiness with parallel PostgreSQL + Redis checks. TanStack Start: liveness + readiness with API reachability check.                                                                                                       |
-| 4 ✅  | I-0.4.4 | Audit log table and logging utility                                                                                    | ✦       | —        | —      | **I-0.1.3**              | ✅ createAuditLogger factory with log()/logBatch(). Fire-and-forget error handling. AUDIT_ACTIONS + AUDIT_RESOURCE_TYPES constants in shared. 382 API tests passing (11 audit).                                                                   |
-| 5 ✅  | I-0.4.5 | Production metrics emitter — booking RPS, payment latency, webhook ACK latency, queue depth, DB pool wait, Redis usage | ✦       | —        | —      | I-0.4.2, **I-0.1.5**     | ✅ OTEL MeterProvider + metrics exporter infrastructure. HTTP request metrics (duration histogram, request counter). OTP send/verify metrics. Conversion funnel counters. Redis INFO polling. All future business metric instruments pre-defined. |
-| 6 ✅  | I-0.4.6 | BullMQ observability — queue depth, oldest job age, retry count, DLQ count per queue                                   | ✦       | —        | —      | I-0.4.2, **I-0.1.6**     | ✅ Queue polling (30s) via getJobCounts()/getJobs(). Per-queue depth, oldest job age, delayed (retry), failed gauges. DLQ total depth. 403 API tests passing.                                                                                     |
+| Order | ID      | Feature                                                                                                                | Backend | Frontend | Shared | Depends on               | Notes                                                                                                                                                                                                                                                                                                                                                      |
+| ----- | ------- | ---------------------------------------------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 ✅  | I-0.4.2 | Pino structured logging with request correlation IDs + OpenTelemetry bridge                                            | ✦       | —        | —      | —                        | ✅ `X-Request-ID` in every log line. Pino + OpenTelemetry bridge for log↔trace correlation. Foundation for all observability.                                                                                                                                                                                                                              |
+| 2 ✅  | I-0.4.1 | Sentry integration — separate projects for client-side, SSR server, API server                                         | ✦       | ✦        | —      | —                        | ✅ @sentry/node for API (conditional OTEL, PII scrubbing, 5xx capture). @sentry/tanstackstart-react for web (browserTracing, replay, error boundaries). Graceful no-op when DSN unset.                                                                                                                                                                     |
+| 3 ✅  | I-0.4.3 | Health check endpoints — Fastify (`GET /health`, `GET /ready`) + TanStack Start (`GET /health`, `GET /ready`)          | ✦       | ✦        | —      | **I-0.1.2**, **I-0.1.5** | ✅ Fastify: liveness + readiness with parallel PostgreSQL + Redis checks. TanStack Start: liveness + readiness with API reachability check.                                                                                                                                                                                                                |
+| 4 ✅  | I-0.4.4 | Audit log table and logging utility                                                                                    | ✦       | —        | —      | **I-0.1.3**              | ✅ createAuditLogger factory with log()/logBatch(). Fire-and-forget error handling. AUDIT_ACTIONS + AUDIT_RESOURCE_TYPES constants in shared. 382 API tests passing (11 audit).                                                                                                                                                                            |
+| 5 ✅  | I-0.4.5 | Production metrics emitter — booking RPS, payment latency, webhook ACK latency, queue depth, DB pool wait, Redis usage | ✦       | —        | —      | I-0.4.2, **I-0.1.5**     | ✅ OTEL MeterProvider + metrics exporter infrastructure. HTTP request metrics (duration histogram, request counter). OTP send/verify metrics. Conversion funnel counters. Redis INFO polling. All future business metric instruments pre-defined.                                                                                                          |
+| 6 ✅  | I-0.4.6 | BullMQ observability — queue depth, oldest job age, retry count, DLQ count per queue                                   | ✦       | —        | —      | I-0.4.2, **I-0.1.6**     | ✅ Queue polling (30s) via getJobCounts()/getJobs(). Per-queue depth, oldest job age, delayed (retry), failed gauges. DLQ total depth. 403 API tests passing.                                                                                                                                                                                              |
+| 7     | I-0.4.7 | Conversion funnel: explicit `started_registrations` event emission + organizer-facing dashboard tile                   | ✦       | ✦        | —      | I-0.4.5, **I-3.1.1**     | Refines I-0.4.5's vague "conversion funnel counters" into a concrete metric. Increment counter when registration form first loads (not on submit). Pair with `paid_bookings` to compute `completion_rate = paid ÷ started`. Surface as a tile on organizer dashboard via I-4.1.6. Supports product-plan §11 success metric "Registration completion rate". |
 
 **Deliverables:**
 
@@ -232,6 +248,7 @@ _Covers infrastructure requirements from architecture §4.3, §4.4, §4.5_
 - Audit log infrastructure ready for all modules
 - Production metrics pipeline for day-one observability
 - BullMQ queue observability with DLQ alerting
+- Conversion funnel metric (`started_registrations`) wired to organizer dashboard (I-0.4.7) for product-plan §11 success criteria
 
 ### Phase 0 Execution Strategy — Solo Developer
 
@@ -320,16 +337,20 @@ _Covers requirements F-1.1.1 through F-1.1.6_
 
 **Implementation order:** Registration form is the foundation. Document upload and policy acceptance extend it. Admin review and approval actions come last.
 
-| Order | ID      | Feature                                                                  | Backend | Frontend | Shared | Depends on                            | Notes                                                                                                                                                                                                     |
-| ----- | ------- | ------------------------------------------------------------------------ | ------- | -------- | ------ | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 ✅  | I-1.1.1 | Organizer registration form — business name, contact details, city       | ✦       | ✦        | ✦      | **I-0.1.1**, **I-0.1.3**, **I-0.2.4** | `POST /api/v1/organizers`, Zod schema in shared. Creates `organizers` table + migration.                                                                                                                  |
-| 2 ✅  | I-1.1.3 | Policy acceptance workflow — platform terms, refund policy framework     | ✦       | ✦        | ✦      | I-1.1.1, **I-0.1.3**                  | Consent versioning, no pre-checked boxes. Uses `consent_records` table from Phase 0. Can parallel with I-1.1.2.                                                                                           |
-| 3 ✅  | I-1.1.2 | Verification document upload — Aadhaar, PAN, GST certificate, bank proof | ✦       | ✦        | —      | I-1.1.1, **I-0.1.8**                  | Upload to S3/R2 via presigned URLs, server-side encryption at rest, access logged. Can parallel with I-1.1.3.                                                                                             |
-| 4 ✅  | I-1.1.8 | Organizer profile management — view and edit organizer profile           | ✦       | ✦        | ✦      | I-1.1.1, **I-0.3.3**                  | `/org/profile` route. Business name, description, city. Separate from the public-facing profile (Phase 2).                                                                                                |
-| 5 ✅  | I-1.1.4 | Verification status tracking — pending → approved/rejected               | ✦       | ✦        | ✦      | I-1.1.1, I-1.1.2, I-1.1.3             | Target 2-business-day SLA from complete submission. Status enum in shared package.                                                                                                                        |
-| 6 ✅  | I-1.1.5 | Admin verification review interface — approve/reject with notes          | ✦       | ✦        | —      | I-1.1.4, **I-0.3.3**, **I-0.4.4**     | Backend: 5 REST endpoints, admin service with Drizzle transactions, audit logging, 26 tests. Frontend: queue + detail pages, doc viewer, approve/reject dialogs.                                          |
-| 7 ✅  | I-1.1.6 | Verification badge assignment on approval                                | ✦       | ✦        | —      | I-1.1.5                               | VerifiedBadge component in packages/ui. Publishing eligibility gated by isVerified + razorpayAccountStatus. Badge shown in organizer dashboard, profile, admin detail.                                    |
-| 8 ✅  | I-1.1.7 | Razorpay Route linked-account creation + KYC sync                        | ✦       | —        | —      | I-1.1.5                               | Razorpay client lib, Fastify plugin, BullMQ async job on approval. Admin retry endpoint. Publishing gate: canPublishPaidEvents = isVerified && razorpayAccountStatus === "active". 528 API tests passing. |
+| Order | ID       | Feature                                                                  | Backend | Frontend | Shared | Depends on                            | Notes                                                                                                                                                                                                                                |
+| ----- | -------- | ------------------------------------------------------------------------ | ------- | -------- | ------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1 ✅  | I-1.1.1  | Organizer registration form — business name, contact details, city       | ✦       | ✦        | ✦      | **I-0.1.1**, **I-0.1.3**, **I-0.2.4** | `POST /api/v1/organizers`, Zod schema in shared. Creates `organizers` table + migration.                                                                                                                                             |
+| 2 ✅  | I-1.1.3  | Policy acceptance workflow — platform terms, refund policy framework     | ✦       | ✦        | ✦      | I-1.1.1, **I-0.1.3**                  | Consent versioning, no pre-checked boxes. Uses `consent_records` table from Phase 0. Can parallel with I-1.1.2.                                                                                                                      |
+| 3 ✅  | I-1.1.2  | Verification document upload — Aadhaar, PAN, GST certificate, bank proof | ✦       | ✦        | —      | I-1.1.1, **I-0.1.8**                  | Upload to S3/R2 via presigned URLs, server-side encryption at rest, access logged. Can parallel with I-1.1.3.                                                                                                                        |
+| 4 ✅  | I-1.1.8  | Organizer profile management — view and edit organizer profile           | ✦       | ✦        | ✦      | I-1.1.1, **I-0.3.3**                  | `/org/profile` route. Business name, description, city. Separate from the public-facing profile (Phase 2).                                                                                                                           |
+| 5 ✅  | I-1.1.4  | Verification status tracking — pending → approved/rejected               | ✦       | ✦        | ✦      | I-1.1.1, I-1.1.2, I-1.1.3             | Target 2-business-day SLA from complete submission. Status enum in shared package.                                                                                                                                                   |
+| 6 ✅  | I-1.1.5  | Admin verification review interface — approve/reject with notes          | ✦       | ✦        | —      | I-1.1.4, **I-0.3.3**, **I-0.4.4**     | Backend: 5 REST endpoints, admin service with Drizzle transactions, audit logging, 26 tests. Frontend: queue + detail pages, doc viewer, approve/reject dialogs.                                                                     |
+| 7 ✅  | I-1.1.6  | Verification badge assignment on approval                                | ✦       | ✦        | —      | I-1.1.5                               | VerifiedBadge component in packages/ui. Publishing eligibility gated by isVerified + razorpayAccountStatus. Badge shown in organizer dashboard, profile, admin detail.                                                               |
+| 8 ✅  | I-1.1.7  | Razorpay Route linked-account creation + KYC sync                        | ✦       | —        | —      | I-1.1.5                               | Razorpay client lib, Fastify plugin, BullMQ async job on approval. Admin retry endpoint. Publishing gate: canPublishPaidEvents = isVerified && razorpayAccountStatus === "active". 528 API tests passing.                            |
+| 9     | I-1.1.9  | Welcome email on organizer signup                                        | ✦       | —        | —      | I-1.1.1, **I-3.3.1**                  | BullMQ `email` queue. React Email template. Triggered immediately after `POST /api/v1/organizers` succeeds. Sets next-step expectations (verification docs + policy acceptance). Transactional — does not require marketing consent. |
+| 10    | I-1.1.10 | Verification-approved email                                              | ✦       | —        | —      | I-1.1.5, I-1.1.7, **I-3.3.1**         | Triggered by admin approval action (I-1.1.5). Includes publish-eligibility CTA: "Your account is verified. Once your Razorpay account is active (we'll email you again), you can publish paid events." Transactional.                |
+| 11    | I-1.1.11 | Verification-rejected email                                              | ✦       | —        | —      | I-1.1.5, **I-3.3.1**                  | Triggered by admin rejection action with rejection reason from `organizers.rejectionReason`. Includes link back to `/org/profile/verification` to resubmit corrected documents. Transactional.                                       |
+| 12    | I-1.1.12 | Razorpay linked-account ready email                                      | ✦       | —        | —      | I-1.1.7, **I-3.3.1**                  | Triggered when `razorpay_account_status` transitions to `active`. Confirms publishing is now unblocked. Transactional. Idempotent — sent once per status transition.                                                                 |
 
 **Database tables:** `organizers`, `organizer_verifications`, `verification_documents`, `policy_acceptances`
 
@@ -339,20 +360,22 @@ _Covers requirements F-1.2.1 through F-1.2.8_
 
 **Implementation order:** Slug generation and event creation are the foundation. Category, pricing, form fields, and policy extend the event. Publish workflow and admin review gate the event for public visibility.
 
-| Order | ID       | Feature                                                                                  | Backend | Frontend | Shared | Depends on                                        | Notes                                                                                                                                                                                                                                                                                  |
-| ----- | -------- | ---------------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 ✅  | I-1.2.10 | Slug generation for events — unique, URL-safe, with redirect on edit                     | ✦       | —        | ✦      | **I-0.1.1**, **I-0.1.3**                          | API service foundation complete: unique slug reservation checks active events + historical redirects, deterministic suffixes, and redirect recording on slug change.                                                                                                                   |
-| 2 ✅  | I-1.2.1  | Event creation form — V1-allowed events only (single-day, paid running, Coimbatore)      | ✦       | ✦        | ✦      | I-1.2.10, **I-1.1.1**, **I-0.3.3**                | Complete: events table fields + migration, shared validation/constants, `POST /api/v1/events` with organizer auth + CSRF and slug uniqueness, `/org/events/new` draft form UI.                                                                                                         |
-| 3 ✅  | I-1.2.2  | Event category & distance configuration — 5K, 10K, half-marathon                         | ✦       | ✦        | ✦      | I-1.2.1                                           | Complete: shared defaults/schemas, `event_categories` table + migration/rollback, `GET/PUT /api/v1/events/:eventId/categories`, and organizer category configuration UI.                                                                                                               |
-| 4 ✅  | I-1.2.3  | Pricing configuration — per category, early-bird support                                 | ✦       | ✦        | ✦      | I-1.2.2                                           | Complete: `{ category, base_price, early_bird_price, early_bird_deadline }` pricing tiers with API + organizer UI. Server-side helper validates applicable price before booking/payment trust.                                                                                         |
-| 5 ✅  | I-1.2.4  | Registration form field configuration — standard + fitness-specific fields               | ✦       | ✦        | ✦      | I-1.2.1                                           | Complete: JSONB `form_schema` with version, shared schema/catalog and default form, organizer-scoped `GET/PUT /api/v1/events/:eventId/registration-form`, and `/org/events/$eventId/configure-registration-fields` UI.                                                                  |
-| 6 ✅  | I-1.2.5  | Refund & cancellation policy capture per event                                           | ✦       | ✦        | ✦      | I-1.2.1                                           | Complete: stored alongside event, shared policy schema, API get/update routes, organizer UI, and publish readiness integration.                                                                                                                                                         |
-| 7 ✅  | I-1.2.9  | Event image upload — hero image, route map                                               | ✦       | ✦        | ✦      | I-1.2.1, **I-0.1.8**                              | Complete: shared image constants/schemas, `event_images` table + migration/rollback, organizer presigned upload/confirm/list/delete API, and `/org/events/$eventId/configure-images` UI.                                                                                               |
-| 8 ✅  | I-1.2.8  | Event edit & update capabilities (pre-event)                                             | ✦       | ✦        | ✦      | I-1.2.1 through I-1.2.5, I-1.2.9                  | Complete: shared update schema, `GET/PUT /api/v1/events/:eventId`, organizer-owned draft-only edits, slug redirect handling, organizer edit UI, query invalidation, and configuration-surface navigation. CDN purge is documented as follow-up pending Cloudflare/I-2.4.2 integration. |
-| 9 ✅  | I-1.2.6  | Event publish workflow — draft → under review → published                                | ✦       | ✦        | ✦      | I-1.2.1 through I-1.2.5, **I-1.1.6**, **I-1.1.7** | Complete: readiness endpoint, publish/unpublish routes, DB publish timestamps with rollback, audit logging, verification + Razorpay + completeness gates, admin-review helper stubs for I-1.2.7, and organizer edit-page publish UI. See [impl-plan](impl-plan/feature-1.2-I-1.2.6.md). |
-| 10 ✅ | I-1.2.7  | Admin event review interface — manual review for first 3 paid events from new organizers | ✦       | ✦        | ✦      | I-1.2.6, **I-0.3.3**, **I-0.4.4**                 | Complete: publish-time first-3 paid event policy, admin event-review shared contracts, `/api/v1/admin/event-reviews` list/detail/approve/reject endpoints with audit logging, and `/admin/event-reviews` queue/detail UI. See [impl-plan](impl-plan/feature-1.2-I-1.2.7.md).                                                                       |
+| Order | ID       | Feature                                                                                  | Backend | Frontend | Shared | Depends on                                        | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----- | -------- | ---------------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 ✅  | I-1.2.10 | Slug generation for events — unique, URL-safe, with redirect on edit                     | ✦       | —        | ✦      | **I-0.1.1**, **I-0.1.3**                          | API service foundation complete: unique slug reservation checks active events + historical redirects, deterministic suffixes, and redirect recording on slug change.                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2 ✅  | I-1.2.1  | Event creation form — V1-allowed events only (single-day, paid running, Coimbatore)      | ✦       | ✦        | ✦      | I-1.2.10, **I-1.1.1**, **I-0.3.3**                | Complete: events table fields + migration, shared validation/constants, `POST /api/v1/events` with organizer auth + CSRF and slug uniqueness, `/org/events/new` draft form UI.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 3 ✅  | I-1.2.2  | Event category & distance configuration — 5K, 10K, half-marathon                         | ✦       | ✦        | ✦      | I-1.2.1                                           | Complete: shared defaults/schemas, `event_categories` table + migration/rollback, `GET/PUT /api/v1/events/:eventId/categories`, and organizer category configuration UI. **v2.2 amendment:** `spots_total` (NOT NULL) and `spots_remaining` (NOT NULL, default = `spots_total`) capacity columns added per category — see I-3.2.10 for atomic decrement logic.                                                                                                                                                                                                                          |
+| 4 ✅  | I-1.2.3  | Pricing configuration — per category, early-bird support                                 | ✦       | ✦        | ✦      | I-1.2.2                                           | Complete: `{ category, base_price, early_bird_price, early_bird_deadline }` pricing tiers with API + organizer UI. Server-side helper validates applicable price before booking/payment trust.                                                                                                                                                                                                                                                                                                                                                                                          |
+| 5 ✅  | I-1.2.4  | Registration form field configuration — standard + fitness-specific fields               | ✦       | ✦        | ✦      | I-1.2.1                                           | Complete: JSONB `form_schema` with version, shared schema/catalog and default form, organizer-scoped `GET/PUT /api/v1/events/:eventId/registration-form`, and `/org/events/$eventId/configure-registration-fields` UI.                                                                                                                                                                                                                                                                                                                                                                  |
+| 6 ✅  | I-1.2.5  | Refund & cancellation policy capture per event                                           | ✦       | ✦        | ✦      | I-1.2.1                                           | Complete: stored alongside event, shared policy schema, API get/update routes, organizer UI, and publish readiness integration.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 7 ✅  | I-1.2.9  | Event image upload — hero image, route map                                               | ✦       | ✦        | ✦      | I-1.2.1, **I-0.1.8**                              | Complete: shared image constants/schemas, `event_images` table + migration/rollback, organizer presigned upload/confirm/list/delete API, and `/org/events/$eventId/configure-images` UI.                                                                                                                                                                                                                                                                                                                                                                                                |
+| 8 ✅  | I-1.2.8  | Event edit & update capabilities (tiered post-publish)                                   | ✦       | ✦        | ✦      | I-1.2.1 through I-1.2.5, I-1.2.9                  | Complete (draft-only). **v2.2 scope amendment — tiered post-publish edits.** Two tiers: (a) **Low-risk fields editable post-publish + audit log:** `description`, route map URL/image, `refundPolicy` text, `cancellationPolicy` text, FAQ. (b) **High-risk fields require unpublish + admin re-review (I-1.2.7):** `start_at`, `end_at`, `city`, `venue_name`, `currency`, `event_pricing_tiers.*`, `event_categories.spots_total`, `registrationOpensAt`, `registrationClosesAt`. Blanket draft-only behavior is removed. CDN purge follow-up pending Cloudflare/I-2.4.2 integration. |
+| 9 ✅  | I-1.2.6  | Event publish workflow — draft → published (with first-3-paid admin gate via I-1.2.7)    | ✦       | ✦        | ✦      | I-1.2.1 through I-1.2.5, **I-1.1.6**, **I-1.1.7** | Complete. **v2.2 note clarification:** organizer can self-publish when verification + Razorpay + completeness gates pass; first 3 paid events from a new organizer route through admin review (I-1.2.7) before status flips to `published`. There is no general `under_review` state for established organizers. See [impl-plan](impl-plan/feature-1.2-I-1.2.6.md).                                                                                                                                                                                                                     |
+| 10 ✅ | I-1.2.7  | Admin event review interface — manual review for first 3 paid events from new organizers | ✦       | ✦        | ✦      | I-1.2.6, **I-0.3.3**, **I-0.4.4**                 | Complete: publish-time first-3 paid event policy, admin event-review shared contracts, `/api/v1/admin/event-reviews` list/detail/approve/reject endpoints with audit logging, and `/admin/event-reviews` queue/detail UI. See [impl-plan](impl-plan/feature-1.2-I-1.2.7.md).                                                                                                                                                                                                                                                                                                            |
+| 11    | I-1.2.11 | Event submitted-for-review email (organizer ack)                                         | ✦       | —        | —      | I-1.2.6, **I-3.3.1**                              | Triggered when an event enters first-3-paid admin review queue (I-1.2.7). Sends the organizer an acknowledgement with expected SLA + admin email digest is paired in Phase 7.4. Transactional.                                                                                                                                                                                                                                                                                                                                                                                          |
+| 12    | I-1.2.12 | Event approved / event rejected emails                                                   | ✦       | —        | —      | I-1.2.7, **I-3.3.1**                              | Two templates triggered from `POST /api/v1/admin/event-reviews/:id/approve` and `/reject`. Approval email links to public event URL. Rejection includes admin reason + edit link. Transactional.                                                                                                                                                                                                                                                                                                                                                                                        |
 
-**Database tables:** `events`, `event_categories`, `event_pricing_tiers`, `event_images`
+**Database tables:** `events`, `event_categories` (with capacity columns added in v2.2 — see I-1.2.2 note), `event_pricing_tiers`, `event_images`
 
 **Key schema decisions:**
 
@@ -372,6 +395,7 @@ Build the organizer entity and the three things that extend registration (doc up
 2. `I-1.1.3` Policy acceptance _(extends registration — consent records)_
 3. `I-1.1.2` Verification document upload _(extends registration — needs object storage)_
 4. `I-1.1.8` Organizer profile management _(organizer self-service `/org/profile`)_
+5. `I-1.1.9` Welcome email on signup _(transactional, fires after I-1.1.1)_
 
 **Wave 2 — Verification pipeline + event foundation**
 Verification status tracking enables the admin review pipeline. Slug generation and event creation can start once organizers exist.
@@ -380,20 +404,25 @@ Verification status tracking enables the admin review pipeline. Slug generation 
 2. `I-1.1.5` Admin verification review _(needs status tracking + audit log)_
 3. `I-1.1.6` Verification badge _(triggered by admin approval)_
 4. `I-1.1.7` Razorpay linked-account _(triggered by admin approval, parallel with I-1.1.6)_
-5. `I-1.2.10` Slug generation _(utility, no 1.1 deps beyond shared/DB — parallel with I-1.1.4+)_
+5. `I-1.1.10` Verification-approved email _(triggered by I-1.1.5 approve action)_
+6. `I-1.1.11` Verification-rejected email _(triggered by I-1.1.5 reject action)_
+7. `I-1.1.12` Razorpay linked-account ready email _(triggered by I-1.1.7 status transition to active)_
+8. `I-1.2.10` Slug generation _(utility, no 1.1 deps beyond shared/DB — parallel with I-1.1.4+)_
 
 **Wave 3 — Event creation, configuration & publishing**
 Build the event form and all its extensions, then the publish/review pipeline.
 
 1. `I-1.2.1` Event creation form _(creates `events` table — needs organizer from Wave 1)_
-2. `I-1.2.2` Event category config _(extends events — `event_categories` table)_
+2. `I-1.2.2` Event category config _(extends events — `event_categories` table with capacity columns)_
 3. `I-1.2.3` Pricing config _(extends categories — `event_pricing_tiers` table)_
 4. `I-1.2.4` Registration form field config _(extends events — JSONB, parallel with I-1.2.3)_
 5. `I-1.2.5` Refund policy capture _(extends events, parallel with I-1.2.3/I-1.2.4)_
 6. `I-1.2.9` Event image upload _(extends events — needs object storage, parallel with I-1.2.3-5)_
-7. `I-1.2.8` Event edit/update _(needs all event fields to exist)_
+7. `I-1.2.8` Event edit/update _(needs all event fields to exist; tiered post-publish edits)_
 8. `I-1.2.6` Event publish workflow _(needs verification badge + Razorpay account from Wave 2)_
-9. `I-1.2.7` Admin event review _(needs publish workflow)_
+9. `I-1.2.7` Admin event review _(first-3-paid gate; needs publish workflow)_
+10. `I-1.2.11` Event submitted-for-review email _(triggered by I-1.2.6 → admin queue)_
+11. `I-1.2.12` Event approved/rejected emails _(triggered by I-1.2.7 actions)_
 
 ```
 Wave 1 (sequential)           Wave 2 (sequential)              Wave 3 (sequential)
@@ -429,16 +458,18 @@ _Covers requirements F-2.1.1 through F-2.1.8_
 
 **Implementation order:** The page layout is the foundation. Sections, SEO, and CTA extend it. I-2.1.8 (mobile-first design) is not a separate step — it's a constraint applied while building I-2.1.1.
 
-| Order | ID      | Feature                                                                                              | Backend | Frontend | Shared | Depends on                                         | Notes                                                                                              |
-| ----- | ------- | ---------------------------------------------------------------------------------------------------- | ------- | -------- | ------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| 1     | I-2.1.1 | Professional event page layout — route, categories, pricing, timing, location, hero image, route map | ✦       | ✦        | —      | **I-1.2.1**, **I-1.2.2**, **I-1.2.3**, **I-1.2.9** | SSR with `ssr: true`, CDN `s-maxage` + `stale-while-revalidate`. Route: `/events/:slug`.           |
-| —     | I-2.1.8 | Mobile-first responsive event page design                                                            | —       | ✦        | —      | I-2.1.1                                            | **Implemented as part of I-2.1.1** — not a separate step. Optimized for mobile browsers.           |
-| 2     | I-2.1.2 | Organizer info section with verification badge                                                       | ✦       | ✦        | —      | I-2.1.1, **I-1.1.1**, **I-1.1.6**                  | Link to organizer profile (wired to I-2.3.1 when built).                                           |
-| 3     | I-2.1.3 | Policy display — refund, cancellation policies visible before booking                                | —       | ✦        | —      | I-2.1.1, **I-1.2.5**                               | Trust information alongside organizer identity. Can parallel with I-2.1.2.                         |
-| 4     | I-2.1.4 | Category & pricing breakdown display                                                                 | —       | ✦        | —      | I-2.1.1, **I-1.2.3**                               | Early-bird pricing with deadline display. Can parallel with I-2.1.2/I-2.1.3.                       |
-| 5     | I-2.1.5 | Share-optimized previews — Open Graph meta tags                                                      | —       | ✦        | —      | I-2.1.1                                            | Social/messaging share optimization. Can parallel with I-2.1.6.                                    |
-| 6     | I-2.1.6 | Structured data markup — JSON-LD for search discovery                                                | —       | ✦        | —      | I-2.1.1                                            | Schema.org Event markup. Can parallel with I-2.1.5.                                                |
-| 7     | I-2.1.7 | "Register Now" CTA linking to booking flow                                                           | —       | ✦        | —      | I-2.1.1                                            | Prominent, mobile-first call-to-action. Links to Phase 3 booking flow (placeholder until Phase 3). |
+| Order | ID       | Feature                                                                                              | Backend | Frontend | Shared | Depends on                                         | Notes                                                                                                                                                                                                                                                                                                                |
+| ----- | -------- | ---------------------------------------------------------------------------------------------------- | ------- | -------- | ------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-2.1.1  | Professional event page layout — route, categories, pricing, timing, location, hero image, route map | ✦       | ✦        | —      | **I-1.2.1**, **I-1.2.2**, **I-1.2.3**, **I-1.2.9** | SSR with `ssr: true`, CDN `s-maxage` + `stale-while-revalidate`. Route: `/events/:slug`.                                                                                                                                                                                                                             |
+| —     | I-2.1.8  | Mobile-first responsive event page design                                                            | —       | ✦        | —      | I-2.1.1                                            | **Implemented as part of I-2.1.1** — not a separate step. Optimized for mobile browsers.                                                                                                                                                                                                                             |
+| 2     | I-2.1.2  | Organizer info section with verification badge                                                       | ✦       | ✦        | —      | I-2.1.1, **I-1.1.1**, **I-1.1.6**                  | Link to organizer profile (wired to I-2.3.1 when built).                                                                                                                                                                                                                                                             |
+| 3     | I-2.1.3  | Policy display — refund, cancellation policies visible before booking                                | —       | ✦        | —      | I-2.1.1, **I-1.2.5**                               | Trust information alongside organizer identity. Can parallel with I-2.1.2.                                                                                                                                                                                                                                           |
+| 4     | I-2.1.4  | Category & pricing breakdown display                                                                 | —       | ✦        | —      | I-2.1.1, **I-1.2.3**                               | Early-bird pricing with deadline display. Can parallel with I-2.1.2/I-2.1.3.                                                                                                                                                                                                                                         |
+| 5     | I-2.1.5  | Share-optimized previews — Open Graph meta tags                                                      | —       | ✦        | —      | I-2.1.1                                            | Social/messaging share optimization. Can parallel with I-2.1.6.                                                                                                                                                                                                                                                      |
+| 6     | I-2.1.6  | Structured data markup — JSON-LD for search discovery                                                | —       | ✦        | —      | I-2.1.1                                            | Schema.org Event markup. Can parallel with I-2.1.5.                                                                                                                                                                                                                                                                  |
+| 7     | I-2.1.7  | "Register Now" CTA linking to booking flow                                                           | —       | ✦        | —      | I-2.1.1                                            | Prominent, mobile-first call-to-action. Links to Phase 3 booking flow (placeholder until Phase 3).                                                                                                                                                                                                                   |
+| 8     | I-2.1.9  | Spots-remaining badge — real-data only                                                               | ✦       | ✦        | —      | I-2.1.1, **I-1.2.2**, **I-3.2.10**                 | Optional per-category "X spots remaining" badge wired to `event_categories.spots_remaining`. Hidden when capacity is unset (organizer chose unlimited). Updates via SSR + revalidation; no speculative or placeholder values. Product-plan §6 Tier 1.2 ("social proof and urgency only where real and supportable"). |
+| 9     | I-2.1.10 | Early-bird countdown timer — real-data only                                                          | —       | ✦        | —      | I-2.1.1, **I-1.2.3**                               | Optional countdown rendered when an event has an active early-bird tier with a future `early_bird_deadline`. Format: "Early-bird closes in 2d 3h". Refreshes client-side every minute. Hidden when no early-bird tier is configured.                                                                                 |
 
 ### Module 2.2: Event Discovery Surface
 
@@ -459,13 +490,14 @@ _Covers requirements F-2.3.1 through F-2.3.4_
 
 **Implementation order:** Slug generation first (utility), then profile page, then sub-sections.
 
-| Order | ID      | Feature                                                                 | Backend | Frontend | Shared | Depends on                        | Notes                                                                                         |
-| ----- | ------- | ----------------------------------------------------------------------- | ------- | -------- | ------ | --------------------------------- | --------------------------------------------------------------------------------------------- |
-| 1     | I-2.3.5 | Organizer slug generation — unique, URL-safe                            | ✦       | —        | ✦      | **I-0.1.1**, **I-1.1.1**          | Uniqueness constraint, redirect on change. Build slug utility before profile page.            |
-| 2     | I-2.3.1 | Organizer profile page — business name, description, verification badge | ✦       | ✦        | —      | I-2.3.5, **I-1.1.1**, **I-1.1.6** | SSR with `ssr: true`, `/organizers/:slug`.                                                    |
-| 3     | I-2.3.4 | Verification status explanation copy                                    | —       | ✦        | —      | I-2.3.1                           | Describes verification as onboarding check, not quality guarantee. Can parallel with I-2.3.2. |
-| 4     | I-2.3.2 | Upcoming events listing on organizer profile                            | ✦       | ✦        | —      | I-2.3.1, **I-1.2.1**              | Query events by organizer. Reuses event card component from I-2.2.2 if available.             |
-| 5     | I-2.3.3 | Past event history on organizer profile                                 | ✦       | ✦        | —      | I-2.3.1, **I-1.2.1**              | Builds organizer credibility. Can parallel with I-2.3.2.                                      |
+| Order | ID      | Feature                                                                 | Backend | Frontend | Shared | Depends on                        | Notes                                                                                                                                                                                                                                                                                                                                                                 |
+| ----- | ------- | ----------------------------------------------------------------------- | ------- | -------- | ------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-2.3.5 | Organizer slug generation — unique, URL-safe                            | ✦       | —        | ✦      | **I-0.1.1**, **I-1.1.1**          | Uniqueness constraint, redirect on change. Build slug utility before profile page.                                                                                                                                                                                                                                                                                    |
+| 2     | I-2.3.1 | Organizer profile page — business name, description, verification badge | ✦       | ✦        | —      | I-2.3.5, **I-1.1.1**, **I-1.1.6** | SSR with `ssr: true`, `/organizers/:slug`.                                                                                                                                                                                                                                                                                                                            |
+| 3     | I-2.3.4 | Verification status explanation copy                                    | —       | ✦        | —      | I-2.3.1                           | Describes verification as onboarding check, not quality guarantee. Can parallel with I-2.3.2.                                                                                                                                                                                                                                                                         |
+| 4     | I-2.3.2 | Upcoming events listing on organizer profile                            | ✦       | ✦        | —      | I-2.3.1, **I-1.2.1**              | Query events by organizer. Reuses event card component from I-2.2.2 if available.                                                                                                                                                                                                                                                                                     |
+| 5     | I-2.3.3 | Past event history on organizer profile                                 | ✦       | ✦        | —      | I-2.3.1, **I-1.2.1**              | Builds organizer credibility. Can parallel with I-2.3.2.                                                                                                                                                                                                                                                                                                              |
+| 6     | I-2.3.6 | Next-event lookup API — same-organizer only                             | ✦       | —        | ✦      | I-2.3.1, **I-1.2.1**, **I-1.2.6** | `GET /api/v1/organizers/{organizerId}/next-event` returns the organizer's immediate next published event (or null). Used by I-6.2.3 to populate the post-event next-event prompt. **V1 scope: same-organizer only.** Cross-organizer next-event discovery is deferred to product-plan §8 Layer 5 post-V1 (after Coimbatore density target of 15+ organizers per §10). |
 
 ### Module 2.4: CDN & Cache Infrastructure
 
@@ -473,17 +505,40 @@ _Covers architecture §1, §4.2 requirements for CDN caching and invalidation_
 
 **Implementation order:** CDN setup first, then invalidation, then stampede prevention. This module should be built after at least one SSR page exists (Module 2.1 or 2.2).
 
-| Order | ID      | Feature                                                                                                                       | Backend | Frontend | Shared | Depends on                 | Notes                                                                                                                     |
-| ----- | ------- | ----------------------------------------------------------------------------------------------------------------------------- | ------- | -------- | ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 1     | I-2.4.1 | Cloudflare CDN setup — DNS, SSL, caching rules for SSR pages                                                                  | —       | ✦        | —      | **I-2.1.1** or **I-2.2.1** | Cache SSR event pages at edge, static assets, DDoS protection. Needs at least one SSR page to configure and test against. |
-| 2     | I-2.4.2 | CDN cache invalidation — Cloudflare API purge on event publish/unpublish, pricing changes, capacity changes, admin moderation | ✦       | —        | —      | I-2.4.1, **I-1.2.6**       | Purge specific cache keys when event data changes.                                                                        |
-| 3     | I-2.4.3 | Cache stampede prevention — single-flight/Redis locking for popular event pages                                               | ✦       | —        | —      | I-2.4.1, **I-0.1.5**       | Architecture §1: prevents origin overload when cache expires on popular events.                                           |
+| Order | ID      | Feature                                                                                                                       | Backend | Frontend | Shared | Depends on                 | Notes                                                                                                                                                                                                                  |
+| ----- | ------- | ----------------------------------------------------------------------------------------------------------------------------- | ------- | -------- | ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-2.4.1 | Cloudflare CDN setup — DNS, SSL, caching rules for SSR pages                                                                  | —       | ✦        | —      | **I-2.1.1** or **I-2.2.1** | Cache SSR event pages at edge, static assets, DDoS protection. Needs at least one SSR page to configure and test against.                                                                                              |
+| 2     | I-2.4.2 | CDN cache invalidation — Cloudflare API purge on event publish/unpublish, pricing changes, capacity changes, admin moderation | ✦       | —        | —      | I-2.4.1, **I-1.2.6**       | Purge specific cache keys when event data changes.                                                                                                                                                                     |
+| 3     | I-2.4.3 | Cache stampede prevention — single-flight/Redis locking for popular event pages                                               | ✦       | —        | —      | I-2.4.1, **I-0.1.5**       | Architecture §1: prevents origin overload when cache expires on popular events.                                                                                                                                        |
+| 4     | I-2.4.4 | `sitemap.xml` generation + serving                                                                                            | ✦       | ✦        | —      | I-2.4.1, **I-1.2.6**       | Auto-generated from published events + organizer profiles. Cached at edge with 1-hour TTL. Submitted to Google Search Console + Bing Webmaster. Regenerated daily via BullMQ + invalidated on event publish/unpublish. |
+| 5     | I-2.4.5 | `robots.txt` + crawl directives                                                                                               | —       | ✦        | —      | I-2.4.1                    | Allow public surfaces (`/`, `/events/*`, `/organizers/*`, `/privacy`, `/terms`, `/contact`, `/about`, `/faq`). Disallow `/org/*`, `/admin/*`, `/my/*`, `/book/*`, `/api/*`. References `sitemap.xml`.                  |
+| 6     | I-2.4.6 | 301 redirect handler for slug changes                                                                                         | ✦       | ✦        | —      | I-2.4.1, **I-1.2.10**      | Reads `slug_redirects` table (already created in I-1.2.10 / I-2.3.5). On request to legacy slug, returns HTTP 301 to current slug. Preserves SEO equity when organizers rename events or themselves.                   |
+| 7     | I-2.4.7 | Canonical URL + alternate language tags                                                                                       | —       | ✦        | —      | I-2.4.1                    | `<link rel="canonical" href="...">` on `/events/:slug` and `/organizers/:slug` pages. Single English-only locale in V1 (alternate-lang tags noted as V2 readiness).                                                    |
+| 8     | I-2.4.8 | Breadcrumb JSON-LD on event detail                                                                                            | —       | ✦        | —      | I-2.4.1, **I-2.1.6**       | Schema.org BreadcrumbList markup: Home → Events → Event Title. Pairs with existing Event JSON-LD (I-2.1.6) for richer search snippets.                                                                                 |
 
 **SSR & Caching:** Event pages use `ssr: true` with CDN caching via `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`. Cache invalidation triggers are explicit and automated.
 
+### Module 2.5: Public Chrome & Legal Pages
+
+_Covers cross-cutting product-plan §9 (trust posture) and DPDPA pre-launch gates that no other module owns._
+
+**Implementation order:** Static templates first (privacy/terms/about/faq), then contact (which embeds the public dispute reporting form from I-7.2.5), then linked from PublicFooter.
+
+| Order | ID      | Feature                                      | Backend | Frontend | Shared | Depends on               | Notes                                                                                                                                                                                                               |
+| ----- | ------- | -------------------------------------------- | ------- | -------- | ------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-2.5.1 | `/privacy` page — DPDPA-aware privacy notice | —       | ✦        | —      | **I-0.3.1**              | Lists data categories collected (per product-plan §13), retention windows, contact for data subject requests (DSAR I-7.3.8 link). Static MDX/React page. Versioned to align with `consent_records.consent_version`. |
+| 2     | I-2.5.2 | `/terms` page — platform terms of service    | —       | ✦        | —      | **I-0.3.1**              | Versioned. Aligns with `consent_records.consent_version` for booking_terms. Includes refund/cancellation framework reference.                                                                                       |
+| 3     | I-2.5.4 | `/about` page                                | —       | ✦        | —      | **I-0.3.1**              | Coimbatore pilot positioning, mission statement, founder note. SEO-relevant.                                                                                                                                        |
+| 4     | I-2.5.5 | `/faq` page                                  | —       | ✦        | —      | **I-0.3.1**              | Participant-facing questions: how booking works, how to view a past booking, refund process summary, what happens on event day.                                                                                     |
+| 5     | I-2.5.3 | `/contact` page                              | —       | ✦        | —      | **I-0.3.1**, **I-7.2.5** | Support email + phone number + embedded public unauthenticated dispute reporting form (I-7.2.5). Discoverable via PublicFooter.                                                                                     |
+
+**Frontend route additions:** `/privacy`, `/terms`, `/contact`, `/about`, `/faq` — all SSR (`ssr: true`), CDN-cacheable with long TTL.
+
+**PublicFooter update:** All five pages must be linked from `PublicFooter` and from `robots.txt` allow-list (I-2.4.5).
+
 ### Phase 2 Execution Strategy — Solo Developer
 
-Modules 2.1, 2.2, and 2.3 are **independent of each other** — they all read from Phase 1 data but have no cross-dependencies. Module 2.4 (CDN) depends on SSR pages from 2.1/2.2 existing. For a solo dev, work through them sequentially by module.
+Modules 2.1, 2.2, and 2.3 are **independent of each other** — they all read from Phase 1 data but have no cross-dependencies. Module 2.4 (CDN + SEO infra) depends on SSR pages from 2.1/2.2 existing. Module 2.5 (public chrome) is independent and can run any time after Module 0.3 layout shell. For a solo dev, work through them sequentially by module.
 
 **Wave 1 — Event status enum + Event detail page**
 Start with the shared status enum (used by both 2.1 and 2.2), then build the highest-value page first.
@@ -496,9 +551,11 @@ Start with the shared status enum (used by both 2.1 and 2.2), then build the hig
 6. `I-2.1.5` OG meta tags
 7. `I-2.1.6` JSON-LD structured data
 8. `I-2.1.7` "Register Now" CTA
+9. `I-2.1.9` Spots-remaining badge _(needs I-1.2.2 capacity columns + I-3.2.10 decrement; build behind feature flag if Phase 3 not ready)_
+10. `I-2.1.10` Early-bird countdown _(needs I-1.2.3)_
 
-**Wave 2 — Discovery listing + Organizer profile**
-Build the listing page (reuses event card component) and organizer profile.
+**Wave 2 — Discovery listing + Organizer profile + Public chrome**
+Build the listing page, organizer profile, and the legal/public pages.
 
 1. `I-2.2.2` Event cards _(reusable component)_
 2. `I-2.2.1` Event listing page _(uses cards + status enum)_
@@ -508,25 +565,42 @@ Build the listing page (reuses event card component) and organizer profile.
 6. `I-2.3.4` Verification explanation
 7. `I-2.3.2` Upcoming events listing _(reuses event card from I-2.2.2)_
 8. `I-2.3.3` Past event history
+9. `I-2.3.6` Next-event lookup API _(used by Phase 6 Layer 4 emails — can defer if Phase 6 not in this iteration)_
+10. `I-2.5.1` Privacy page
+11. `I-2.5.2` Terms page
+12. `I-2.5.4` About page
+13. `I-2.5.5` FAQ page
+14. `I-2.5.3` Contact page _(depends on I-7.2.5 — defer if Phase 7 not ready, ship contact email-only fallback)_
 
-**Wave 3 — CDN & Cache**
+**Wave 3 — CDN + SEO infrastructure**
 Infrastructure that requires SSR pages to already exist.
 
 1. `I-2.4.1` Cloudflare CDN setup
 2. `I-2.4.2` Cache invalidation
 3. `I-2.4.3` Cache stampede prevention
+4. `I-2.4.4` Sitemap generation
+5. `I-2.4.5` Robots.txt
+6. `I-2.4.6` Slug 301 redirect handler
+7. `I-2.4.7` Canonical URL tags
+8. `I-2.4.8` Breadcrumb JSON-LD
 
 ```
-Wave 1 (sequential)           Wave 2 (sequential)              Wave 3 (sequential)
-──────────────────────────    ──────────────────────────────    ──────────────────────
-I-2.2.3 status enum           I-2.2.2 event cards              I-2.4.1 CDN setup
-I-2.1.1 event page layout     I-2.2.1 listing page             I-2.4.2 cache invalidation
-I-2.1.2 organizer section     I-2.2.4 sort by date             I-2.4.3 stampede prevention
-I-2.1.3 policy display        I-2.3.5 organizer slug
-I-2.1.4 pricing breakdown     I-2.3.1 organizer profile
-I-2.1.5 OG meta tags          I-2.3.4 verification copy
-I-2.1.6 JSON-LD               I-2.3.2 upcoming events
-I-2.1.7 register CTA          I-2.3.3 past events
+Wave 1 (sequential)             Wave 2 (sequential)              Wave 3 (sequential)
+──────────────────────────      ──────────────────────────────    ──────────────────────────
+I-2.2.3 status enum             I-2.2.2 event cards              I-2.4.1 CDN setup
+I-2.1.1 event page layout       I-2.2.1 listing page             I-2.4.2 cache invalidation
+I-2.1.2 organizer section       I-2.2.4 sort by date             I-2.4.3 stampede prevention
+I-2.1.3 policy display          I-2.3.5 organizer slug           I-2.4.4 sitemap.xml
+I-2.1.4 pricing breakdown       I-2.3.1 organizer profile        I-2.4.5 robots.txt
+I-2.1.5 OG meta tags            I-2.3.4 verification copy        I-2.4.6 slug 301 redirects
+I-2.1.6 JSON-LD                 I-2.3.2 upcoming events          I-2.4.7 canonical URLs
+I-2.1.7 register CTA            I-2.3.3 past events              I-2.4.8 breadcrumb JSON-LD
+I-2.1.9 spots-remaining badge   I-2.3.6 next-event API
+I-2.1.10 early-bird countdown   I-2.5.1 /privacy
+                                I-2.5.2 /terms
+                                I-2.5.4 /about
+                                I-2.5.5 /faq
+                                I-2.5.3 /contact
 ```
 
 **Validate after each wave:** Run `check-types`, `lint`, and `test` for all affected workspaces.
@@ -547,14 +621,15 @@ _Covers requirements F-3.1.1 through F-3.1.6_
 
 **Implementation order:** Category selection and validation first (pure frontend), then registration form, then consent and auth integration, then auto-fill (needs participant profile from Module 3.4).
 
-| Order | ID      | Feature                                                                         | Backend | Frontend | Shared | Depends on                        | Notes                                                                                                                                                                                                            |
-| ----- | ------- | ------------------------------------------------------------------------------- | ------- | -------- | ------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | I-3.1.1 | Category selection step — pick distance/category                                | —       | ✦        | —      | **I-1.2.2**, **I-2.1.1**          | Dynamic based on event configuration. Entry point to booking flow.                                                                                                                                               |
-| 2     | I-3.1.5 | Form validation with clear error messaging                                      | —       | ✦        | ✦      | **I-0.1.1**                       | Shared Zod schema, `zodValidator()` adapter. Build validation layer before form.                                                                                                                                 |
-| 3     | I-3.1.2 | Registration form with pre-configured fields                                    | ✦       | ✦        | ✦      | I-3.1.1, I-3.1.5, **I-1.2.4**     | TanStack Form + Zod from shared, fitness-specific fields. Core form implementation.                                                                                                                              |
-| 4     | I-3.1.6 | Consent capture at submission — booking terms, data usage, marketing (separate) | ✦       | ✦        | ✦      | I-3.1.2, **I-0.1.3**              | Three distinct consent types per architecture §6. booking_terms and data_usage required; marketing optional (separate checkbox, not bundled). Consent versioning, no pre-checked boxes, server-side enforcement. |
-| 5     | I-3.1.3 | OTP verification triggered at form submission                                   | ✦       | ✦        | —      | I-3.1.2, **I-0.2.1**, **I-0.2.7** | Deferred auth pattern — triggers OTP flow. Wires registration to auth.                                                                                                                                           |
-| 6     | I-3.1.4 | Auto-fill from saved participant profile                                        | ✦       | ✦        | —      | I-3.1.2, **I-3.4.1**              | Pre-fill for returning participants. **Cross-dep on Module 3.4 participant profile.** Build after I-3.4.1.                                                                                                       |
+| Order | ID      | Feature                                                                         | Backend | Frontend | Shared | Depends on                        | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----- | ------- | ------------------------------------------------------------------------------- | ------- | -------- | ------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-3.1.1 | Category selection step — pick distance/category                                | —       | ✦        | —      | **I-1.2.2**, **I-2.1.1**          | Dynamic based on event configuration. Entry point to booking flow.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2     | I-3.1.5 | Form validation with clear error messaging                                      | —       | ✦        | ✦      | **I-0.1.1**                       | Shared Zod schema, `zodValidator()` adapter. Build validation layer before form.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 3     | I-3.1.2 | Registration form with pre-configured fields                                    | ✦       | ✦        | ✦      | I-3.1.1, I-3.1.5, **I-1.2.4**     | TanStack Form + Zod from shared, fitness-specific fields. Core form implementation.                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 4     | I-3.1.6 | Consent capture at submission — booking terms, data usage, marketing (separate) | ✦       | ✦        | ✦      | I-3.1.2, **I-0.1.3**              | Three distinct consent types per architecture §6. booking_terms and data_usage required; marketing optional (separate checkbox, not bundled). Consent versioning, no pre-checked boxes, server-side enforcement.                                                                                                                                                                                                                                                                                                                   |
+| 5     | I-3.1.3 | OTP verification triggered at form submission                                   | ✦       | ✦        | —      | I-3.1.2, **I-0.2.1**, **I-0.2.7** | Deferred auth pattern — triggers OTP flow. Wires registration to auth.                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 6     | I-3.1.4 | Auto-fill from saved participant profile                                        | ✦       | ✦        | —      | I-3.1.2, **I-3.4.1**              | Pre-fill for returning participants. **Cross-dep on Module 3.4 participant profile.** Build after I-3.4.1. **Privacy scope (v2.2):** sensitive fields (blood group, emergency contact, medical conditions) are NEVER auto-filled — they live in `sensitive_participant_data` (30-day TTL) and are re-collected each booking. Auto-fill covers non-sensitive fields only (name, age, gender, city, T-shirt size, phone). UX surfaces a one-line note explaining why ("For your safety, we re-ask emergency details every booking"). |
+| 7     | I-3.1.7 | Parental consent for minor participants — DPDPA pre-launch gate                 | ✦       | ✦        | ✦      | I-3.1.2, I-3.1.6, **I-0.1.3**     | When `participant.age < 18`, registration form requires parent/guardian name + parent/guardian email + parental consent checkbox before submission. Stored as a fourth consent type (`parental`) in `consent_records` (alongside `booking_terms`, `data_usage`, `marketing`). Confirmation email also CC'd to guardian. Server-side enforcement; cannot be bypassed client-side. Architecture §6 + DPDPA pre-launch gate.                                                                                                          |
 
 **Key pattern:** Registration form uses shared Zod schemas from `packages/shared`. Async phone uniqueness validation (debounced). TanStack Form v1 with `zodValidator()`.
 
@@ -564,19 +639,20 @@ _Covers requirements F-3.2.1 through F-3.2.6_
 
 **Implementation order:** Payment status enum and capacity reservation first (DB foundations), then Razorpay order creation, then client-side checkout, then webhook pipeline, then resilience (reconciliation, backpressure).
 
-| Order | ID       | Feature                                                                          | Backend | Frontend | Shared | Depends on                     | Notes                                                                                                                                                                                                                                                                                      |
-| ----- | -------- | -------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1     | I-3.2.4  | Payment status tracking — initiated, success, failed, refunded                   | ✦       | ✦        | ✦      | **I-0.1.1**                    | Immutable payment records table. Status enum in shared. DB foundation for all payment features.                                                                                                                                                                                            |
-| 2     | I-3.2.10 | Capacity reservation — atomic DB update with 15-min expiry                       | ✦       | —        | —      | **I-0.1.3**, **I-1.2.3**       | `UPDATE ... SET spots_remaining = spots_remaining - 1 WHERE spots_remaining > 0`. Expired reservations reclaimed by BullMQ repeatable job.                                                                                                                                                 |
-| 3     | I-3.2.1  | Razorpay Route integration — payment-time split with organizer-linked settlement | ✦       | ✦        | —      | I-3.2.4, I-3.2.10, **I-1.1.7** | Create Razorpay order using organizer's `razorpay_account_id`, return checkout token. Core booking endpoint: `POST /api/v1/bookings`.                                                                                                                                                      |
-| 4     | I-3.2.3  | Split payout configuration — EventKart fee at payment time                       | ✦       | —        | —      | I-3.2.1                        | Razorpay Route split, remainder to organizer's linked account.                                                                                                                                                                                                                             |
-| 5     | I-3.2.6  | Free pilot period handling — first 3 events: no platform fee split               | ✦       | —        | —      | I-3.2.3, **I-1.1.1**           | Per-organizer event counter. Can parallel with I-3.2.2.                                                                                                                                                                                                                                    |
-| 6     | I-3.2.2  | UPI + card payment support                                                       | —       | ✦        | —      | I-3.2.1                        | Client-side Razorpay SDK handles checkout UI. Can parallel with I-3.2.3.                                                                                                                                                                                                                   |
-| 7     | I-3.2.5  | Payment failure handling with retry flow                                         | ✦       | ✦        | —      | I-3.2.1, I-3.2.2               | Clear retry UX, idempotent backend.                                                                                                                                                                                                                                                        |
-| 8     | I-3.2.7  | Razorpay webhook handler — signature verification, BullMQ enqueue, 5s ACK        | ✦       | —        | —      | I-3.2.1, **I-0.1.6**           | `POST /api/v1/bookings/payment/callback`, HMAC SHA256. ACK immediately, process async.                                                                                                                                                                                                     |
-| 9     | I-3.2.8  | Webhook idempotency — webhook_events table, unique razorpay_payment_id           | ✦       | —        | —      | I-3.2.7                        | Dedup via provider event ID. Process through booking state machine with row-level locking.                                                                                                                                                                                                 |
-| 10    | I-3.2.9  | Payment reconciliation job — periodic Razorpay API poll for stuck payments       | ✦       | —        | —      | I-3.2.7, I-3.2.8, **I-0.1.6**  | BullMQ repeatable job every 5 min, catches lost webhooks.                                                                                                                                                                                                                                  |
-| 11    | I-3.2.11 | Booking endpoint backpressure / waiting-room mode                                | ✦       | ✦        | —      | I-3.2.1, **I-0.1.5**           | Architecture §1: when Redis queue depth, job age, DB pool wait, or provider error rate cross thresholds, return controlled "registration busy, retry shortly" response. Optional waiting-room mode for burst events. Per-event rate limiting (sliding window counters per event + per IP). |
+| Order | ID       | Feature                                                                          | Backend | Frontend | Shared | Depends on                            | Notes                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----- | -------- | -------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-3.2.4  | Payment status tracking — initiated, success, failed, refunded                   | ✦       | ✦        | ✦      | **I-0.1.1**                           | Immutable payment records table. Status enum in shared. DB foundation for all payment features.                                                                                                                                                                                                                                                                                                                           |
+| 2     | I-3.2.10 | Capacity reservation — atomic per-category DB update with 15-min expiry          | ✦       | —        | —      | **I-0.1.3**, **I-1.2.2**, **I-1.2.3** | **v2.2 amendment — per-category capacity model.** `UPDATE event_categories SET spots_remaining = spots_remaining - 1 WHERE id = $1 AND spots_remaining > 0` (returns 1 row on success, 0 if sold out). Single distance can sell out while others remain available. Reservation rows stored with `expires_at`; expired reservations reclaimed by BullMQ repeatable job (15-min TTL). v2.1 event-level capacity is removed. |
+| 3     | I-3.2.1  | Razorpay Route integration — payment-time split with organizer-linked settlement | ✦       | ✦        | —      | I-3.2.4, I-3.2.10, **I-1.1.7**        | Create Razorpay order using organizer's `razorpay_account_id`, return checkout token. Core booking endpoint: `POST /api/v1/bookings`.                                                                                                                                                                                                                                                                                     |
+| 4     | I-3.2.3  | Split payout configuration — EventKart fee at payment time                       | ✦       | —        | —      | I-3.2.1                               | Razorpay Route split, remainder to organizer's linked account.                                                                                                                                                                                                                                                                                                                                                            |
+| 5     | I-3.2.6  | Free pilot period handling — first 3 events: no platform fee split               | ✦       | —        | —      | I-3.2.3, **I-1.1.1**                  | Per-organizer event counter. Can parallel with I-3.2.2.                                                                                                                                                                                                                                                                                                                                                                   |
+| 6     | I-3.2.2  | UPI + card payment support                                                       | —       | ✦        | —      | I-3.2.1                               | Client-side Razorpay SDK handles checkout UI. Can parallel with I-3.2.3.                                                                                                                                                                                                                                                                                                                                                  |
+| 7     | I-3.2.5  | Payment failure handling with retry flow                                         | ✦       | ✦        | —      | I-3.2.1, I-3.2.2                      | Clear retry UX, idempotent backend.                                                                                                                                                                                                                                                                                                                                                                                       |
+| 8     | I-3.2.7  | Razorpay webhook handler — signature verification, BullMQ enqueue, 5s ACK        | ✦       | —        | —      | I-3.2.1, **I-0.1.6**                  | `POST /api/v1/bookings/payment/callback`, HMAC SHA256. ACK immediately, process async.                                                                                                                                                                                                                                                                                                                                    |
+| 9     | I-3.2.8  | Webhook idempotency — webhook_events table, unique razorpay_payment_id           | ✦       | —        | —      | I-3.2.7                               | Dedup via provider event ID. Process through booking state machine with row-level locking.                                                                                                                                                                                                                                                                                                                                |
+| 10    | I-3.2.9  | Payment reconciliation job — periodic Razorpay API poll for stuck payments       | ✦       | —        | —      | I-3.2.7, I-3.2.8, **I-0.1.6**         | BullMQ repeatable job every 5 min, catches lost webhooks.                                                                                                                                                                                                                                                                                                                                                                 |
+| 11    | I-3.2.11 | Booking endpoint backpressure / waiting-room mode                                | ✦       | ✦        | —      | I-3.2.1, **I-0.1.5**                  | Architecture §1: when Redis queue depth, job age, DB pool wait, or provider error rate cross thresholds, return controlled "registration busy, retry shortly" response. Optional waiting-room mode for burst events. **Per-event rate limiting is now its own item — see I-3.2.12.**                                                                                                                                      |
+| 12    | I-3.2.12 | Per-event sliding-window rate limiting on `/checkout/start` and reserve          | ✦       | —        | —      | I-3.2.1, **I-0.1.5**                  | Architecture §7 step 8. Sliding-window counters in Redis per `event_id` and per `(event_id, ip)`. Defaults: 600 req/min/event, 30 req/min/IP/event (overridable per event for known burst sales). Returns HTTP 429 with `Retry-After` when exceeded. Distinct from global `@fastify/rate-limit` and from I-3.2.11 (which is for systemic backpressure, not per-event throttling).                                         |
 
 **Database tables:** `bookings`, `payment_records`, `webhook_events`
 
@@ -603,6 +679,8 @@ _Covers requirements F-3.3.1 through F-3.3.5 AND F-6.1.1, F-6.1.2 (moved here fr
 | 4     | I-3.3.4 | QR code generation — HMAC-signed booking token                         | ✦       | ✦        | —      | I-3.3.2                           | Token: booking_id, event_id, ticket_version, exp, kid, jti. **Client renders QR on-demand for confirmation page; email worker generates QR image inline (server-side, e.g., `qrcode` npm package) since email clients don't execute JavaScript.** |
 | 5     | I-3.3.3 | Booking confirmation page with summary                                 | —       | ✦        | —      | I-3.3.2, I-3.3.4, **I-2.1.1**     | `/book/:eventId/confirmation`. QR rendered client-side from HMAC-signed token.                                                                                                                                                                    |
 | 6     | I-3.3.5 | Booking confirmation email with QR ticket                              | ✦       | —        | —      | I-3.3.1, I-3.3.4                  | Triggered by payment webhook worker. React Email template with inline QR image.                                                                                                                                                                   |
+| 7     | I-3.3.7 | Magic-link booking re-access email                                     | ✦       | ✦        | —      | I-3.3.5, **I-0.2.1**              | Confirmation email includes a one-tap signed magic link (`/my/bookings/:bookingId?token=...`, HMAC-signed, 90-day expiry, single-event scope). Lets participants view their booking + QR without re-OTP. Token revocable on `revokeAt` event.     |
+| 8     | I-3.3.8 | Booking lookup by phone + booking-id (for lost magic link)             | ✦       | ✦        | —      | I-3.3.7, **I-0.2.1**              | `POST /api/v1/bookings/lookup` accepts phone + booking reference → triggers OTP → returns booking details on verify. Public form discoverable from `/contact` (I-2.5.3). Rate-limited (1/phone/60s).                                              |
 
 ### Module 3.4: Participant Profile & Consent Management
 
@@ -610,13 +688,13 @@ _Covers requirements F-3.4.1 through F-3.4.4_
 
 **Implementation order:** Profile save on first booking first (triggered by registration), then profile view/edit, then booking history (needs bookings), then consent withdrawal and deletion request.
 
-| Order | ID      | Feature                                   | Backend | Frontend | Shared | Depends on               | Notes                                                                                                                                                                                                                                                                                   |
-| ----- | ------- | ----------------------------------------- | ------- | -------- | ------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | I-3.4.1 | Save participant details on first booking | ✦       | —        | ✦      | **I-3.1.2**, **I-0.1.3** | Name, age, gender, city stored in `participant_profiles`. **Sensitive fields (blood group, emergency contact, medical) stored ONLY in `sensitive_participant_data` table with 30-day post-event retention and scoped access.** Triggered by registration form submission.               |
-| 2     | I-3.4.2 | Profile view and edit for participants    | ✦       | ✦        | ✦      | I-3.4.1, **I-0.3.3**     | `/my/profile` route. Needs role-based routing for `/my/*`.                                                                                                                                                                                                                              |
-| 3     | I-3.4.3 | Booking history view                      | ✦       | ✦        | —      | I-3.4.1, **I-3.3.2**     | `/my/bookings` route. Needs confirmed bookings to display.                                                                                                                                                                                                                              |
-| 4     | I-3.4.5 | Consent withdrawal API                    | ✦       | ✦        | ✦      | I-3.4.1, **I-3.1.6**     | `DELETE /api/v1/my/consent/:type`. Architecture §6: participants can withdraw specific consent types (e.g., marketing) without deleting profile. Withdrawal triggers anonymization of data processed under that consent.                                                                |
-| 5     | I-3.4.4 | Profile data deletion request             | ✦       | ✦        | —      | I-3.4.1, **I-0.1.6**     | `DELETE /api/v1/my/profile`. Marks profile as deleted, enqueues anonymization job. **Note: The anonymization BullMQ job processor is stubbed here and completed in Phase 7 (I-7.3.5). The endpoint + queue message work now; the worker that processes anonymization is Phase 7 work.** |
+| Order | ID      | Feature                                   | Backend | Frontend | Shared | Depends on               | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----- | ------- | ----------------------------------------- | ------- | -------- | ------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-3.4.1 | Save participant details on first booking | ✦       | —        | ✦      | **I-3.1.2**, **I-0.1.3** | Name, age, gender, city, T-shirt size, phone stored in `participant_profiles` (long-lived). **Sensitive fields (blood group, emergency contact, medical) stored ONLY in `sensitive_participant_data` table with 30-day post-event retention and scoped access.** **v2.2 design decision (DEC-1):** sensitive fields are NEVER auto-filled on repeat booking — privacy-first per DPDPA §13. "Fast repeat booking" via I-3.1.4 covers only non-sensitive fields (~40-50% form friction reduction). UX copy in I-3.1.4 explains the tradeoff. Triggered by registration form submission. |
+| 2     | I-3.4.2 | Profile view and edit for participants    | ✦       | ✦        | ✦      | I-3.4.1, **I-0.3.3**     | `/my/profile` route. Needs role-based routing for `/my/*`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 3     | I-3.4.3 | Booking history view                      | ✦       | ✦        | —      | I-3.4.1, **I-3.3.2**     | `/my/bookings` route. Needs confirmed bookings to display.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 4     | I-3.4.5 | Consent withdrawal API                    | ✦       | ✦        | ✦      | I-3.4.1, **I-3.1.6**     | `DELETE /api/v1/my/consent/:type`. Architecture §6: participants can withdraw specific consent types (e.g., marketing) without deleting profile. Withdrawal triggers anonymization of data processed under that consent.                                                                                                                                                                                                                                                                                                                                                              |
+| 5     | I-3.4.4 | Profile data deletion request             | ✦       | ✦        | —      | I-3.4.1, **I-0.1.6**     | `DELETE /api/v1/my/profile`. Marks profile as deleted, enqueues anonymization job. **Note: The anonymization BullMQ job processor is stubbed here and completed in Phase 7 (I-7.3.5). The endpoint + queue message work now; the worker that processes anonymization is Phase 7 work.**                                                                                                                                                                                                                                                                                               |
 
 ### Phase 3 Execution Strategy — Solo Developer
 
@@ -637,12 +715,14 @@ Build the two entry points to the booking flow: the registration form and the pa
 2. `I-3.1.5` Form validation layer
 3. `I-3.1.2` Registration form
 4. `I-3.1.6` Consent capture
-5. `I-3.1.3` OTP verification at submission
-6. `I-3.4.1` Save participant profile _(triggered by first booking)_
-7. `I-3.2.1` Razorpay Route — booking endpoint + order creation
-8. `I-3.2.3` Split payout configuration
-9. `I-3.2.6` Free pilot period handling
-10. `I-3.2.2` UPI + card checkout UI
+5. `I-3.1.7` Parental consent for minors _(server-side gate when age < 18)_
+6. `I-3.1.3` OTP verification at submission
+7. `I-3.4.1` Save participant profile _(triggered by first booking)_
+8. `I-3.2.1` Razorpay Route — booking endpoint + order creation
+9. `I-3.2.12` Per-event sliding-window rate limiting _(applies to /checkout/start + reserve)_
+10. `I-3.2.3` Split payout configuration
+11. `I-3.2.6` Free pilot period handling
+12. `I-3.2.2` UPI + card checkout UI
 
 **Wave 3 — Webhook pipeline + Booking confirmation**
 The async payment processing pipeline and confirmation flow.
@@ -653,32 +733,36 @@ The async payment processing pipeline and confirmation flow.
 4. `I-3.3.4` QR code generation
 5. `I-3.3.3` Confirmation page
 6. `I-3.3.5` Confirmation email with QR
-7. `I-3.2.5` Payment failure + retry
+7. `I-3.3.7` Magic-link booking re-access in confirmation email
+8. `I-3.2.5` Payment failure + retry
 
 **Wave 4 — Resilience + Participant self-service**
 Reconciliation, backpressure, auto-fill, and participant profile management.
 
 1. `I-3.2.9` Payment reconciliation job
 2. `I-3.2.11` Backpressure / waiting-room
-3. `I-3.1.4` Auto-fill from saved profile _(needs I-3.4.1 from Wave 2)_
-4. `I-3.4.2` Participant profile view/edit
-5. `I-3.4.3` Booking history
-6. `I-3.4.5` Consent withdrawal API
-7. `I-3.4.4` Profile deletion request _(stub worker, completed Phase 7)_
+3. `I-3.1.4` Auto-fill from saved profile _(needs I-3.4.1 from Wave 2; non-sensitive fields only per DEC-1)_
+4. `I-3.3.8` Booking lookup by phone + booking-id _(public form for lost magic links)_
+5. `I-3.4.2` Participant profile view/edit
+6. `I-3.4.3` Booking history
+7. `I-3.4.5` Consent withdrawal API
+8. `I-3.4.4` Profile deletion request _(stub worker, completed Phase 7)_
 
 ```
-Wave 1 (foundations)          Wave 2 (form + payment)          Wave 3 (webhook + confirm)    Wave 4 (resilience + profile)
-────────────────────────    ─────────────────────────────    ────────────────────────    ───────────────────────────
-I-3.2.4 payment enum          I-3.1.1 category selection       I-3.2.7 webhook handler       I-3.2.9 reconciliation job
-I-3.3.6 booking enum          I-3.1.5 form validation          I-3.2.8 webhook idempotency   I-3.2.11 backpressure
-I-3.2.10 capacity reservation I-3.1.2 registration form        I-3.3.2 booking confirmation  I-3.1.4 auto-fill
-I-3.3.1 email service         I-3.1.6 consent capture          I-3.3.4 QR generation         I-3.4.2 profile view/edit
-                               I-3.1.3 OTP at submission        I-3.3.3 confirmation page     I-3.4.3 booking history
-                               I-3.4.1 save participant profile I-3.3.5 confirmation email    I-3.4.5 consent withdrawal
-                               I-3.2.1 razorpay order           I-3.2.5 payment retry         I-3.4.4 deletion request
-                               I-3.2.3 split payout
-                               I-3.2.6 free pilot
-                               I-3.2.2 checkout UI
+Wave 1 (foundations)          Wave 2 (form + payment)          Wave 3 (webhook + confirm)        Wave 4 (resilience + profile)
+────────────────────────      ─────────────────────────────    ──────────────────────────────    ───────────────────────────
+I-3.2.4 payment enum          I-3.1.1 category selection       I-3.2.7 webhook handler           I-3.2.9 reconciliation job
+I-3.3.6 booking enum          I-3.1.5 form validation          I-3.2.8 webhook idempotency       I-3.2.11 backpressure
+I-3.2.10 capacity (per-cat)   I-3.1.2 registration form        I-3.3.2 booking confirmation      I-3.1.4 auto-fill (non-sensitive)
+I-3.3.1 email service         I-3.1.6 consent capture          I-3.3.4 QR generation             I-3.3.8 booking lookup
+                              I-3.1.7 parental consent          I-3.3.3 confirmation page         I-3.4.2 profile view/edit
+                              I-3.1.3 OTP at submission         I-3.3.5 confirmation email        I-3.4.3 booking history
+                              I-3.4.1 save participant profile  I-3.3.7 magic-link in email       I-3.4.5 consent withdrawal
+                              I-3.2.1 razorpay order            I-3.2.5 payment retry             I-3.4.4 deletion request
+                              I-3.2.12 per-event rate limit
+                              I-3.2.3 split payout
+                              I-3.2.6 free pilot
+                              I-3.2.2 checkout UI
 ```
 
 **Validate after each wave:** Run `check-types`, `lint`, and `test` for all affected workspaces. **End-to-end test after Wave 3:** Complete a full booking flow (register → pay → webhook → confirmation email) before moving to Wave 4.
@@ -701,13 +785,14 @@ _Covers requirements F-4.1.1 through F-4.1.5_
 
 **Implementation order:** Count summary first (the dashboard header), then participant list (the core table), then detail view and revenue (extend the page), then export (async job).
 
-| Order | ID      | Feature                                                                         | Backend | Frontend | Shared | Depends on               | Notes                                                                                                                                                                                         |
-| ----- | ------- | ------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | I-4.1.1 | Registered / paid / checked-in count summary per event                          | ✦       | ✦        | —      | **I-3.3.2**, **I-0.3.3** | Aggregate queries, `/org/events/:id`. Dashboard header with key metrics.                                                                                                                      |
-| 2     | I-4.1.2 | Participant list with status filters                                            | ✦       | ✦        | —      | I-4.1.1, **I-3.4.1**     | Server-side pagination for >100 rows, TanStack Table. **Scoped to organizer's own events only (server-side enforcement from Phase 0).**                                                       |
-| 3     | I-4.1.3 | Individual participant booking detail view                                      | ✦       | ✦        | —      | I-4.1.2                  | Scoped to organizer's own events only. **Sensitive fields (blood group, medical) suppressed at API layer unless safety-critical.** Navigate from participant list. Can parallel with I-4.1.4. |
-| 4     | I-4.1.4 | Basic revenue view per event — total collected, EventKart fee, net to organizer | ✦       | ✦        | —      | I-4.1.1, **I-3.2.4**     | Read from payment records. Can parallel with I-4.1.3.                                                                                                                                         |
-| 5     | I-4.1.5 | Participant roster export — CSV for offline fallback                            | ✦       | ✦        | —      | I-4.1.2, **I-0.1.6**     | BullMQ exports queue, sensitive fields controlled.                                                                                                                                            |
+| Order | ID      | Feature                                                                         | Backend | Frontend | Shared | Depends on               | Notes                                                                                                                                                                                                      |
+| ----- | ------- | ------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-4.1.1 | Registered / paid / checked-in count summary per event                          | ✦       | ✦        | —      | **I-3.3.2**, **I-0.3.3** | Aggregate queries, `/org/events/:id`. Dashboard header with key metrics.                                                                                                                                   |
+| 2     | I-4.1.2 | Participant list with status filters                                            | ✦       | ✦        | —      | I-4.1.1, **I-3.4.1**     | Server-side pagination for >100 rows, TanStack Table. **Scoped to organizer's own events only (server-side enforcement from Phase 0).**                                                                    |
+| 3     | I-4.1.3 | Individual participant booking detail view                                      | ✦       | ✦        | —      | I-4.1.2                  | Scoped to organizer's own events only. **Sensitive fields (blood group, medical) suppressed at API layer unless safety-critical.** Navigate from participant list. Can parallel with I-4.1.4.              |
+| 4     | I-4.1.4 | Basic revenue view per event — total collected, EventKart fee, net to organizer | ✦       | ✦        | —      | I-4.1.1, **I-3.2.4**     | Read from payment records. Can parallel with I-4.1.3.                                                                                                                                                      |
+| 5     | I-4.1.5 | Participant roster export — CSV for offline fallback                            | ✦       | ✦        | —      | I-4.1.2, **I-0.1.6**     | BullMQ exports queue, sensitive fields controlled.                                                                                                                                                         |
+| 6     | I-4.1.6 | Conversion-rate tile (started → paid) per event                                 | ✦       | ✦        | —      | I-4.1.1, **I-0.4.7**     | Reads `started_registrations` counter (I-0.4.7) vs paid bookings to render funnel tile + comparison to organizer's prior events. Powers product-plan §11 "Conversion proof" success metric for organizers. |
 
 **Key pattern:** Participant tables use TanStack Table + TanStack Virtual for large lists (20K+ rows). Server-side pagination for initial load, client-side virtual scrolling for render.
 
@@ -741,7 +826,8 @@ The detail view organizers drill into per event.
 3. `I-4.1.3` Participant booking detail view
 4. `I-4.1.4` Revenue view _(can parallel with I-4.1.3)_
 5. `I-4.1.5` Participant roster export
-6. `I-4.2.3` Quick-access links _(wires landing page to detail views)_
+6. `I-4.1.6` Conversion-rate tile _(needs I-0.4.7 from Phase 0)_
+7. `I-4.2.3` Quick-access links _(wires landing page to detail views)_
 
 ```
 Wave 1 (landing page)         Wave 2 (event operations)
@@ -874,14 +960,15 @@ _Covers requirements F-6.1.3, F-6.1.4_
 
 _Covers requirements F-6.2.1 through F-6.2.4_
 
-**Implementation order:** Organizer content interface first (organizer adds links/content), then follow-up email (includes that content), then email extensions (results, next-event prompt).
+**Implementation order:** Organizer content interface first (organizer adds links/content), then follow-up email (includes that content), then email extensions (results, next-event prompt). The marketing-consent gate is enforced as a distinct check (I-6.2.5) so it can be unit-tested independently.
 
-| Order | ID      | Feature                                                      | Backend | Frontend | Shared | Depends on                        | Notes                                                                                                                                             |
-| ----- | ------- | ------------------------------------------------------------ | ------- | -------- | ------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | I-6.2.4 | Organizer interface to add post-event content                | ✦       | ✦        | —      | **I-0.3.3**, **I-1.2.1**          | Results link, photos link, next event link. `/org/events/:id/post-event`. **Build before follow-up email so email has content to include.**       |
-| 2     | I-6.2.1 | Post-event follow-up email to participants                   | ✦       | —        | —      | I-6.2.4, **I-3.3.1**, **I-3.1.6** | Triggered after event completion. **Requires valid marketing consent for promotional content.** Includes organizer-provided content from I-6.2.4. |
-| 3     | I-6.2.2 | Include organizer-provided wrap-up or external results links | ✦       | —        | —      | I-6.2.1                           | First-party results hosting out of scope. Extends follow-up email template. Can parallel with I-6.2.3.                                            |
-| 4     | I-6.2.3 | Next-event prompt for repeat booking in follow-up email      | ✦       | —        | —      | I-6.2.1, **I-1.2.1**              | Link to organizer's next event. **Only sent to participants with marketing consent.** Can parallel with I-6.2.2.                                  |
+| Order | ID      | Feature                                                      | Backend | Frontend | Shared | Depends on                        | Notes                                                                                                                                                                                                                                                      |
+| ----- | ------- | ------------------------------------------------------------ | ------- | -------- | ------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-6.2.4 | Organizer interface to add post-event content                | ✦       | ✦        | —      | **I-0.3.3**, **I-1.2.1**          | Results link, photos link, next event link. `/org/events/:id/post-event`. **Build before follow-up email so email has content to include.**                                                                                                                |
+| 2     | I-6.2.1 | Post-event follow-up email to participants                   | ✦       | —        | —      | I-6.2.4, **I-3.3.1**, **I-3.1.6** | Triggered after event completion. **Requires valid marketing consent for promotional content.** Includes organizer-provided content from I-6.2.4.                                                                                                          |
+| 3     | I-6.2.2 | Include organizer-provided wrap-up or external results links | ✦       | —        | —      | I-6.2.1                           | First-party results hosting out of scope. Extends follow-up email template. Can parallel with I-6.2.3.                                                                                                                                                     |
+| 4     | I-6.2.3 | Next-event prompt for repeat booking in follow-up email      | ✦       | —        | —      | I-6.2.1, **I-1.2.1**, **I-2.3.6** | Link to organizer's next event (uses I-2.3.6 same-organizer next-event endpoint). **Per DEC-5: same-organizer scope only in V1.** **Marketing-consent enforcement is in I-6.2.5.** Can parallel with I-6.2.2.                                              |
+| 5     | I-6.2.5 | Marketing-consent enforcement in next-event prompt section   | ✦       | —        | —      | I-6.2.3, **I-3.1.6**              | Server-side check before rendering the next-event prompt: only include the prompt block when `consent_records.consent_type='marketing'` is present and not withdrawn. Email body conditionally renders the section. Tested independently of I-6.2.3 logic. |
 
 ### Phase 6 Execution Strategy — Solo Developer
 
@@ -899,14 +986,16 @@ The follow-up email and its extensions. Needs organizer content interface from W
 
 1. `I-6.2.1` Post-event follow-up email
 2. `I-6.2.2` Results/wrap-up links in email
-3. `I-6.2.3` Next-event prompt in email
+3. `I-6.2.3` Next-event prompt in email _(same-organizer scope; uses I-2.3.6)_
+4. `I-6.2.5` Marketing-consent enforcement on next-event section
 
 ```
 Wave 1 (independent items)    Wave 2 (follow-up email)
-────────────────────────    ─────────────────────────────
+────────────────────────      ─────────────────────────────
 I-6.1.1 reminder email        I-6.2.1 follow-up email
 I-6.1.2 cancellation template I-6.2.2 results links (∥)
 I-6.2.4 post-event interface  I-6.2.3 next-event prompt (∥)
+                              I-6.2.5 marketing-consent gate
 ```
 
 **Validate after each wave:** Run `check-types`, `lint`, and `test` for all affected workspaces.
@@ -942,12 +1031,14 @@ _Covers requirements F-7.2.1 through F-7.2.4_
 
 **Implementation order:** Participant reporting first, then admin queue, then SLA tracking and suspension workflow.
 
-| Order | ID      | Feature                                               | Backend | Frontend | Shared | Depends on                        | Notes                                                                             |
-| ----- | ------- | ----------------------------------------------------- | ------- | -------- | ------ | --------------------------------- | --------------------------------------------------------------------------------- |
-| 1     | I-7.2.1 | Participant issue reporting mechanism                 | ✦       | ✦        | —      | **I-3.3.2**, **I-0.3.3**          | Contact/form-based reporting. Creates dispute record.                             |
-| 2     | I-7.2.2 | Admin dispute queue and management interface          | ✦       | ✦        | —      | I-7.2.1, **I-0.3.3**, **I-0.4.4** | `/admin/disputes` route. Admin views and manages disputes.                        |
-| 3     | I-7.2.3 | 2-business-day first-response SLA tracking            | ✦       | ✦        | —      | I-7.2.2                           | SLA timer on dispute records. Alerting on breach.                                 |
-| 4     | I-7.2.4 | Organizer suspension workflow for repeated violations | ✦       | ✦        | —      | I-7.2.2, **I-1.1.1**, **I-0.4.4** | Admin action, logged in audit. Suspends organizer account and unpublishes events. |
+| Order | ID      | Feature                                               | Backend | Frontend | Shared | Depends on                        | Notes                                                                                                                                                                                                                                                                                                                                                                 |
+| ----- | ------- | ----------------------------------------------------- | ------- | -------- | ------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-7.2.1 | Participant issue reporting mechanism                 | ✦       | ✦        | —      | **I-3.3.2**, **I-0.3.3**          | Authenticated participant flow. Creates dispute record from `/my/bookings/:id` page. **Public unauthenticated entry point is I-7.2.5.**                                                                                                                                                                                                                               |
+| 2     | I-7.2.5 | Public unauthenticated dispute reporting form         | ✦       | ✦        | ✦      | I-7.2.1, **I-2.5.3**              | `POST /api/v1/public/disputes` accepts contact form payload (name, email, phone, booking-ref optional, description). Embedded on `/contact` (I-2.5.3) and linked from event page footer + booking confirmation email. Rate-limited per-IP. Creates dispute record with `source = 'public_form'`. Admin queue (I-7.2.2) handles both authenticated and public reports. |
+| 3     | I-7.2.2 | Admin dispute queue and management interface          | ✦       | ✦        | —      | I-7.2.1, **I-0.3.3**, **I-0.4.4** | `/admin/disputes` route. Admin views and manages disputes (auth + public).                                                                                                                                                                                                                                                                                            |
+| 4     | I-7.2.3 | 2-business-day first-response SLA tracking            | ✦       | ✦        | —      | I-7.2.2                           | SLA timer on dispute records. Alerting on breach.                                                                                                                                                                                                                                                                                                                     |
+| 5     | I-7.2.4 | Organizer suspension workflow for repeated violations | ✦       | ✦        | —      | I-7.2.2, **I-1.1.1**, **I-0.4.4** | Admin action, logged in audit. Suspends organizer account and unpublishes events.                                                                                                                                                                                                                                                                                     |
+| 6     | I-7.2.6 | Organizer-suspension email                            | ✦       | —        | —      | I-7.2.4, **I-3.3.1**              | Triggered when admin suspends organizer (I-7.2.4). React Email template with reason, appeal-process link, and expected reactivation timeline.                                                                                                                                                                                                                         |
 
 ### Module 7.3: Admin Operations Panel & Data Lifecycle
 
@@ -955,34 +1046,52 @@ _Covers requirements F-7.3.1 through F-7.3.4 plus data lifecycle from architectu
 
 **Implementation order:** Admin panels first (extend Phase 1 admin interfaces), then data lifecycle workers (anonymization, cleanup jobs), then compliance features (DSAR export, bounce handling). I-7.3.10 must come after I-7.3.5 since inactive accounts feed into the anonymization worker.
 
-| Order | ID       | Feature                                                                           | Backend | Frontend | Shared | Depends on                            | Notes                                                                                                                                              |
-| ----- | -------- | --------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | I-7.3.1  | Organizer verification queue — pending applications, approve/reject               | ✦       | ✦        | —      | **I-1.1.5**                           | Started in Phase 1, completed here with full queue management (pagination, filters, bulk actions).                                                 |
-| 2     | I-7.3.2  | Event review queue — new organizer events pending manual review                   | ✦       | ✦        | —      | **I-1.2.7**                           | Started in Phase 1, completed here with full queue management. Can parallel with I-7.3.1.                                                          |
-| 3     | I-7.3.4  | Audit log viewer — filter by actor, action, resource, date range                  | ✦       | ✦        | —      | **I-0.4.4**                           | Queries audit_log table. Can parallel with I-7.3.1/I-7.3.2.                                                                                        |
-| 4     | I-7.3.3  | Payout monitoring dashboard — split payout status, exceptions                     | ✦       | ✦        | —      | **I-3.2.4**, **I-3.2.3**              | Read from payment records. Can parallel with I-7.3.4.                                                                                              |
-| 5     | I-7.3.5  | Anonymization worker — processes profile deletion and consent withdrawal requests | ✦       | —        | —      | **I-3.4.4**, **I-0.1.6**              | BullMQ cleanup queue. Replaces PII with deterministic hashes/placeholders. Preserves financial data. **Completes the stub from I-3.4.4.**          |
-| 6     | I-7.3.6  | Sensitive field cleanup job — 30 days post-event                                  | ✦       | —        | —      | **I-3.4.1**, **I-0.1.6**              | BullMQ daily repeatable job. Scans and deletes sensitive fields on bookings for completed events. Can parallel with I-7.3.5.                       |
-| 7     | I-7.3.7  | KYC document cleanup job — 1 year after account closure                           | ✦       | —        | —      | **I-1.1.2**, **I-0.1.8**, **I-0.1.6** | BullMQ weekly repeatable job. Removes S3/R2 objects and DB metadata. Can parallel with I-7.3.5/I-7.3.6.                                            |
-| 8     | I-7.3.8  | DSAR data export — machine-readable export of all participant data                | ✦       | ✦        | —      | **I-3.4.1**, **I-0.1.6**              | `GET /api/v1/my/data-export`. BullMQ exports queue. Required for DPDPA compliance.                                                                 |
-| 9     | I-7.3.9  | Email bounce/complaint handling — deliverability hygiene                          | ✦       | —        | —      | **I-3.3.1**                           | Resend/SES webhook for bounces and complaints. Suppress future sends to bounced addresses.                                                         |
-| 10    | I-7.3.10 | Inactive account cleanup — 3 years inactivity                                     | ✦       | —        | —      | **I-7.3.5**, **I-0.1.6**              | BullMQ weekly repeatable job. Marks inactive accounts for anonymization. **Must come after I-7.3.5** since it feeds into the anonymization worker. |
+| Order | ID       | Feature                                                                           | Backend | Frontend | Shared | Depends on                            | Notes                                                                                                                                                                                                                                                          |
+| ----- | -------- | --------------------------------------------------------------------------------- | ------- | -------- | ------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-7.3.1  | Organizer verification queue — pending applications, approve/reject               | ✦       | ✦        | —      | **I-1.1.5**                           | Started in Phase 1, completed here with full queue management (pagination, filters, bulk actions).                                                                                                                                                             |
+| 2     | I-7.3.2  | Event review queue — new organizer events pending manual review                   | ✦       | ✦        | —      | **I-1.2.7**                           | Started in Phase 1, completed here with full queue management. Can parallel with I-7.3.1.                                                                                                                                                                      |
+| 3     | I-7.3.4  | Audit log viewer — filter by actor, action, resource, date range                  | ✦       | ✦        | —      | **I-0.4.4**                           | Queries audit_log table. Can parallel with I-7.3.1/I-7.3.2.                                                                                                                                                                                                    |
+| 4     | I-7.3.3  | Payout monitoring dashboard — split payout status, exceptions                     | ✦       | ✦        | —      | **I-3.2.4**, **I-3.2.3**              | Read from payment records. Can parallel with I-7.3.4.                                                                                                                                                                                                          |
+| 5     | I-7.3.5  | Anonymization worker — processes profile deletion and consent withdrawal requests | ✦       | —        | —      | **I-3.4.4**, **I-0.1.6**              | BullMQ cleanup queue. Replaces PII with deterministic hashes/placeholders. Preserves financial data. **Completes the stub from I-3.4.4.**                                                                                                                      |
+| 6     | I-7.3.6  | Sensitive field cleanup job — 30 days post-event                                  | ✦       | —        | —      | **I-3.4.1**, **I-0.1.6**              | BullMQ daily repeatable job. Scans and deletes sensitive fields on bookings for completed events. Can parallel with I-7.3.5.                                                                                                                                   |
+| 7     | I-7.3.7  | KYC document cleanup job — 1 year after account closure                           | ✦       | —        | —      | **I-1.1.2**, **I-0.1.8**, **I-0.1.6** | BullMQ weekly repeatable job. Removes S3/R2 objects and DB metadata. Can parallel with I-7.3.5/I-7.3.6.                                                                                                                                                        |
+| 8     | I-7.3.8  | DSAR data export — machine-readable export of all participant data                | ✦       | ✦        | —      | **I-3.4.1**, **I-0.1.6**              | `GET /api/v1/my/data-export`. BullMQ exports queue. Required for DPDPA compliance.                                                                                                                                                                             |
+| 9     | I-7.3.9  | Email bounce/complaint handling — deliverability hygiene                          | ✦       | —        | —      | **I-3.3.1**                           | Resend/SES webhook for bounces and complaints. Suppress future sends to bounced addresses.                                                                                                                                                                     |
+| 10    | I-7.3.10 | Inactive account cleanup — 3 years inactivity                                     | ✦       | —        | —      | **I-7.3.5**, **I-0.1.6**              | BullMQ weekly repeatable job. Marks inactive accounts for anonymization. **Must come after I-7.3.5** since it feeds into the anonymization worker.                                                                                                             |
+| 11    | I-7.3.11 | SLA compliance dashboard — refund + dispute breach alerts                         | ✦       | ✦        | —      | **I-7.1.3**, **I-7.2.3**, **I-0.4.4** | Admin tile under `/admin/operations`. Aggregates refund SLA status (target 7 business days from F-7.1.x) and dispute first-response SLA (2 business days from F-7.2.3). Powers product-plan §11 trust baseline metric. Triggers I-7.4.4 admin email on breach. |
+
+### Module 7.4: Admin Notifications
+
+_New module — covers cross-cutting admin awareness. Currently admin must poll for new organizer/event/dispute submissions; v2.2 closes this gap with targeted email notifications + a daily digest._
+
+**Implementation order:** Per-event notifications first (independent), then daily digest aggregator last (uses same templates).
+
+| Order | ID      | Feature                                                           | Backend | Frontend | Shared | Depends on                            | Notes                                                                                                                                                                  |
+| ----- | ------- | ----------------------------------------------------------------- | ------- | -------- | ------ | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | I-7.4.1 | Admin notification email on new organizer verification submission | ✦       | —        | —      | **I-1.1.4**, **I-3.3.1**, **I-0.2.6** | Triggered after I-1.1.4 verification submitted. Sends to `ADMIN_NOTIFY_EMAIL` from config with deep link to admin verification queue (I-7.3.1).                        |
+| 2     | I-7.4.2 | Admin notification email on event submitted for review            | ✦       | —        | —      | **I-1.2.7**, **I-3.3.1**, **I-0.2.6** | Triggered after I-1.2.7 event review submission. Sends to `ADMIN_NOTIFY_EMAIL` with deep link to event review queue (I-7.3.2).                                         |
+| 3     | I-7.4.3 | Admin notification email on new dispute filed                     | ✦       | —        | —      | **I-7.2.1**, **I-7.2.5**, **I-3.3.1** | Triggered for both authenticated and public disputes. Includes severity heuristic (e.g., contains "fraud", "missing money").                                           |
+| 4     | I-7.4.4 | Admin notification email on refund or dispute SLA breach          | ✦       | —        | —      | **I-7.3.11**, **I-3.3.1**             | Triggered by I-7.3.11 SLA dashboard's BullMQ daily breach scan.                                                                                                        |
+| 5     | I-7.4.5 | Admin notification email on payment-webhook DLQ entry             | ✦       | —        | —      | **I-3.2.7**, **I-0.4.5**, **I-3.3.1** | Triggered when a webhook job fails irreversibly and lands in dead-letter queue. Critical-severity alert.                                                               |
+| 6     | I-7.4.6 | Admin daily digest email                                          | ✦       | —        | —      | **I-7.4.1**, **I-7.4.2**, **I-7.2.2** | BullMQ scheduled daily job. Aggregates: pending verifications count, pending event reviews count, open disputes count, SLA-breach count, DLQ count. Sent at 09:00 IST. |
 
 ### Phase 7 Execution Strategy — Solo Developer
 
-Phase 7 has three largely independent modules. Modules 7.1 (refunds) and 7.2 (disputes) are independent of each other. Module 7.3 is a collection of independent admin panels and background jobs. Work in 3 waves:
+Phase 7 has four largely independent modules. Modules 7.1 (refunds) and 7.2 (disputes) are independent of each other. Module 7.3 is a collection of independent admin panels and background jobs. Module 7.4 (admin notifications) is a thin layer over 7.1/7.2/7.3 events. Work in 4 waves:
 
-**Wave 1 — Refund workflow + Dispute reporting + Admin panels**
-The user-facing exception flows and admin queue enhancements. All three tracks are independent.
+**Wave 1 — Refund workflow + Dispute reporting**
+The user-facing exception flows. All three tracks are independent.
 
 1. `I-7.1.1` Refund request initiation
 2. `I-7.1.2` Refund gateway processing
 3. `I-7.1.3` Refund status + email _(wires Phase 6 cancellation template)_
 4. `I-7.1.4` Settled-funds handling
-5. `I-7.2.1` Participant issue reporting
-6. `I-7.2.2` Admin dispute queue
-7. `I-7.2.3` SLA tracking
-8. `I-7.2.4` Organizer suspension
+5. `I-7.2.1` Participant issue reporting (authenticated)
+6. `I-7.2.5` Public unauthenticated dispute form _(needs I-2.5.3 contact page)_
+7. `I-7.2.2` Admin dispute queue
+8. `I-7.2.3` SLA tracking
+9. `I-7.2.4` Organizer suspension
+10. `I-7.2.6` Organizer-suspension email
 
 **Wave 2 — Admin operations panels**
 Complete the admin dashboard with full queue management, payout monitoring, and audit viewer.
@@ -991,6 +1100,7 @@ Complete the admin dashboard with full queue management, payout monitoring, and 
 2. `I-7.3.2` Event review queue _(extends Phase 1 admin interface)_
 3. `I-7.3.4` Audit log viewer
 4. `I-7.3.3` Payout monitoring dashboard
+5. `I-7.3.11` SLA compliance dashboard
 
 **Wave 3 — Data lifecycle workers + Compliance**
 Background jobs for DPDPA compliance, data hygiene, and deliverability.
@@ -1002,17 +1112,29 @@ Background jobs for DPDPA compliance, data hygiene, and deliverability.
 5. `I-7.3.9` Email bounce/complaint handling
 6. `I-7.3.10` Inactive account cleanup _(feeds into I-7.3.5 anonymization)_
 
+**Wave 4 — Admin notifications**
+Email notifications to admin staff so they no longer need to poll. Depends on the upstream events from Waves 1-3 and on Phase 1 verification/event-review submission flows.
+
+1. `I-7.4.1` Verification submission notification _(needs I-1.1.4)_
+2. `I-7.4.2` Event review submission notification _(needs I-1.2.7)_
+3. `I-7.4.3` New dispute notification _(needs I-7.2.1, I-7.2.5)_
+4. `I-7.4.5` Payment-webhook DLQ notification _(needs I-3.2.7, I-0.4.5)_
+5. `I-7.4.4` SLA breach notification _(needs I-7.3.11)_
+6. `I-7.4.6` Daily admin digest _(aggregates all of the above)_
+
 ```
-Wave 1 (exception flows)      Wave 2 (admin panels)            Wave 3 (data lifecycle)
-────────────────────────    ────────────────────────────    ────────────────────────────
-I-7.1.1 refund request        I-7.3.1 verification queue       I-7.3.5 anonymization worker
-I-7.1.2 gateway processing    I-7.3.2 event review queue (∥)   I-7.3.6 sensitive cleanup (∥)
-I-7.1.3 status + email        I-7.3.4 audit log viewer (∥)     I-7.3.7 KYC cleanup (∥)
-I-7.1.4 settled funds         I-7.3.3 payout dashboard (∥)     I-7.3.8 DSAR export
-I-7.2.1 issue reporting                                         I-7.3.9 bounce handling
-I-7.2.2 dispute queue                                           I-7.3.10 inactive cleanup
+Wave 1 (exception flows)        Wave 2 (admin panels)              Wave 3 (data lifecycle)            Wave 4 (admin notifications)
+────────────────────────────    ────────────────────────────────    ────────────────────────────       ──────────────────────────────
+I-7.1.1 refund request          I-7.3.1 verification queue          I-7.3.5 anonymization worker       I-7.4.1 verification notify
+I-7.1.2 gateway processing      I-7.3.2 event review queue (∥)      I-7.3.6 sensitive cleanup (∥)      I-7.4.2 event review notify
+I-7.1.3 status + email          I-7.3.4 audit log viewer (∥)        I-7.3.7 KYC cleanup (∥)            I-7.4.3 new dispute notify
+I-7.1.4 settled funds           I-7.3.3 payout dashboard (∥)        I-7.3.8 DSAR export                I-7.4.5 DLQ notify
+I-7.2.1 issue reporting         I-7.3.11 SLA dashboard              I-7.3.9 bounce handling            I-7.4.4 SLA breach notify
+I-7.2.5 public dispute form                                          I-7.3.10 inactive cleanup          I-7.4.6 daily digest
+I-7.2.2 dispute queue
 I-7.2.3 SLA tracking
 I-7.2.4 organizer suspension
+I-7.2.6 suspension email
 ```
 
 **Validate after each wave:** Run `check-types`, `lint`, and `test` for all affected workspaces.
@@ -1040,18 +1162,24 @@ These are not separate phases — they are requirements that apply during every 
 
 ### Privacy & Data Handling (DPDPA-Aware)
 
-| Concern                      | Implementation                                                                                                                      | Applies From |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| Data minimization            | Collect only registration + event-day data                                                                                          | Phase 3      |
-| Sensitive field opt-in       | Blood group, medical fields optional by default                                                                                     | Phase 1      |
-| Consent at collection        | Explicit consent, versioned, no pre-checked boxes. **Three separate consent types**: booking_terms, data_usage, marketing (I-3.1.6) | Phase 3      |
-| Consent withdrawal           | API endpoint to revoke specific consent types (I-3.4.5)                                                                             | Phase 3      |
-| Marketing consent separation | Promotional emails require explicit marketing consent; transactional emails (booking confirmation, reminders) do not                | Phase 3      |
-| Scoped organizer access      | Server-side filtering to own events only — enforced from Phase 1, not Phase 4                                                       | Phase 1      |
-| Sensitive data segregation   | `sensitive_participant_data` table — blood_group, medical_conditions, emergency_contact stored separately with 30-day TTL           | Phase 3      |
-| Separate KYC storage         | Object storage with presigned URLs, access logged                                                                                   | Phase 1      |
-| Deletion/anonymization       | Soft delete, booking anonymization, scheduled cleanup (I-7.3.5)                                                                     | Phase 7      |
-| Data export (DSAR)           | `GET /api/v1/my/data-export` machine-readable export (I-7.3.8)                                                                      | Phase 7      |
+| Concern                       | Implementation                                                                                                                                                                     | Applies From |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Data minimization             | Collect only registration + event-day data                                                                                                                                         | Phase 3      |
+| Sensitive field opt-in        | Blood group, medical fields optional by default                                                                                                                                    | Phase 1      |
+| Consent at collection         | Explicit consent, versioned, no pre-checked boxes. **Four separate consent types**: booking_terms, data_usage, marketing (I-3.1.6), parental (I-3.1.7 — when participant age < 18) | Phase 3      |
+| Consent withdrawal            | API endpoint to revoke specific consent types (I-3.4.5)                                                                                                                            | Phase 3      |
+| Marketing consent separation  | Promotional emails require explicit marketing consent; transactional emails (booking confirmation, reminders) do not. Enforced explicitly in next-event prompt section (I-6.2.5).  | Phase 3      |
+| Parental consent for minors   | Server-side gate when `participant.age < 18`: parent/guardian email + consent recorded as a `parental` row in `consent_records`; confirmation email CC'd to guardian (I-3.1.7)     | Phase 3      |
+| Sensitive field auto-fill     | **Never auto-filled across bookings (DEC-1, v2.2 privacy-first).** Auto-fill (I-3.1.4) covers non-sensitive fields only.                                                           | Phase 3      |
+| Scoped organizer access       | Server-side filtering to own events only — enforced from Phase 1, not Phase 4                                                                                                      | Phase 1      |
+| Sensitive data segregation    | `sensitive_participant_data` table — blood_group, medical_conditions, emergency_contact stored separately with 30-day TTL                                                          | Phase 3      |
+| Separate KYC storage          | Object storage with presigned URLs, access logged                                                                                                                                  | Phase 1      |
+| Public legal surface          | `/privacy`, `/terms`, `/about`, `/faq`, `/contact` (Module 2.5); consent versions align with `consent_records.consent_version`                                                     | Phase 2      |
+| Booking re-access             | Magic-link booking re-access (I-3.3.7) + phone+booking-id lookup (I-3.3.8) — no persistent participant session needed                                                              | Phase 3      |
+| Deletion/anonymization        | Soft delete, booking anonymization, scheduled cleanup (I-7.3.5)                                                                                                                    | Phase 7      |
+| Data export (DSAR)            | `GET /api/v1/my/data-export` machine-readable export (I-7.3.8)                                                                                                                     | Phase 7      |
+| Public dispute reporting      | Public unauthenticated dispute form (I-7.2.5) — entry from `/contact` and event page footer                                                                                        | Phase 7      |
+| Admin awareness notifications | Email notifications to admin on new verification / event review / dispute / SLA breach / DLQ + daily digest (Module 7.4)                                                           | Phase 7      |
 
 ### Data Lifecycle & Retention
 
@@ -1138,23 +1266,25 @@ Phase 3 complete
 
 | Phase                                          | Modules | Features |
 | ---------------------------------------------- | ------- | -------- |
-| Phase 0: Foundation                            | 4       | 33       |
-| Phase 1: Organizer Onboarding & Event Creation | 2       | 18       |
-| Phase 2: Event Discovery & Public Pages        | 4       | 20       |
-| Phase 3: Registration, Payment & Booking       | 4       | 28       |
-| Phase 4: Organizer Operations Dashboard        | 2       | 8        |
+| Phase 0: Foundation                            | 4       | 37       |
+| Phase 1: Organizer Onboarding & Event Creation | 2       | 24       |
+| Phase 2: Event Discovery & Public Pages        | 5       | 33       |
+| Phase 3: Registration, Payment & Booking       | 4       | 32       |
+| Phase 4: Organizer Operations Dashboard        | 2       | 9        |
 | Phase 5: Event-Day Operations                  | 3       | 12       |
-| Phase 6: Communications & Retention            | 2       | 6        |
-| Phase 7: Refunds, Disputes & Admin Ops         | 3       | 18       |
-| **Total**                                      | **24**  | **143**  |
+| Phase 6: Communications & Retention            | 2       | 7        |
+| Phase 7: Refunds, Disputes & Admin Ops         | 4       | 27       |
+| **Total**                                      | **26**  | **181**  |
 
 **Note:** Feature count is higher than the requirements doc (103 F-IDs across 8 phases) because:
 
-- Phase 0 adds infrastructure features (Redis, BullMQ, object storage, CI/CD, security headers, observability, metrics)
-- Phase 1 adds Razorpay Route linked-account, event images, slug generation
-- Phase 2 adds CDN infrastructure module and organizer slug
-- Phase 3 adds payment infrastructure (webhook, reconciliation, capacity, backpressure), email foundation (moved from Phase 6), consent withdrawal
-- Phase 7 adds data lifecycle workers (anonymization, sensitive field cleanup, KYC cleanup, DSAR export, email deliverability)
+- Phase 0 adds infrastructure features (Redis, BullMQ, object storage, CI/CD, security headers, observability, metrics, conversion-funnel counters, secret-rotation runbook, internal-key hotfixes)
+- Phase 1 adds Razorpay Route linked-account, event images, slug generation, organizer transactional emails (welcome / verification approve+reject / Razorpay-ready), event review emails
+- Phase 2 adds CDN infrastructure module, organizer slug, sitemap/robots/canonical/breadcrumb SEO, slug 301 redirect handler, public chrome (privacy/terms/about/faq/contact)
+- Phase 3 adds payment infrastructure (webhook, reconciliation, per-category capacity, backpressure, per-event rate limiting), email foundation (moved from Phase 6), consent withdrawal, parental consent, magic-link booking re-access, booking lookup
+- Phase 4 adds the conversion-rate tile
+- Phase 6 adds explicit marketing-consent enforcement on next-event prompt
+- Phase 7 adds data lifecycle workers (anonymization, sensitive field cleanup, KYC cleanup, DSAR export, email deliverability), public dispute form, suspension email, SLA compliance dashboard, full admin notifications module
 - All implementation IDs use I-prefix (e.g., I-3.2.1) to avoid collision with requirements F-IDs. See Appendix A for the complete mapping.
 
 ---
@@ -1199,6 +1329,7 @@ POST /events/:id/publish      → Submit for review/publish
 ```
 POST /organizers              → Organizer signup
 GET  /organizers/:slug        → Public organizer profile
+GET  /organizers/:id/next-event → Next event by same organizer (Layer 4 emails, I-2.3.6)
 POST /organizers/verify       → Submit verification documents
 ```
 
@@ -1207,7 +1338,8 @@ POST /organizers/verify       → Submit verification documents
 ```
 POST /bookings                → Submit registration + initiate payment
 POST /bookings/payment/callback → Razorpay webhook
-GET  /bookings/:id            → Booking detail
+GET  /bookings/:id            → Booking detail (auth or magic-link token)
+POST /bookings/lookup         → Phone+booking-id lookup → triggers OTP (I-3.3.8)
 ```
 
 ### Consent
@@ -1259,6 +1391,15 @@ POST /admin/disputes/:id/respond  → Respond to dispute
 GET  /admin/payouts               → Payout monitoring
 POST /admin/organizers/:id/suspend → Suspend organizer
 GET  /admin/audit-log             → Audit log viewer
+GET  /admin/sla                   → SLA compliance dashboard (I-7.3.11)
+```
+
+### Public (unauthenticated)
+
+```
+POST /public/disputes             → Public unauthenticated dispute reporting (I-7.2.5)
+GET  /sitemap.xml                 → Sitemap of public pages (I-2.4.4)
+GET  /robots.txt                  → Crawl directives (I-2.4.5)
 ```
 
 ### Refunds
@@ -1285,6 +1426,13 @@ GET  /ready                   → Readiness check (DB + Redis)
 /                             → Event discovery (Coimbatore)
 /events/:slug                 → Event detail page (CDN-cached)
 /organizers/:slug             → Organizer public profile
+/privacy                      → DPDPA-aware privacy notice (I-2.5.1)
+/terms                        → Platform terms of service (I-2.5.2)
+/about                        → About / mission / Coimbatore pilot (I-2.5.4)
+/faq                          → Participant FAQ (I-2.5.5)
+/contact                      → Contact + public dispute form (I-2.5.3)
+/sitemap.xml                  → Sitemap (I-2.4.4)
+/robots.txt                   → Robots directives (I-2.4.5)
 ```
 
 ### Booking (CSR, `ssr: 'data-only'`)
@@ -1292,6 +1440,8 @@ GET  /ready                   → Readiness check (DB + Redis)
 ```
 /book/:eventId                → Registration + payment flow
 /book/:eventId/confirmation   → Booking confirmation with QR
+/my/bookings/:bookingId       → Booking re-access (magic-link or auth, I-3.3.7)
+/lookup-booking               → Public lookup form (phone + booking-id, I-3.3.8)
 ```
 
 ### Participant (CSR, `ssr: 'data-only'`, auth required)
@@ -1323,6 +1473,7 @@ GET  /ready                   → Readiness check (DB + Redis)
 /admin/disputes               → Dispute management
 /admin/payouts                → Payout monitoring
 /admin/audit-log              → Audit log viewer
+/admin/sla                    → SLA compliance dashboard (I-7.3.11)
 ```
 
 ---
@@ -1333,22 +1484,38 @@ All workers run as a **separate Railway service** — never in the API process.
 
 **DLQ pattern:** BullMQ has no native DLQ. Implement via `failed` event handler: after max retries exhausted, move job to dead-letter storage + alert admin via webhook/email.
 
-| Queue             | Job                         | Trigger                     | Concurrency | Retry          | Notes                                      |
-| ----------------- | --------------------------- | --------------------------- | ----------- | -------------- | ------------------------------------------ |
-| `payment-webhook` | Process payment webhook     | Razorpay webhook received   | 10          | 3× exponential | Critical path — booking state machine      |
-| `payment-webhook` | Payment reconciliation      | Repeatable (every 5 min)    | 1           | 1×             | Catches missed webhooks                    |
-| `payment-webhook` | Capacity reservation expiry | Repeatable (every 1 min)    | 2           | 1×             | 15-minute reservation timeout              |
-| `email`           | Booking confirmation        | Booking confirmed           | 5           | 2× exponential | Contains QR ticket                         |
-| `email`           | Event reminder              | Scheduled (1-2 days before) | 5           | 2× exponential | —                                          |
-| `email`           | Post-event follow-up        | Event completed             | 5           | 2× exponential | Requires marketing consent                 |
-| `email`           | Refund confirmation         | Refund processed            | 5           | 2× exponential | —                                          |
-| `email`           | Bounce/complaint handler    | Resend/SES webhook          | 2           | 1×             | Suppress future sends to bounced addresses |
-| `cleanup`         | Sensitive field cleanup     | Repeatable daily            | 2           | 1×             | 30 days post-event                         |
-| `cleanup`         | KYC doc cleanup             | Repeatable weekly           | 2           | 1×             | 1 year after account closure               |
-| `cleanup`         | Inactive account cleanup    | Repeatable weekly           | 2           | 1×             | 3 years inactivity (I-7.3.10)              |
-| `cleanup`         | Anonymization processor     | Profile deletion request    | 2           | 2× exponential | PII → deterministic hashes                 |
-| `exports`         | Roster PDF/CSV generation   | Organizer request           | 1           | 2×             | Sensitive fields controlled                |
-| `exports`         | DSAR data export            | Participant request         | 1           | 2×             | All personal data, machine-readable        |
+| Queue             | Job                          | Trigger                              | Concurrency | Retry          | Notes                                        |
+| ----------------- | ---------------------------- | ------------------------------------ | ----------- | -------------- | -------------------------------------------- |
+| `payment-webhook` | Process payment webhook      | Razorpay webhook received            | 10          | 3× exponential | Critical path — booking state machine        |
+| `payment-webhook` | Payment reconciliation       | Repeatable (every 5 min)             | 1           | 1×             | Catches missed webhooks                      |
+| `payment-webhook` | Capacity reservation expiry  | Repeatable (every 1 min)             | 2           | 1×             | 15-minute reservation timeout (per-category) |
+| `email`           | Organizer welcome email      | Organizer signup                     | 5           | 2× exponential | I-1.1.9                                      |
+| `email`           | Email-verification link      | Organizer signup                     | 5           | 2× exponential | I-0.2.5                                      |
+| `email`           | Verification approved        | Admin approves verification          | 5           | 2× exponential | I-1.1.10                                     |
+| `email`           | Verification rejected        | Admin rejects verification           | 5           | 2× exponential | I-1.1.11                                     |
+| `email`           | Razorpay account ready       | Razorpay linked-account active       | 5           | 2× exponential | I-1.1.12                                     |
+| `email`           | Event submitted for review   | Event submit-for-review              | 5           | 2× exponential | I-1.2.11 (organizer ack)                     |
+| `email`           | Event approved/rejected      | Admin reviews event                  | 5           | 2× exponential | I-1.2.12                                     |
+| `email`           | Booking confirmation         | Booking confirmed                    | 5           | 2× exponential | Contains QR ticket + magic link              |
+| `email`           | Magic-link booking re-access | Booking confirmed                    | 5           | 2× exponential | I-3.3.7 (folded into confirmation)           |
+| `email`           | Event reminder               | Scheduled (1-2 days before)          | 5           | 2× exponential | —                                            |
+| `email`           | Post-event follow-up         | Event completed                      | 5           | 2× exponential | Requires marketing consent (I-6.2.5)         |
+| `email`           | Refund confirmation          | Refund processed                     | 5           | 2× exponential | —                                            |
+| `email`           | Organizer suspension         | Admin suspends organizer             | 5           | 2× exponential | I-7.2.6                                      |
+| `email`           | Bounce/complaint handler     | Resend/SES webhook                   | 2           | 1×             | Suppress future sends to bounced addresses   |
+| `admin-notify`    | New verification submission  | Verification submitted               | 2           | 2× exponential | I-7.4.1                                      |
+| `admin-notify`    | Event submitted for review   | Event submitted                      | 2           | 2× exponential | I-7.4.2                                      |
+| `admin-notify`    | New dispute filed            | Dispute created                      | 2           | 2× exponential | I-7.4.3 (auth + public)                      |
+| `admin-notify`    | SLA breach                   | Daily SLA scan                       | 2           | 2× exponential | I-7.4.4                                      |
+| `admin-notify`    | Payment-webhook DLQ entry    | DLQ insert                           | 2           | 2× exponential | I-7.4.5                                      |
+| `admin-notify`    | Daily admin digest           | Repeatable daily 09:00 IST           | 1           | 1×             | I-7.4.6                                      |
+| `cleanup`         | Sensitive field cleanup      | Repeatable daily                     | 2           | 1×             | 30 days post-event                           |
+| `cleanup`         | KYC doc cleanup              | Repeatable weekly                    | 2           | 1×             | 1 year after account closure                 |
+| `cleanup`         | Inactive account cleanup     | Repeatable weekly                    | 2           | 1×             | 3 years inactivity (I-7.3.10)                |
+| `cleanup`         | Anonymization processor      | Profile deletion request             | 2           | 2× exponential | PII → deterministic hashes                   |
+| `seo`             | Sitemap regeneration         | Repeatable hourly + on event publish | 1           | 2×             | I-2.4.4                                      |
+| `exports`         | Roster PDF/CSV generation    | Organizer request                    | 1           | 2×             | Sensitive fields controlled                  |
+| `exports`         | DSAR data export             | Participant request                  | 1           | 2×             | All personal data, machine-readable          |
 
 ---
 
@@ -1369,10 +1536,10 @@ All workers run as a **separate Railway service** — never in the API process.
 
 ### Events (Phase 1)
 
-- `events` — id, organizer_id, slug, name, date, time, location, description, route_details, image_storage_key, status (draft/under_review/published/completed/cancelled), form_schema JSONB, form_schema_version, spots_total, spots_remaining, refund_policy, cancellation_policy, created_at, updated_at
-- `event_categories` — id, event_id, name, distance, sort_order
+- `events` — id, organizer_id, slug, name, date, time, location, description, route_details, image_storage_key, status (draft/under_review/published/completed/cancelled), form_schema JSONB, form_schema_version, refund_policy, cancellation_policy, created_at, updated_at. **Capacity is NOT on `events`** — see `event_categories` (DEC-3 v2.2).
+- `event_categories` — id, event_id, name, distance, sort_order, **spots_total, spots_remaining**. Per-category capacity model so a single distance can sell out independently. Modified atomically in I-3.2.10.
 - `event_pricing_tiers` — id, event_category_id, base_price, early_bird_price, early_bird_deadline
-- `slug_redirects` — id, old_slug, new_slug, resource_type (event/organizer), resource_id, created_at
+- `slug_redirects` — id, old_slug, new_slug, resource_type (event/organizer), resource_id, created_at. Powers I-2.4.6 301 redirect handler.
 
 ### Bookings & Payments (Phase 3)
 
@@ -1382,8 +1549,10 @@ All workers run as a **separate Railway service** — never in the API process.
 
 ### Participant (Phase 3)
 
-- `participant_profiles` — id, user_id, name, age, gender, city, tshirt_size, updated_at. **Note: blood_group, medical_conditions, emergency_contact are NOT stored here — they go in `sensitive_participant_data` only.**
+- `participant_profiles` — id, user_id, name, age, gender, city, tshirt_size, **phone**, updated_at. **Note: blood_group, medical_conditions, emergency_contact are NOT stored here — they go in `sensitive_participant_data` only.** Per DEC-1 (v2.2), only fields stored here are auto-fillable on repeat booking; sensitive fields are re-collected each time.
 - `sensitive_participant_data` — id, booking_id, blood_group, medical_conditions, emergency_contact, expires_at (30 days post-event)
+- `consent_records` — id, user_id, booking_id, consent_type (booking_terms/data_usage/marketing/parental), consent_version, granted_at, withdrawn_at. Parental rows include guardian_email + guardian_name (I-3.1.7).
+- `booking_access_tokens` — id, booking_id, token_hash, expires_at, revoked_at. Powers I-3.3.7 magic-link booking re-access.
 
 ### Communications (Phase 6)
 
@@ -1393,7 +1562,7 @@ All workers run as a **separate Railway service** — never in the API process.
 ### Disputes & Refunds (Phase 7)
 
 - `refund_requests` — id, booking_id, requested_by, reason, status, processed_at
-- `disputes` — id, booking_id, reporter_id, description, status, sla_deadline, resolved_at
+- `disputes` — id, booking_id (nullable for public form), reporter_id (nullable), reporter_email, reporter_name, reporter_phone, description, source (authenticated/public_form), status, sla_deadline, sla_first_response_at, resolved_at. Source distinguishes authenticated (I-7.2.1) from public form (I-7.2.5).
 
 ---
 
@@ -1420,38 +1589,42 @@ Implementation plan IDs use an `I-` prefix to avoid collision with requirements 
 
 ### Phase 0: Foundation
 
-| Requirements ID | Implementation ID | Feature                                                        |
-| --------------- | ----------------- | -------------------------------------------------------------- |
-| F-0.1.1         | I-0.1.1           | Shared packages (expanded from "Initialize project structure") |
-| F-0.1.2         | I-0.1.2, I-0.1.3  | DB schema foundations (split into Drizzle ORM + core tables)   |
-| F-0.1.3         | I-0.1.9           | CI/CD deployment pipeline                                      |
-| F-0.1.4         | I-0.1.4           | Local dev infrastructure (Docker Compose)                      |
-| — (new)         | I-0.1.5           | Redis client setup (infra)                                     |
-| — (new)         | I-0.1.6           | BullMQ queue infrastructure (infra)                            |
-| — (new)         | I-0.1.7           | Database migration CI pipeline (infra)                         |
-| — (new)         | I-0.1.8           | Object storage client (infra)                                  |
-| F-0.2.1         | I-0.2.1           | Phone OTP authentication (expanded with WhatsApp fallback)     |
-| F-0.2.2         | I-0.2.4           | Role-based access control                                      |
-| F-0.2.3         | I-0.2.2, I-0.2.3  | Session management (split into creation + middleware)          |
-| F-0.2.4         | I-0.2.7           | Deferred authentication pattern                                |
-| — (new)         | I-0.2.5           | Organizer email verification (architecture §6)                 |
-| — (new)         | I-0.2.6           | Admin IP allowlist (architecture §6)                           |
-| — (new)         | I-0.2.8           | Logout endpoint                                                |
-| — (new)         | I-0.2.9           | Session forwarding for SSR                                     |
-| — (new)         | I-0.2.10          | Internal API key for server-to-server                          |
-| — (new)         | I-0.2.11          | CSRF protection                                                |
-| — (new)         | I-0.2.12          | Security headers                                               |
-| F-0.3.1         | I-0.3.1           | Mobile-first responsive layout shell                           |
-| F-0.3.2         | I-0.3.2           | Core UI component library                                      |
-| F-0.3.3         | I-0.3.3           | Role-based routing and navigation                              |
-| F-0.3.4         | I-0.3.4, I-0.3.5  | Error handling + loading state patterns (split into 2)         |
-| — (new)         | I-0.3.6           | API client setup (hybrid SSR/browser)                          |
-| — (new)         | I-0.4.1           | Sentry integration (observability)                             |
-| — (new)         | I-0.4.2           | Pino logging + OpenTelemetry (observability)                   |
-| — (new)         | I-0.4.3           | Health check endpoints (observability)                         |
-| — (new)         | I-0.4.4           | Audit log infrastructure (observability)                       |
-| — (new)         | I-0.4.5           | Production metrics emitter (observability)                     |
-| — (new)         | I-0.4.6           | BullMQ observability (observability)                           |
+| Requirements ID | Implementation ID | Feature                                                                         |
+| --------------- | ----------------- | ------------------------------------------------------------------------------- |
+| F-0.1.1         | I-0.1.1           | Shared packages (expanded from "Initialize project structure")                  |
+| F-0.1.2         | I-0.1.2, I-0.1.3  | DB schema foundations (split into Drizzle ORM + core tables)                    |
+| F-0.1.3         | I-0.1.9           | CI/CD deployment pipeline                                                       |
+| F-0.1.4         | I-0.1.4           | Local dev infrastructure (Docker Compose)                                       |
+| — (new)         | I-0.1.5           | Redis client setup (infra)                                                      |
+| — (new)         | I-0.1.6           | BullMQ queue infrastructure (infra)                                             |
+| — (new)         | I-0.1.7           | Database migration CI pipeline (infra)                                          |
+| — (new)         | I-0.1.8           | Object storage client (infra)                                                   |
+| F-0.2.1         | I-0.2.1           | Phone OTP authentication (expanded with WhatsApp fallback)                      |
+| F-0.2.2         | I-0.2.4           | Role-based access control                                                       |
+| F-0.2.3         | I-0.2.2, I-0.2.3  | Session management (split into creation + middleware)                           |
+| F-0.2.4         | I-0.2.7           | Deferred authentication pattern                                                 |
+| — (new)         | I-0.2.5           | Organizer email verification (architecture §6)                                  |
+| — (new)         | I-0.2.6           | Admin IP allowlist (architecture §6)                                            |
+| — (new)         | I-0.2.8           | Logout endpoint                                                                 |
+| — (new)         | I-0.2.9           | Session forwarding for SSR                                                      |
+| — (new)         | I-0.2.10          | Internal API key for server-to-server                                           |
+| — (new)         | I-0.2.11          | CSRF protection                                                                 |
+| — (new)         | I-0.2.12          | Security headers                                                                |
+| F-0.3.1         | I-0.3.1           | Mobile-first responsive layout shell                                            |
+| F-0.3.2         | I-0.3.2           | Core UI component library                                                       |
+| F-0.3.3         | I-0.3.3           | Role-based routing and navigation                                               |
+| F-0.3.4         | I-0.3.4, I-0.3.5  | Error handling + loading state patterns (split into 2)                          |
+| — (new)         | I-0.3.6           | API client setup (hybrid SSR/browser)                                           |
+| — (new)         | I-0.4.1           | Sentry integration (observability)                                              |
+| — (new)         | I-0.4.2           | Pino logging + OpenTelemetry (observability)                                    |
+| — (new)         | I-0.4.3           | Health check endpoints (observability)                                          |
+| — (new)         | I-0.4.4           | Audit log infrastructure (observability)                                        |
+| — (new)         | I-0.4.5           | Production metrics emitter (observability)                                      |
+| — (new)         | I-0.4.6           | BullMQ observability (observability)                                            |
+| — (new)         | I-0.4.7           | Conversion funnel counters + dashboard tile (product plan §11)                  |
+| — (new)         | I-0.2.13          | Secret rotation runbook + automated reminder (architecture §6)                  |
+| — (new)         | I-0.2.14          | Hotfix: treat blank `INTERNAL_API_KEY` as unset (test-failure-driven)           |
+| — (new)         | I-0.2.15          | Hotfix: differentiate "not configured" vs "invalid" internal-key error messages |
 
 ### Phase 1: Organizer Onboarding & Event Creation
 
@@ -1475,6 +1648,12 @@ Implementation plan IDs use an `I-` prefix to avoid collision with requirements 
 | F-1.2.8         | I-1.2.8           | Event edit & update capabilities                         |
 | — (new)         | I-1.2.9           | Event image upload (product plan §6)                     |
 | — (new)         | I-1.2.10          | Slug generation for events                               |
+| — (new)         | I-1.1.9           | Welcome email on organizer signup                        |
+| — (new)         | I-1.1.10          | Verification-approved email                              |
+| — (new)         | I-1.1.11          | Verification-rejected email                              |
+| — (new)         | I-1.1.12          | Razorpay linked-account ready email                      |
+| — (new)         | I-1.2.11          | Event submitted-for-review email (organizer ack)         |
+| — (new)         | I-1.2.12          | Event approved/rejected email                            |
 
 ### Phase 2: Event Discovery & Public Pages
 
@@ -1500,6 +1679,19 @@ Implementation plan IDs use an `I-` prefix to avoid collision with requirements 
 | — (new)         | I-2.4.1           | Cloudflare CDN setup (architecture §1, §4.2) |
 | — (new)         | I-2.4.2           | CDN cache invalidation                       |
 | — (new)         | I-2.4.3           | Cache stampede prevention                    |
+| — (new)         | I-2.4.4           | sitemap.xml generation                       |
+| — (new)         | I-2.4.5           | robots.txt + crawl directives                |
+| — (new)         | I-2.4.6           | 301 redirect handler for slug changes        |
+| — (new)         | I-2.4.7           | Canonical URL tags                           |
+| — (new)         | I-2.4.8           | Breadcrumb JSON-LD on event detail           |
+| — (new)         | I-2.1.9           | Spots-remaining badge (per-category)         |
+| — (new)         | I-2.1.10          | Early-bird countdown timer                   |
+| — (new)         | I-2.3.6           | Same-organizer next-event lookup API         |
+| — (new)         | I-2.5.1           | /privacy page                                |
+| — (new)         | I-2.5.2           | /terms page                                  |
+| — (new)         | I-2.5.3           | /contact page                                |
+| — (new)         | I-2.5.4           | /about page                                  |
+| — (new)         | I-2.5.5           | /faq page                                    |
 
 ### Phase 3: Registration, Payment & Booking
 
@@ -1533,6 +1725,10 @@ Implementation plan IDs use an `I-` prefix to avoid collision with requirements 
 | F-3.4.3          | I-3.4.3           | Booking history view                                                                        |
 | F-3.4.4          | I-3.4.4           | Profile data deletion request                                                               |
 | — (new)          | I-3.4.5           | Consent withdrawal API (architecture §6)                                                    |
+| — (new)          | I-3.1.7           | Parental consent for minor participants (DPDPA + architecture §6)                           |
+| — (new)          | I-3.2.12          | Per-event sliding-window rate limiting on checkout (architecture §7 step 8)                 |
+| — (new)          | I-3.3.7           | Magic-link booking re-access email                                                          |
+| — (new)          | I-3.3.8           | Booking lookup by phone + booking-id                                                        |
 
 ### Phase 4: Organizer Operations Dashboard
 
@@ -1543,6 +1739,7 @@ Implementation plan IDs use an `I-` prefix to avoid collision with requirements 
 | F-4.1.3         | I-4.1.3           | Individual booking detail             |
 | F-4.1.4         | I-4.1.4           | Revenue view                          |
 | F-4.1.5         | I-4.1.5           | Roster export (CSV)                   |
+| — (new)         | I-4.1.6           | Conversion-rate tile (uses I-0.4.7)   |
 | F-4.2.1         | I-4.2.1           | Organizer event home                  |
 | F-4.2.2         | I-4.2.2           | Event status cards                    |
 | F-4.2.3         | I-4.2.3           | Quick-access links                    |
@@ -1566,62 +1763,73 @@ Implementation plan IDs use an `I-` prefix to avoid collision with requirements 
 
 ### Phase 6: Communications & Retention
 
-| Requirements ID | Implementation ID | Feature                                |
-| --------------- | ----------------- | -------------------------------------- |
-| F-6.1.1         | → I-3.3.1         | **Moved to Phase 3 Module 3.3**        |
-| F-6.1.2         | → I-3.3.5         | **Merged into Phase 3 Module 3.3**     |
-| F-6.1.3         | I-6.1.1           | Event reminder email                   |
-| F-6.1.4         | I-6.1.2           | Cancellation/refund confirmation email |
-| F-6.2.1         | I-6.2.1           | Post-event follow-up email             |
-| F-6.2.2         | I-6.2.2           | Organizer wrap-up/results links        |
-| F-6.2.3         | I-6.2.3           | Next-event prompt                      |
-| F-6.2.4         | I-6.2.4           | Organizer post-event content interface |
+| Requirements ID | Implementation ID | Feature                                                    |
+| --------------- | ----------------- | ---------------------------------------------------------- |
+| F-6.1.1         | → I-3.3.1         | **Moved to Phase 3 Module 3.3**                            |
+| F-6.1.2         | → I-3.3.5         | **Merged into Phase 3 Module 3.3**                         |
+| F-6.1.3         | I-6.1.1           | Event reminder email                                       |
+| F-6.1.4         | I-6.1.2           | Cancellation/refund confirmation email                     |
+| F-6.2.1         | I-6.2.1           | Post-event follow-up email                                 |
+| F-6.2.2         | I-6.2.2           | Organizer wrap-up/results links                            |
+| F-6.2.3         | I-6.2.3           | Next-event prompt                                          |
+| F-6.2.4         | I-6.2.4           | Organizer post-event content interface                     |
+| — (new)         | I-6.2.5           | Marketing-consent enforcement on next-event prompt section |
 
 ### Phase 7: Refunds, Disputes & Admin Operations
 
-| Requirements ID | Implementation ID | Feature                                        |
-| --------------- | ----------------- | ---------------------------------------------- |
-| F-7.1.1         | I-7.1.1           | Refund request initiation                      |
-| F-7.1.2         | I-7.1.2           | Refund processing (reverse split)              |
-| F-7.1.3         | I-7.1.3           | Refund status tracking                         |
-| F-7.1.4         | I-7.1.4           | Already-settled fund handling                  |
-| F-7.2.1         | I-7.2.1           | Participant issue reporting                    |
-| F-7.2.2         | I-7.2.2           | Admin dispute queue                            |
-| F-7.2.3         | I-7.2.3           | SLA tracking                                   |
-| F-7.2.4         | I-7.2.4           | Organizer suspension                           |
-| F-7.3.1         | I-7.3.1           | Organizer verification queue (extends I-1.1.5) |
-| F-7.3.2         | I-7.3.2           | Event review queue (extends I-1.2.7)           |
-| F-7.3.3         | I-7.3.3           | Payout monitoring dashboard                    |
-| F-7.3.4         | I-7.3.4           | Audit log viewer                               |
-| — (new)         | I-7.3.5           | Anonymization worker (DPDPA compliance)        |
-| — (new)         | I-7.3.6           | Sensitive field cleanup (30d post-event)       |
-| — (new)         | I-7.3.7           | KYC document cleanup (1y post-closure)         |
-| — (new)         | I-7.3.8           | DSAR data export (DPDPA compliance)            |
-| — (new)         | I-7.3.9           | Email bounce/complaint handling                |
-| — (new)         | I-7.3.10          | Inactive account cleanup (3y inactivity)       |
+| Requirements ID | Implementation ID | Feature                                                                |
+| --------------- | ----------------- | ---------------------------------------------------------------------- |
+| F-7.1.1         | I-7.1.1           | Refund request initiation                                              |
+| F-7.1.2         | I-7.1.2           | Refund processing (reverse split)                                      |
+| F-7.1.3         | I-7.1.3           | Refund status tracking                                                 |
+| F-7.1.4         | I-7.1.4           | Already-settled fund handling                                          |
+| F-7.2.1         | I-7.2.1           | Participant issue reporting                                            |
+| F-7.2.2         | I-7.2.2           | Admin dispute queue                                                    |
+| F-7.2.3         | I-7.2.3           | SLA tracking                                                           |
+| F-7.2.4         | I-7.2.4           | Organizer suspension                                                   |
+| F-7.3.1         | I-7.3.1           | Organizer verification queue (extends I-1.1.5)                         |
+| F-7.3.2         | I-7.3.2           | Event review queue (extends I-1.2.7)                                   |
+| F-7.3.3         | I-7.3.3           | Payout monitoring dashboard                                            |
+| F-7.3.4         | I-7.3.4           | Audit log viewer                                                       |
+| — (new)         | I-7.3.5           | Anonymization worker (DPDPA compliance)                                |
+| — (new)         | I-7.3.6           | Sensitive field cleanup (30d post-event)                               |
+| — (new)         | I-7.3.7           | KYC document cleanup (1y post-closure)                                 |
+| — (new)         | I-7.3.8           | DSAR data export (DPDPA compliance)                                    |
+| — (new)         | I-7.3.9           | Email bounce/complaint handling                                        |
+| — (new)         | I-7.3.10          | Inactive account cleanup (3y inactivity)                               |
+| — (new)         | I-7.3.11          | SLA compliance dashboard (refund + dispute breach alerts)              |
+| — (new)         | I-7.2.5           | Public unauthenticated dispute reporting form                          |
+| — (new)         | I-7.2.6           | Organizer-suspension email                                             |
+| — (new)         | I-7.4.1           | Admin notification: new verification submission                        |
+| — (new)         | I-7.4.2           | Admin notification: event submitted for review                         |
+| — (new)         | I-7.4.3           | Admin notification: new dispute filed                                  |
+| — (new)         | I-7.4.4           | Admin notification: SLA breach (refund/dispute)                        |
+| — (new)         | I-7.4.5           | Admin notification: payment-webhook DLQ entry                          |
+| — (new)         | I-7.4.6           | Admin daily digest (verifications, reviews, disputes, SLA, DLQ counts) |
 
 ### Summary
 
-|           | Requirements (F-IDs) | Implementation (I-IDs) | Δ                                                                      |
-| --------- | -------------------- | ---------------------- | ---------------------------------------------------------------------- |
-| Phase 0   | 12                   | 33                     | +21 (infrastructure)                                                   |
-| Phase 1   | 14                   | 18                     | +4 (Razorpay, images, slug, profile)                                   |
-| Phase 2   | 16                   | 20                     | +4 (CDN, organizer slug)                                               |
-| Phase 3   | 21                   | 28                     | +7 (payment infra, backpressure, consent withdrawal, email moved here) |
-| Phase 4   | 8                    | 8                      | 0                                                                      |
-| Phase 5   | 12                   | 12                     | 0                                                                      |
-| Phase 6   | 8                    | 6                      | −2 (F-6.1.1, F-6.1.2 moved to Phase 3)                                 |
-| Phase 7   | 12                   | 18                     | +6 (data lifecycle, DSAR, bounce)                                      |
-| **Total** | **103**              | **143**                | **+40**                                                                |
+|           | Requirements (F-IDs) | Implementation (I-IDs) | Δ                                                                                                                                   |
+| --------- | -------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 0   | 12                   | 37                     | +25 (infrastructure, conversion funnel, secret rotation, hotfixes)                                                                  |
+| Phase 1   | 14                   | 24                     | +10 (Razorpay, images, slug, profile, organizer + event emails)                                                                     |
+| Phase 2   | 16                   | 33                     | +17 (CDN, organizer slug, full SEO infra, spots/countdown, legal pages)                                                             |
+| Phase 3   | 21                   | 32                     | +11 (payment infra, backpressure, consent withdrawal, parental consent, magic-link, lookup, per-event rate limit, email moved here) |
+| Phase 4   | 8                    | 9                      | +1 (conversion-rate tile)                                                                                                           |
+| Phase 5   | 12                   | 12                     | 0                                                                                                                                   |
+| Phase 6   | 8                    | 7                      | −1 (F-6.1.1, F-6.1.2 moved to Phase 3; +1 marketing-consent gate)                                                                   |
+| Phase 7   | 12                   | 27                     | +15 (data lifecycle, DSAR, bounce, public dispute, suspension email, SLA dashboard, full admin notifications module)                |
+| **Total** | **103**              | **181**                | **+78**                                                                                                                             |
 
-**Sensitive field tradeoff note:** Product plan §6 Tier 1 says saved profiles include "blood group, emergency contact" for repeat bookings. The implementation stores these per-booking in `sensitive_participant_data` with 30-day TTL (privacy-first design per DPDPA). This means sensitive fields will **not auto-fill** on repeat bookings — participants re-enter them each time. This is a deliberate privacy-over-convenience tradeoff.
+**v2.2 sensitive field decision (DEC-1):** Per-product-plan §6 Tier 1 originally said saved profiles include "blood group, emergency contact" for repeat bookings. The v2.2 design decision is: sensitive fields (blood group, emergency contact, medical conditions) are **never auto-filled across bookings** — they live in `sensitive_participant_data` with 30-day TTL and are re-collected each booking. Auto-fill (I-3.1.4) covers only non-sensitive fields (name, age, gender, city, T-shirt size, phone). UX copy in I-3.1.4 explains the privacy-over-convenience tradeoff. This is a deliberate DPDPA-aligned choice; the operator can revisit by introducing an opt-in toggle in V2 if pilot feedback warrants it.
 
 ---
 
 ## Appendix B: Review & Revision History
 
-| Version | Date | Reviewed By                                                  | Key Changes                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ------- | ---- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| v1.0    | —    | Initial draft                                                | 8 phases, 23 modules, 115 features                                                                                                                                                                                                                                                                                                                                                                                                               |
-| v2.0    | —    | Claude Opus 4.7, Claude Opus 4.6, GPT-5.4, Claude Sonnet 4.6 | 139 features. Feature ID prefix changed F→I. Email infra moved to Phase 3. Phase 5 prerequisite fixed. Razorpay Route linked-account added. Backpressure/waiting-room added. Sensitive data model fixed. Pre-launch gates added. DSAR export added. Anonymization worker added. CDN module added. Consent model expanded to 3 types.                                                                                                             |
-| v2.1    | —    | Claude Opus 4.6, GPT-5.4 (final review)                      | 143 features. Appendix A completely rewritten with per-F-ID traceability. Feature count corrected (Phase 2: 20, Phase 3: 28, Phase 7: 18). Added I-7.3.10 (inactive account cleanup). Added slug_redirects table. Added missing API endpoints (email verification, presigned upload, consent, issue reporting, check-in verification). Fixed consent API consistency. Fixed security table cross-reference. Added sensitive field tradeoff note. |
+| Version | Date | Reviewed By                                                  | Key Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------- | ---- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v1.0    | —    | Initial draft                                                | 8 phases, 23 modules, 115 features                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| v2.0    | —    | Claude Opus 4.7, Claude Opus 4.6, GPT-5.4, Claude Sonnet 4.6 | 139 features. Feature ID prefix changed F→I. Email infra moved to Phase 3. Phase 5 prerequisite fixed. Razorpay Route linked-account added. Backpressure/waiting-room added. Sensitive data model fixed. Pre-launch gates added. DSAR export added. Anonymization worker added. CDN module added. Consent model expanded to 3 types.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| v2.1    | —    | Claude Opus 4.6, GPT-5.4 (final review)                      | 143 features. Appendix A completely rewritten with per-F-ID traceability. Feature count corrected (Phase 2: 20, Phase 3: 28, Phase 7: 18). Added I-7.3.10 (inactive account cleanup). Added slug_redirects table. Added missing API endpoints (email verification, presigned upload, consent, issue reporting, check-in verification). Fixed consent API consistency. Fixed security table cross-reference. Added sensitive field tradeoff note.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| v2.2    | —    | Claude Opus 4.7 (product/requirements vs impl-plan audit)    | **181 features (+38)**, 26 modules (+2). Product-first audit added: conversion funnel (I-0.4.7) + 4.1 conversion tile, secret rotation runbook (I-0.2.13), 2 internal-key hotfixes (I-0.2.14/15), 6 organizer/event transactional emails (I-1.1.9-12, I-1.2.11-12), per-category capacity model (I-1.2.2 + I-3.2.10 amendment, schema moved spots from `events` to `event_categories`), spots-remaining badge + early-bird countdown (I-2.1.9-10), same-organizer next-event API (I-2.3.6), full SEO infra (sitemap/robots/301-redirect/canonical/breadcrumb — I-2.4.4-8), new Public Chrome & Legal Pages module (Phase 2.5: privacy/terms/contact/about/faq), parental consent for minors (I-3.1.7), per-event sliding-window rate limit (I-3.2.12), magic-link booking re-access + lookup (I-3.3.7-8), marketing-consent enforcement on next-event prompt (I-6.2.5), public unauthenticated dispute form (I-7.2.5), organizer-suspension email (I-7.2.6), SLA compliance dashboard (I-7.3.11), new Admin Notifications module (Phase 7.4: I-7.4.1-6). DEC-1: sensitive fields are never auto-filled (privacy-first). DEC-2: tiered post-publish edit policy. DEC-3: per-category capacity. DEC-5: same-organizer scope for next-event in V1. Drift fixes: 4 missing Current State rows, Database Table Overview spots correction, I-1.2.6 publish-flow clarification, I-0.2.4 participant-OTP clarification. |
