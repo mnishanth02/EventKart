@@ -953,7 +953,10 @@ describe("updatePublishedEvent", () => {
 	});
 
 	it("returns structured 409 for high-risk published edits", async () => {
-		const { db, update } = createMockSlugStore();
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ status: "published" })],
+		]);
 
 		await expect(
 			updatePublishedEvent(
@@ -980,7 +983,10 @@ describe("updatePublishedEvent", () => {
 	it("rejects mixed high-risk and low-risk payloads atomically", async () => {
 		const originalDescription =
 			"A paid running event for Coimbatore runners with a clearly marked city route.";
-		const { db, update } = createMockSlugStore();
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ status: "published" })],
+		]);
 
 		await expect(
 			updatePublishedEvent(
@@ -1024,6 +1030,27 @@ describe("updatePublishedEvent", () => {
 				TEST_USER_ID,
 				EVENT_ID,
 				{ description: "Updated published event description text." },
+			),
+		).rejects.toThrow(ForbiddenError);
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 (not structured 409) for a non-owner sending a high-risk payload", async () => {
+		const { db, update } = createMockSlugStore([
+			[organizerRow],
+			[buildEventRow({ status: "published", organizerId: OTHER_ORGANIZER_ID })],
+		]);
+
+		await expect(
+			updatePublishedEvent(
+				{
+					db: asDatabase(db),
+					log: { info: vi.fn() },
+					auditLogger: createAuditLogger(),
+				},
+				TEST_USER_ID,
+				EVENT_ID,
+				{ title: "High Risk Title By Non Owner" },
 			),
 		).rejects.toThrow(ForbiddenError);
 		expect(update).not.toHaveBeenCalled();

@@ -2240,33 +2240,12 @@ export async function updatePublishedEvent(
 		);
 	}
 
-	const highRiskFields = getPublishedHighRiskFields(parsed.data);
-	if (highRiskFields.length > 0) {
-		throwPublishedHighRiskEditConflict(highRiskFields);
-	}
-
 	const organizer = await getOrganizerByUserId(deps.db as Database, userId);
 	if (!organizer) {
 		throw new NotFoundError(
 			"Organizer profile not found. Please register first.",
 		);
 	}
-
-	const lowRiskPatch = Object.fromEntries(
-		PUBLISHED_EVENT_LOW_RISK_FIELDS.filter((field) => field in parsed.data).map(
-			(field) => [field, parsed.data[field]],
-		),
-	);
-	const lowRiskParsed =
-		publishedEventLowRiskPatchSchema.safeParse(lowRiskPatch);
-	if (!lowRiskParsed.success) {
-		throw new ValidationError(
-			"Invalid published event patch",
-			toValidationDetails(lowRiskParsed.error),
-		);
-	}
-
-	const data = lowRiskParsed.data;
 
 	const result = await deps.db.transaction(async (tx) => {
 		const event = await selectEventForCategories(tx, parsedEventId, {
@@ -2282,6 +2261,29 @@ export async function updatePublishedEvent(
 				"This endpoint can only be used while the event is published",
 			);
 		}
+
+		// Authorization confirmed; only now reject high-risk payloads so that
+		// non-owners cannot probe arbitrary event ids via the structured 409.
+		const highRiskFields = getPublishedHighRiskFields(parsed.data);
+		if (highRiskFields.length > 0) {
+			throwPublishedHighRiskEditConflict(highRiskFields);
+		}
+
+		const lowRiskPatch = Object.fromEntries(
+			PUBLISHED_EVENT_LOW_RISK_FIELDS.filter(
+				(field) => field in parsed.data,
+			).map((field) => [field, parsed.data[field]]),
+		);
+		const lowRiskParsed =
+			publishedEventLowRiskPatchSchema.safeParse(lowRiskPatch);
+		if (!lowRiskParsed.success) {
+			throw new ValidationError(
+				"Invalid published event patch",
+				toValidationDetails(lowRiskParsed.error),
+			);
+		}
+
+		const data = lowRiskParsed.data;
 
 		const updateFields: Record<string, unknown> = { updatedAt: new Date() };
 		const changedFields: string[] = [];
