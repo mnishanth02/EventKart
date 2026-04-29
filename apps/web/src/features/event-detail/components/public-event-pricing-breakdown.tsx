@@ -7,7 +7,7 @@ import {
 	CardTitle,
 } from "@repo/ui/components/ui/card";
 import { useNow } from "../hooks";
-import { getEarlyBirdStatus } from "../pricing";
+import { getEarlyBirdStatus, hasValidEarlyBirdOffer } from "../pricing";
 import type {
 	EventPublicCategory,
 	EventPublicDetail,
@@ -23,7 +23,7 @@ export function PublicEventPricingBreakdown({
 }: PublicEventPricingBreakdownProps) {
 	const rows = getBreakdownRows(event.categories, event.pricingTiers);
 	const hasEarlyBird = rows.some(
-		(row) => row.tier?.earlyBirdPrice != null,
+		(row) => row.tier !== undefined && hasValidEarlyBirdOffer(row.tier),
 	);
 	const now = useNow();
 
@@ -89,37 +89,44 @@ export function PublicEventPricingBreakdown({
 						</tbody>
 					</table>
 				</div>
-				<dl className="space-y-3 sm:hidden">
+				<ul className="space-y-3 sm:hidden">
 					{rows.map(({ category, tier }) => (
-						<div
+						<li
 							key={category.slug}
 							className="rounded-xl border bg-background p-4"
 						>
-							<div className="flex items-start justify-between gap-4">
-								<dt className="font-medium">{category.name}</dt>
-								{tier ? (
+							<h3 className="font-medium">{category.name}</h3>
+							<dl className="mt-2 space-y-1 text-sm">
+								<div className="flex items-baseline justify-between gap-4">
+									<dt className="text-muted-foreground">Distance</dt>
+									<dd>{formatDistance(category.distanceMeters)}</dd>
+								</div>
+								<div className="flex items-baseline justify-between gap-4">
+									<dt className="text-muted-foreground">Base price</dt>
 									<dd>
-										<CurrencyINR value={tier.basePrice} />
+										{tier ? (
+											<CurrencyINR value={tier.basePrice} />
+										) : (
+											<span className="text-muted-foreground">—</span>
+										)}
 									</dd>
-								) : (
-									<dd className="text-muted-foreground">—</dd>
-								)}
-							</div>
-							<dd className="mt-1 text-sm text-muted-foreground">
-								{formatDistance(category.distanceMeters)}
-							</dd>
-							{tier?.earlyBirdPrice != null ? (
-								<dd className="mt-2 text-sm">
-									<EarlyBirdCell
-										tier={tier}
-										timezone={event.timezone}
-										now={now}
-									/>
-								</dd>
-							) : null}
-						</div>
+								</div>
+								{tier !== undefined && hasValidEarlyBirdOffer(tier) ? (
+									<div className="flex items-baseline justify-between gap-4">
+										<dt className="text-muted-foreground">Early bird</dt>
+										<dd className="text-right">
+											<EarlyBirdCell
+												tier={tier}
+												timezone={event.timezone}
+												now={now}
+											/>
+										</dd>
+									</div>
+								) : null}
+							</dl>
+						</li>
 					))}
-				</dl>
+				</ul>
 			</CardContent>
 		</Card>
 	);
@@ -132,17 +139,15 @@ interface EarlyBirdCellProps {
 }
 
 function EarlyBirdCell({ tier, timezone, now }: EarlyBirdCellProps) {
-	if (!tier || tier.earlyBirdPrice == null) {
+	if (!tier || !hasValidEarlyBirdOffer(tier)) {
 		return <span className="text-muted-foreground">—</span>;
 	}
-	const status = now
-		? getEarlyBirdStatus(tier, now)
-		: ("none" as const);
+	const status = now ? getEarlyBirdStatus(tier, now) : ("none" as const);
 
 	return (
 		<div className="space-y-1">
 			<div className="flex flex-wrap items-center gap-2">
-				<CurrencyINR value={tier.earlyBirdPrice} />
+				<CurrencyINR value={tier.earlyBirdPrice as number} />
 				{status === "active" ? (
 					<Badge variant="default">Active</Badge>
 				) : null}

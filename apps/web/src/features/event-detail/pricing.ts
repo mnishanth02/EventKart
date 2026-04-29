@@ -2,17 +2,43 @@ import type { EventPublicPricingTier } from "./types";
 
 export type EarlyBirdStatus = "active" | "expired" | "none";
 
-export function getEarlyBirdStatus(
-	tier: Pick<EventPublicPricingTier, "earlyBirdPrice" | "earlyBirdDeadline">,
-	now: Date,
-): EarlyBirdStatus {
+/**
+ * Returns true when a tier has a usable early-bird offer at all (regardless
+ * of whether the deadline has passed). Single source of truth for whether
+ * to render the early-bird column / row in the UI.
+ *
+ * Mirrors the legacy guard in {@link getEffectivePricePaise} so the badge
+ * shown in the breakdown table can never disagree with the "From INRX" CTA:
+ * a tier whose `earlyBirdPrice >= basePrice` is treated as "no offer" by
+ * both helpers, even if a future deadline is set.
+ */
+export function hasValidEarlyBirdOffer(
+	tier: Pick<
+		EventPublicPricingTier,
+		"basePrice" | "earlyBirdPrice" | "earlyBirdDeadline"
+	>,
+): boolean {
 	if (tier.earlyBirdPrice === null || tier.earlyBirdDeadline === null) {
-		return "none";
+		return false;
+	}
+	if (tier.earlyBirdPrice >= tier.basePrice) {
+		return false;
 	}
 	const deadlineMs = new Date(tier.earlyBirdDeadline).getTime();
-	if (Number.isNaN(deadlineMs)) {
+	return !Number.isNaN(deadlineMs);
+}
+
+export function getEarlyBirdStatus(
+	tier: Pick<
+		EventPublicPricingTier,
+		"basePrice" | "earlyBirdPrice" | "earlyBirdDeadline"
+	>,
+	now: Date,
+): EarlyBirdStatus {
+	if (!hasValidEarlyBirdOffer(tier)) {
 		return "none";
 	}
+	const deadlineMs = new Date(tier.earlyBirdDeadline as string).getTime();
 	return now.getTime() < deadlineMs ? "active" : "expired";
 }
 
@@ -23,17 +49,14 @@ export function getEffectivePricePaise(
 	>,
 	now: Date,
 ): number {
-	if (tier.earlyBirdPrice === null || tier.earlyBirdDeadline === null) {
+	if (!hasValidEarlyBirdOffer(tier)) {
 		return tier.basePrice;
 	}
-	if (tier.earlyBirdPrice >= tier.basePrice) {
+	const deadlineMs = new Date(tier.earlyBirdDeadline as string).getTime();
+	if (now.getTime() >= deadlineMs) {
 		return tier.basePrice;
 	}
-	const deadlineMs = new Date(tier.earlyBirdDeadline).getTime();
-	if (Number.isNaN(deadlineMs) || now.getTime() >= deadlineMs) {
-		return tier.basePrice;
-	}
-	return tier.earlyBirdPrice;
+	return tier.earlyBirdPrice as number;
 }
 
 export interface StartingPrice {
