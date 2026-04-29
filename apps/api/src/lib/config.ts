@@ -188,6 +188,7 @@ export function loadConfig(
 
 	const config = envSchema<AppConfig>({
 		schema: appConfigSchema,
+		env: false,
 		data: normalizeConfigData({
 			...process.env,
 			...data,

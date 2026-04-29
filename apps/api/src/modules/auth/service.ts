@@ -1,5 +1,5 @@
 import type { Database } from "@repo/db";
-import { and, eq, isNull } from "@repo/db";
+import { and, eq, isNull, sql } from "@repo/db";
 import { sessions, users } from "@repo/db/schema";
 import { OTP_TTL_SECONDS, SESSION_TTL_SECONDS } from "@repo/shared/constants";
 import type { FastifyBaseLogger } from "fastify";
@@ -187,6 +187,7 @@ export async function verifyOtpAndCreateSession(
 		})
 		.onConflictDoNothing({
 			target: users.phone,
+			where: sql`deleted_at IS NULL AND phone IS NOT NULL`,
 		})
 		.returning({
 			id: users.id,
