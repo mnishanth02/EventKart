@@ -156,11 +156,21 @@ describe("PublicEventPage", () => {
 	});
 
 	it("guards policy and verified-organizer text", () => {
-		const { rerender } = render(<PublicEventPage event={fixture} />);
+		const { rerender, container } = render(
+			<PublicEventPage event={fixture} />,
+		);
 
 		expect(screen.getByText(refundPolicy)).toBeTruthy();
 		expect(screen.getByText(cancellationPolicy)).toBeTruthy();
 		expect(screen.getByText("Verified organizer")).toBeTruthy();
+		expect(container.querySelector("section#policies")).not.toBeNull();
+		expect(container.querySelector("section#refund-policy")).not.toBeNull();
+		expect(container.querySelector("section#cancellation-policy")).not.toBeNull();
+		expect(
+			screen.getByText(
+				/Review Race Coimbatore Collective's refund and cancellation terms before booking\./,
+			),
+		).toBeTruthy();
 
 		rerender(
 			<PublicEventPage
@@ -176,9 +186,14 @@ describe("PublicEventPage", () => {
 		expect(screen.queryByText(refundPolicy)).toBeNull();
 		expect(screen.queryByText(cancellationPolicy)).toBeNull();
 		expect(screen.queryByText("Verified organizer")).toBeNull();
+		expect(
+			screen.getByText(
+				"Race Coimbatore Collective has not published refund or cancellation policies for this event.",
+			),
+		).toBeTruthy();
 	});
 
-	it("renders CTA copy and organizer summary", () => {
+	it("renders CTA copy, organizer summary, and a sidebar policy anchor", () => {
 		render(<PublicEventPage event={fixture} />);
 
 		expect(
@@ -192,5 +207,10 @@ describe("PublicEventPage", () => {
 		expect(screen.getByText(/Organized by/).textContent).toContain(
 			"Coimbatore",
 		);
+
+		const policyLink = screen.getByRole("link", {
+			name: /Review refund.*cancellation policies/i,
+		});
+		expect(policyLink.getAttribute("href")).toBe("#policies");
 	});
 });
