@@ -1,0 +1,310 @@
+{
+  "nodes": [
+    {
+      "id": "vitest_config",
+      "label": "Vitest Config",
+      "file_type": "code",
+      "source_file": "apps/api/vitest.config.ts"
+    },
+    {
+      "id": "app_buildApp",
+      "label": "buildApp Function",
+      "file_type": "code",
+      "source_file": "apps/api/src/app.ts"
+    },
+    {
+      "id": "server_startup",
+      "label": "Server Startup",
+      "file_type": "code",
+      "source_file": "apps/api/src/server.ts"
+    },
+    {
+      "id": "lib_config",
+      "label": "Config Module",
+      "file_type": "code",
+      "source_file": "apps/api/src/lib/config.ts"
+    },
+    {
+      "id": "lib_redis",
+      "label": "Redis Client Factory",
+      "file_type": "code",
+      "source_file": "apps/api/src/lib/redis.ts"
+    },
+    {
+      "id": "lib_queue",
+      "label": "BullMQ Queue Factory",
+      "file_type": "code",
+      "source_file": "apps/api/src/lib/queue.ts"
+    },
+    {
+      "id": "lib_otel",
+      "label": "OpenTelemetry Initialization",
+      "file_type": "code",
+      "source_file": "apps/api/src/lib/otel.ts"
+    },
+    {
+      "id": "lib_sentry",
+      "label": "Sentry Integration",
+      "file_type": "code",
+      "source_file": "apps/api/src/lib/sentry.ts"
+    },
+    {
+      "id": "admin_routes",
+      "label": "Admin Routes",
+      "file_type": "code",
+      "source_file": "apps/api/src/modules/admin/routes.ts"
+    },
+    {
+      "id": "auth_routes",
+      "label": "Auth Routes",
+      "file_type": "code",
+      "source_file": "apps/api/src/modules/auth/routes.ts"
+    },
+    {
+      "id": "events_routes",
+      "label": "Events Routes",
+      "file_type": "code",
+      "source_file": "apps/api/src/modules/events/routes.ts"
+    },
+    {
+      "id": "organizer_routes",
+      "label": "Organizer Routes",
+      "file_type": "code",
+      "source_file": "apps/api/src/modules/organizer/routes.ts"
+    },
+    {
+      "id": "config_plugin",
+      "label": "Config Plugin",
+      "file_type": "code",
+      "source_file": "apps/api/src/plugins/config.ts"
+    },
+    {
+      "id": "auth_plugin",
+      "label": "Auth Plugin",
+      "file_type": "code",
+      "source_file": "apps/api/src/plugins/auth.ts"
+    },
+    {
+      "id": "redis_plugin",
+      "label": "Redis Plugin",
+      "file_type": "code",
+      "source_file": "apps/api/src/plugins/redis.ts"
+    },
+    {
+      "id": "database_plugin",
+      "label": "Database Plugin",
+      "file_type": "code",
+      "source_file": "apps/api/src/plugins/database.ts"
+    },
+    {
+      "id": "router_tsx",
+      "label": "TanStack Router Factory",
+      "file_type": "code",
+      "source_file": "apps/web/src/router.tsx"
+    },
+    {
+      "id": "design_system_index",
+      "label": "Design System Export Barrel",
+      "file_type": "code",
+      "source_file": "apps/web/src/components/design-system/index.ts"
+    },
+    {
+      "id": "error_index",
+      "label": "Error Components Export Barrel",
+      "file_type": "code",
+      "source_file": "apps/web/src/components/error/index.ts"
+    },
+    {
+      "id": "button_Button",
+      "label": "Button Component",
+      "file_type": "code",
+      "source_file": "packages/ui/src/components/ui/button.tsx"
+    },
+    {
+      "id": "card_Card",
+      "label": "Card Component",
+      "file_type": "code",
+      "source_file": "packages/ui/src/components/ui/card.tsx"
+    },
+    {
+      "id": "form_Form",
+      "label": "Form Component",
+      "file_type": "code",
+      "source_file": "packages/ui/src/components/ui/form.tsx"
+    },
+    {
+      "id": "dialog_Dialog",
+      "label": "Dialog Component",
+      "file_type": "code",
+      "source_file": "packages/ui/src/components/ui/dialog.tsx"
+    },
+    {
+      "id": "users_table",
+      "label": "Users Table",
+      "file_type": "code",
+      "source_file": "packages/db/src/schema/users.ts"
+    },
+    {
+      "id": "organizers_table",
+      "label": "Organizers Table",
+      "file_type": "code",
+      "source_file": "packages/db/src/schema/organizers.ts"
+    },
+    {
+      "id": "events_table",
+      "label": "Events Table",
+      "file_type": "code",
+      "source_file": "packages/db/src/schema/events.ts"
+    },
+    {
+      "id": "event_constants",
+      "label": "Event Constants",
+      "file_type": "code",
+      "source_file": "packages/shared/src/constants/event.ts"
+    },
+    {
+      "id": "organizer_constants",
+      "label": "Organizer Constants",
+      "file_type": "code",
+      "source_file": "packages/shared/src/constants/organizer.ts"
+    }
+  ],
+  "edges": [
+    {
+      "source": "server_startup",
+      "target": "lib_config",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "server_startup",
+      "target": "lib_otel",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "server_startup",
+      "target": "lib_sentry",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "app_buildApp",
+      "target": "lib_config",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "auth_plugin",
+      "target": "config_plugin",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "redis_plugin",
+      "target": "config_plugin",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "database_plugin",
+      "target": "config_plugin",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "admin_routes",
+      "target": "admin_routes",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.9
+    },
+    {
+      "source": "auth_routes",
+      "target": "auth_routes",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.9
+    },
+    {
+      "source": "events_routes",
+      "target": "events_routes",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.9
+    },
+    {
+      "source": "design_system_index",
+      "target": "button_Button",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "design_system_index",
+      "target": "card_Card",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "design_system_index",
+      "target": "form_Form",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "initialization_flow",
+      "label": "Server Initialization & Telemetry Flow",
+      "nodes": [
+        "server_startup",
+        "lib_config",
+        "lib_sentry",
+        "lib_otel",
+        "app_buildApp"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "id": "plugin_layer",
+      "label": "Plugin Infrastructure Layer",
+      "nodes": [
+        "config_plugin",
+        "auth_plugin",
+        "redis_plugin",
+        "database_plugin"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95
+    },
+    {
+      "id": "design_system",
+      "label": "Design System Component Ecosystem",
+      "nodes": [
+        "design_system_index",
+        "button_Button",
+        "card_Card",
+        "form_Form",
+        "dialog_Dialog"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
