@@ -276,19 +276,18 @@ describe("PublicEventPage volatile pricing state (I-2.1.4)", () => {
 		expect(screen.queryAllByTestId("price-from").length).toBe(0);
 	});
 
-	it("renders no Active/Expired badge before the client mounts (SSR-safe)", () => {
-		// Render WITHOUT advancing fake timers — useEffect should not have flushed,
-		// so the volatile bits stay blank, mirroring SSR / first hydration.
+	it("renders no Active/Expired badge or 'From' price during SSR (renderToString)", async () => {
+		// True SSR test: render the page on the server (no useEffect runs),
+		// then assert the HTML never advertises a volatile signal that could
+		// be wrong by the time a CDN-cached response reaches a client.
 		vi.useFakeTimers({
 			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
 		});
 		vi.setSystemTime(beforeDeadline);
-		render(<PublicEventPage event={fixture} />);
-		const breakdownTable = screen.getByRole("table", {
-			name: /race categories with distance and registration pricing/i,
-		});
-		expect(within(breakdownTable).queryByText("Active")).toBeNull();
-		expect(within(breakdownTable).queryByText("Expired")).toBeNull();
-		expect(screen.queryAllByTestId("price-from").length).toBe(0);
+		const { renderToString } = await import("react-dom/server");
+		const html = renderToString(<PublicEventPage event={fixture} />);
+		expect(html).not.toContain(">Active<");
+		expect(html).not.toContain(">Expired<");
+		expect(html).not.toContain('data-testid="price-from"');
 	});
 });
