@@ -17,6 +17,21 @@ export const publicEnv = createEnv({
 			.min(0)
 			.max(1)
 			.optional(),
+		VITE_SITE_URL: z
+			.string()
+			.url()
+			.refine(
+				(value) => {
+					try {
+						const protocol = new URL(value).protocol;
+						return protocol === "http:" || protocol === "https:";
+					} catch {
+						return false;
+					}
+				},
+				{ message: "VITE_SITE_URL must be an http(s) URL" },
+			)
+			.optional(),
 	},
 	runtimeEnv: import.meta.env,
 	emptyStringAsUndefined: true,

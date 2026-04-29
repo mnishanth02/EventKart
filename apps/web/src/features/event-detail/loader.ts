@@ -6,7 +6,7 @@ import type { EventPublicDetail, EventPublicLookupResponse } from "./types";
 export interface ResolvePublicEventLoaderArgs {
 	slug: string;
 	queryClient: QueryClient;
-	setResponseHeaders?: (headers: Headers) => void;
+	setResponseHeaders?: (headers: Headers) => void | Promise<void>;
 }
 
 export async function resolvePublicEventLoader({
@@ -34,7 +34,7 @@ export async function resolvePublicEventLoader({
 	}
 
 	if (setResponseHeaders) {
-		setResponseHeaders(
+		await setResponseHeaders(
 			new Headers({
 				"Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
 			}),
