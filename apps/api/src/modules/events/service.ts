@@ -1021,9 +1021,14 @@ export async function updateDraftEvent(
 ): Promise<Event> {
 	const parsedEventId = parseUuid(eventId, "event id");
 	const parsed = updateEventInputSchema.safeParse(input);
-	const isLowRiskOnlyPayload = hasOnlyPublishedLowRiskFields(input);
-	if (!parsed.success && !isLowRiskOnlyPayload) {
-		throwInvalidEventDetails(parsed.error);
+	const draftValidationError = parsed.success ? undefined : parsed.error;
+	const canRedirectLowRiskPayloadToPublishedPatch =
+		draftValidationError !== undefined && hasOnlyPublishedLowRiskFields(input);
+	if (
+		draftValidationError !== undefined &&
+		!canRedirectLowRiskPayloadToPublishedPatch
+	) {
+		throwInvalidEventDetails(draftValidationError);
 	}
 
 	const { db, log } = deps;
@@ -1066,8 +1071,8 @@ export async function updateDraftEvent(
 		}
 
 		if (!parsed.success) {
-			// Low-risk-only published payloads reach the status branch above so callers
-			// get the patch-endpoint conflict; draft events still return validation errors.
+			// Published events reached the status branch above; draft events still
+			// return the full draft PUT validation errors.
 			throwInvalidEventDetails(parsed.error);
 		}
 
