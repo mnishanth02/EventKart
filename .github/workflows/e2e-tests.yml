@@ -1,0 +1,143 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: eventkart
+          POSTGRES_PASSWORD: eventkart_dev
+          POSTGRES_DB: eventkart_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Setup test environment variables
+        run: |
+          # API env
+          cat > apps/api/.env << EOF
+          NODE_ENV=test
+          HOST=0.0.0.0
+          PORT=3001
+          LOG_LEVEL=error
+          WEB_ORIGIN=http://localhost:3000
+          DATABASE_URL=postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev
+          REDIS_URL=redis://localhost:6379
+          OTP_DELIVERY_MODE=log
+          EMAIL_FROM=EventKart <noreply@eventkart.app>
+          INTERNAL_API_KEY=test-internal-key-for-ci
+          EOF
+
+          # Web env
+          cat > apps/web/.env.local << EOF
+          VITE_APP_TITLE=eventKart
+          VITE_API_URL=http://localhost:3001
+          VITE_POSTHOG_KEY=
+          VITE_POSTHOG_HOST=https://us.i.posthog.com
+          INTERNAL_API_URL=http://localhost:3001
+          SERVER_URL=http://localhost:3000
+          INTERNAL_API_KEY=test-internal-key-for-ci
+          VITE_SITE_URL=http://localhost:3000
+          EOF
+
+      - name: Run database migrations
+        run: |
+          export DATABASE_URL="postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev"
+          pnpm --filter @repo/db db:migrate
+
+      - name: Seed test data
+        run: |
+          export DATABASE_URL="postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev"
+          pnpm --filter @repo/db db:seed
+
+      - name: Build packages
+        run: pnpm build --filter @repo/ui --filter @repo/shared --filter @repo/db
+
+      - name: Start API server
+        run: |
+          pnpm --filter api dev &
+          echo $! > api.pid
+          # Wait for API to be ready
+          timeout 60 bash -c 'until curl -f http://localhost:3001/health; do sleep 2; done'
+
+      - name: Start Web server
+        run: |
+          pnpm --filter web dev &
+          echo $! > web.pid
+          # Wait for Web to be ready
+          timeout 60 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          TEST_API_URL: http://localhost:3001
+          TEST_WEB_URL: http://localhost:3000
+          CI: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-videos
+          path: test-results/
+          retention-days: 7
+
+      - name: Stop servers
+        if: always()
+        run: |
+          if [ -f api.pid ]; then kill $(cat api.pid) || true; fi
+          if [ -f web.pid ]; then kill $(cat web.pid) || true; fi
