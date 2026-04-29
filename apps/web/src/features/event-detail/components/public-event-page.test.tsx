@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { eventPublicDetailSchema } from "@repo/shared/schemas";
 import type { EventPublicDetail } from "../types";
@@ -125,12 +131,12 @@ describe("PublicEventPage", () => {
 		expect(routeMapImage.getAttribute("src")).toBe(routeMapImageUrl);
 	});
 
-	it("renders categories in sort order", () => {
+	it("renders categories in sort order in the combined breakdown table", () => {
 		render(<PublicEventPage event={fixture} />);
-		const categoriesTable = screen.getByRole("table", {
-			name: /available event categories/i,
+		const breakdownTable = screen.getByRole("table", {
+			name: /race categories with distance and registration pricing/i,
 		});
-		const rows = within(categoriesTable).getAllByRole("row").slice(1);
+		const rows = within(breakdownTable).getAllByRole("row").slice(1);
 
 		expect(rows[0]?.textContent).toContain("5K Fun Run");
 		expect(rows[0]?.textContent).toContain("5 km");
@@ -138,18 +144,18 @@ describe("PublicEventPage", () => {
 		expect(rows[1]?.textContent).toContain("10 km");
 	});
 
-	it("renders INR pricing and early-bird details only for eligible tiers", () => {
+	it("renders INR pricing and early-bird details only for eligible tiers in the combined breakdown", () => {
 		render(<PublicEventPage event={fixture} />);
-		const pricingTable = screen.getByRole("table", {
-			name: /registration pricing by category/i,
+		const breakdownTable = screen.getByRole("table", {
+			name: /race categories with distance and registration pricing/i,
 		});
 
-		expect(within(pricingTable).getByText("₹799")).toBeTruthy();
-		expect(within(pricingTable).getByText("₹599")).toBeTruthy();
-		expect(within(pricingTable).getByText("₹1,299")).toBeTruthy();
-		expect(within(pricingTable).getByText(/Until/)).toBeTruthy();
+		expect(within(breakdownTable).getByText("₹799")).toBeTruthy();
+		expect(within(breakdownTable).getByText("₹599")).toBeTruthy();
+		expect(within(breakdownTable).getByText("₹1,299")).toBeTruthy();
+		expect(within(breakdownTable).getByText(/Until/)).toBeTruthy();
 
-		const rows = within(pricingTable).getAllByRole("row");
+		const rows = within(breakdownTable).getAllByRole("row");
 		const tenKRow = rows.find((row) => row.textContent?.includes("10K Open"));
 		expect(tenKRow).toBeDefined();
 		expect(tenKRow?.textContent).not.toContain("Until");
@@ -192,5 +198,96 @@ describe("PublicEventPage", () => {
 		expect(screen.getByText(/Organized by/).textContent).toContain(
 			"Coimbatore",
 		);
+	});
+});
+
+describe("PublicEventPage volatile pricing state (I-2.1.4)", () => {
+	const beforeDeadline = new Date("2026-07-10T00:00:00.000Z");
+	const afterDeadline = new Date("2026-07-20T00:00:00.000Z");
+
+	function renderAtTime(now: Date, event: EventPublicDetail = fixture) {
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(now);
+		const utils = render(<PublicEventPage event={event} />);
+		act(() => {
+			vi.runAllTimers();
+		});
+		return utils;
+	}
+
+	afterEach(() => {
+		vi.useRealTimers();
+		cleanup();
+	});
+
+	it("shows the 'Active' badge while the early-bird window is open", () => {
+		renderAtTime(beforeDeadline);
+		const breakdownTable = screen.getByRole("table", {
+			name: /race categories with distance and registration pricing/i,
+		});
+		expect(within(breakdownTable).getAllByText("Active").length).toBeGreaterThan(
+			0,
+		);
+		expect(within(breakdownTable).queryByText("Expired")).toBeNull();
+	});
+
+	it("shows the 'Expired' badge after the deadline has passed", () => {
+		renderAtTime(afterDeadline);
+		const breakdownTable = screen.getByRole("table", {
+			name: /race categories with distance and registration pricing/i,
+		});
+		expect(within(breakdownTable).getAllByText("Expired").length).toBeGreaterThan(
+			0,
+		);
+		expect(within(breakdownTable).queryByText("Active")).toBeNull();
+	});
+
+	it("renders 'From ₹599 (early-bird)' in both CTA surfaces while the discount is active", () => {
+		renderAtTime(beforeDeadline);
+		const fromBadges = screen.getAllByTestId("price-from");
+		// One in the sticky aside CTA, one in the fixed mobile bottom bar.
+		expect(fromBadges.length).toBe(2);
+		for (const badge of fromBadges) {
+			expect(badge.textContent).toContain("From");
+			expect(badge.textContent).toContain("₹599");
+			expect(badge.textContent).toContain("(early-bird)");
+		}
+	});
+
+	it("renders 'From ₹799' (no early-bird tag) once the discount has expired", () => {
+		renderAtTime(afterDeadline);
+		const fromBadges = screen.getAllByTestId("price-from");
+		expect(fromBadges.length).toBe(2);
+		for (const badge of fromBadges) {
+			expect(badge.textContent).toContain("From");
+			expect(badge.textContent).toContain("₹799");
+			expect(badge.textContent).not.toContain("(early-bird)");
+		}
+	});
+
+	it("omits the 'From' badge entirely when there are no pricing tiers", () => {
+		renderAtTime(beforeDeadline, {
+			...fixture,
+			pricingTiers: [],
+		});
+		expect(screen.queryAllByTestId("price-from").length).toBe(0);
+	});
+
+	it("renders no Active/Expired badge before the client mounts (SSR-safe)", () => {
+		// Render WITHOUT advancing fake timers — useEffect should not have flushed,
+		// so the volatile bits stay blank, mirroring SSR / first hydration.
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(beforeDeadline);
+		render(<PublicEventPage event={fixture} />);
+		const breakdownTable = screen.getByRole("table", {
+			name: /race categories with distance and registration pricing/i,
+		});
+		expect(within(breakdownTable).queryByText("Active")).toBeNull();
+		expect(within(breakdownTable).queryByText("Expired")).toBeNull();
+		expect(screen.queryAllByTestId("price-from").length).toBe(0);
 	});
 });
