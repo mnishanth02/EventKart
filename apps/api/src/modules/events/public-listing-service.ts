@@ -44,6 +44,7 @@ export interface PublicEventListingParams {
 	now: Date;
 	timeWindow: "upcoming" | "past";
 	organizerSlug?: OrganizerSlug;
+	organizerId?: string;
 }
 
 export interface PublicEventListingResult {
@@ -123,6 +124,9 @@ async function selectListingRows(
 		baseConditions.push(
 			sql`${events.organizerId} IN (SELECT ${organizers.id} FROM ${organizers} WHERE ${organizers.slug} = ${params.organizerSlug})`,
 		);
+	}
+	if (params.organizerId !== undefined) {
+		baseConditions.push(eq(events.organizerId, params.organizerId));
 	}
 	const condition = and(...baseConditions);
 	const offset = (params.page - 1) * params.limit;

@@ -868,3 +868,85 @@ describe("listPublicEvents — timeWindow filter", () => {
 		});
 	});
 });
+
+describe("listPublicEvents — organizerId filter", () => {
+	const ORG_A_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+	const ORG_A_EVENT = "aaaaaaaa-1111-4111-8111-111111111111";
+
+	it("applies an equality predicate on events.organizer_id to BOTH count and rows queries", async () => {
+		const { deps, selectQueries } = createDeps([[{ count: 0 }], []]);
+
+		await listPublicEvents(deps, { ...params, organizerId: ORG_A_ID });
+
+		const countWhereArg = selectQueries[0]?.where.mock.calls[0]?.[0];
+		const rowsWhereArg = selectQueries[1]?.where.mock.calls[0]?.[0];
+		expect(countWhereArg).toBeDefined();
+		expect(rowsWhereArg).toBeDefined();
+
+		for (const arg of [countWhereArg, rowsWhereArg]) {
+			const { columnNames, values } = flattenSqlChunks(arg);
+			expect(columnNames).toContain("status");
+			expect(columnNames).toContain("end_at");
+			expect(columnNames).toContain("organizer_id");
+			expect(columnNames).not.toContain("slug");
+			expect(values).toContain(ORG_A_ID);
+		}
+	});
+
+	it("does NOT add the organizer_id predicate when organizerId is omitted", async () => {
+		const { deps, selectQueries } = createDeps([[{ count: 0 }], []]);
+
+		await listPublicEvents(deps, params);
+
+		const countWhereArg = selectQueries[0]?.where.mock.calls[0]?.[0];
+		const { columnNames } = flattenSqlChunks(countWhereArg);
+		expect(columnNames).not.toContain("organizer_id");
+	});
+
+	it("returns the organizer's single next event when limit=1", async () => {
+		const orgRow = buildEventRow({
+			id: ORG_A_EVENT,
+			slug: "org-a-next",
+			title: "Org A Next Race",
+		});
+		const { deps } = createDeps([
+			[{ count: 1 }],
+			[orgRow],
+			[buildCategoryRow({ eventId: ORG_A_EVENT, id: CATEGORY_ID })],
+			[buildPricingRow({ eventId: ORG_A_EVENT, eventCategoryId: CATEGORY_ID })],
+			[],
+		]);
+
+		const result = await listPublicEvents(deps, {
+			...params,
+			limit: 1,
+			organizerId: ORG_A_ID,
+		});
+
+		expect(result.meta.total).toBe(1);
+		expect(result.data).toHaveLength(1);
+		expect(result.data[0]).toMatchObject({ slug: "org-a-next" });
+	});
+
+	it("returns empty data when the organizer has no upcoming events", async () => {
+		const { deps } = createDeps([[{ count: 0 }], []]);
+
+		const result = await listPublicEvents(deps, {
+			...params,
+			limit: 1,
+			organizerId: ORG_A_ID,
+		});
+
+		expect(result).toEqual({
+			data: [],
+			meta: {
+				page: 1,
+				limit: 1,
+				total: 0,
+				totalPages: 0,
+				hasNext: false,
+				hasPrev: false,
+			},
+		});
+	});
+});
