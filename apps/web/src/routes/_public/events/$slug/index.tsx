@@ -10,7 +10,7 @@ import { buildPublicEventMeta } from "#/features/event-detail/seo";
 import type { EventPublicDetail } from "#/features/event-detail/types";
 import { publicEnv } from "#/lib/env/public";
 
-export const Route = createFileRoute("/_public/events/$slug")({
+export const Route = createFileRoute("/_public/events/$slug/")({
 	loader: async ({ params, context }) =>
 		resolvePublicEventLoader({
 			slug: params.slug,
@@ -41,5 +41,5 @@ export const Route = createFileRoute("/_public/events/$slug")({
 
 function EventDetailRouteComponent() {
 	const event = Route.useLoaderData() as EventPublicDetail;
-	return <PublicEventPage event={ event } />;
+	return <PublicEventPage event={event} />;
 }

@@ -5,6 +5,7 @@ import {
 	screen,
 	within,
 } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { eventPublicDetailSchema } from "@repo/shared/schemas";
 import type { EventPublicDetail } from "../types";
@@ -15,6 +16,32 @@ vi.mock("@number-flow/react", () => ({
 	default: ({ value }: { value: number }) => (
 		<span data-testid="number-flow">₹{value.toLocaleString("en-IN")}</span>
 	),
+}));
+
+vi.mock("@tanstack/react-router", () => ({
+	Link: ({
+		children,
+		to,
+		params,
+		...rest
+	}: {
+		children: ReactNode;
+		to: string;
+		params?: Record<string, string>;
+	} & Record<string, unknown>) => {
+		let href = to;
+		if (params) {
+			for (const [key, value] of Object.entries(params)) {
+				href = href.replace(`$${key}`, String(value));
+			}
+		}
+		// Drop `params` to keep the rendered DOM clean of unknown attrs.
+		return (
+			<a href={href} {...rest}>
+				{children}
+			</a>
+		);
+	},
 }));
 
 afterEach(() => {
@@ -217,16 +244,18 @@ describe("PublicEventPage", () => {
 		).toBeTruthy();
 	});
 
-	it("renders CTA copy, organizer summary, and a sidebar policy anchor", () => {
+	it("renders organizer summary and sidebar policy anchor", () => {
+		// Use a frozen time inside the registration window so the post-mount
+		// CTA state is deterministic ("open"). The dedicated I-2.1.7 suite
+		// below covers the live state-aware CTA copy (and the SSR-neutral
+		// baseline via `renderToString`); this test only owns the organizer
+		// summary + policy anchor.
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(new Date("2026-07-15T00:00:00.000Z"));
 		render(<PublicEventPage event={fixture} />);
 
-		expect(
-			screen.getAllByText("Registration coming soon").length,
-		).toBeGreaterThan(0);
-		expect(
-			screen.getAllByText("Booking opens with our launch — check back soon.")
-				.length,
-		).toBeGreaterThan(0);
 		expect(screen.getByText("About the organizer")).toBeTruthy();
 		expect(screen.getByText("Race Coimbatore Collective")).toBeTruthy();
 		expect(screen.getByText("Based in Coimbatore")).toBeTruthy();
@@ -242,6 +271,8 @@ describe("PublicEventPage", () => {
 			name: /Review refund.*cancellation policies/i,
 		});
 		expect(policyLink.getAttribute("href")).toBe("#policies");
+
+		vi.useRealTimers();
 	});
 });
 
@@ -315,11 +346,13 @@ describe("PublicEventPage volatile pricing state (I-2.1.4)", () => {
 			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
 		});
 		vi.setSystemTime(now);
-		const utils = render(<PublicEventPage event={event} />);
-		act(() => {
-			vi.runAllTimers();
-		});
-		return utils;
+		// `render(...)` auto-wraps in `act`, which flushes the initial
+		// `useEffect` so `useNow` and `useRegistrationState` commit their
+		// post-mount state. We deliberately do NOT advance fake timers —
+		// `useRegistrationState` schedules a chained `setTimeout` at the
+		// next boundary, and `vi.runAllTimers()` would chase that chain
+		// across all future boundaries (days/weeks ahead).
+		return render(<PublicEventPage event={event} />);
 	}
 
 	afterEach(() => {
@@ -438,5 +471,162 @@ describe("PublicEventPage volatile pricing state (I-2.1.4)", () => {
 			expect(badge.textContent).toContain("₹799");
 			expect(badge.textContent).not.toContain("(early-bird)");
 		}
+	});
+});
+
+describe("PublicEventPage registration CTA (I-2.1.7)", () => {
+	const insideWindow = new Date("2026-07-15T00:00:00.000Z");
+	const beforeOpen = new Date("2026-06-01T00:00:00.000Z");
+	const afterClose = new Date("2026-08-14T18:00:00.000Z");
+	const afterEnd = new Date("2026-08-16T00:00:00.000Z");
+
+	function renderAtTime(now: Date, event: EventPublicDetail = fixture) {
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(now);
+		// See the I-2.1.4 helper above for why we don't advance fake timers
+		// here — the chained boundary `setTimeout` in `useRegistrationState`
+		// must not fire, otherwise `vi.runAllTimers()` chases the chain
+		// past every future boundary.
+		return render(<PublicEventPage event={event} />);
+	}
+
+	afterEach(() => {
+		vi.useRealTimers();
+		cleanup();
+	});
+
+	it("renders SSR-neutral copy and a 'View registration' link to the booking flow (renderToString)", async () => {
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(insideWindow);
+		const { renderToString } = await import("react-dom/server");
+		const html = renderToString(<PublicEventPage event={fixture} />);
+
+		expect(html).toContain("View registration");
+		expect(html).toContain('href="/events/coimbatore-city-10k/register"');
+
+		// Pre-mount must NEVER advertise the live state (cache truthfulness).
+		expect(html).not.toContain("Register now");
+		expect(html).not.toContain("Registration closed");
+		expect(html).not.toContain("Registration opens ");
+		expect(html).not.toContain("Event has ended");
+		expect(html).not.toContain('data-testid="price-from"');
+	});
+
+	it("renders an active 'Register now' link to the booking flow when registration is open", () => {
+		renderAtTime(insideWindow);
+
+		const registerLinks = screen.getAllByRole("link", {
+			name: /^Register now$/,
+		});
+		expect(registerLinks.length).toBe(2);
+		for (const link of registerLinks) {
+			expect(link.getAttribute("href")).toBe(
+				"/events/coimbatore-city-10k/register",
+			);
+		}
+		// Price hint shown alongside an open CTA.
+		expect(screen.getAllByTestId("price-from").length).toBe(2);
+	});
+
+	it("renders a disabled 'Registration opens ...' button before the window opens with aria-describedby + price still shown", () => {
+		renderAtTime(beforeOpen);
+
+		const buttons = screen.getAllByRole("button", {
+			name: /Registration opens /,
+		});
+		expect(buttons.length).toBe(2);
+		for (const button of buttons) {
+			expect(button.getAttribute("disabled")).not.toBeNull();
+			expect(button.getAttribute("aria-disabled")).toBe("true");
+			expect(button.getAttribute("aria-describedby")).toMatch(
+				/^register-cta-(reason|mobile-reason)$/,
+			);
+		}
+		// Active-state link must NOT be present.
+		expect(screen.queryAllByRole("link", { name: /^Register now$/ }).length).toBe(
+			0,
+		);
+		// Price hint stays visible — registration hasn't closed yet.
+		expect(screen.getAllByTestId("price-from").length).toBe(2);
+	});
+
+	it("renders a disabled 'Registration closed' button after closesAt and hides the price hint", () => {
+		renderAtTime(afterClose);
+
+		const buttons = screen.getAllByRole("button", {
+			name: /^Registration closed$/,
+		});
+		expect(buttons.length).toBe(2);
+		for (const button of buttons) {
+			expect(button.getAttribute("disabled")).not.toBeNull();
+			expect(button.getAttribute("aria-disabled")).toBe("true");
+		}
+		expect(screen.queryAllByRole("link", { name: /^Register now$/ }).length).toBe(
+			0,
+		);
+		// Price hint is hidden so the UI never reads "From ₹X — Registration closed".
+		expect(screen.queryAllByTestId("price-from").length).toBe(0);
+	});
+
+	it("renders a disabled 'Event has ended' button after endAt and hides the price hint", () => {
+		renderAtTime(afterEnd);
+
+		const buttons = screen.getAllByRole("button", {
+			name: /^Event has ended$/,
+		});
+		expect(buttons.length).toBe(2);
+		for (const button of buttons) {
+			expect(button.getAttribute("disabled")).not.toBeNull();
+			expect(button.getAttribute("aria-disabled")).toBe("true");
+		}
+		expect(screen.queryAllByTestId("price-from").length).toBe(0);
+	});
+
+	it("treats both registration timestamps as null + future endAt → 'Register now' active CTA", () => {
+		const noWindow: EventPublicDetail = {
+			...fixture,
+			registrationOpensAt: null,
+			registrationClosesAt: null,
+		};
+		renderAtTime(insideWindow, noWindow);
+
+		const links = screen.getAllByRole("link", { name: /^Register now$/ });
+		expect(links.length).toBe(2);
+	});
+
+	it("transitions the CTA from 'Register now' → 'Registration closed' when the window closes mid-page", () => {
+		const tenMsBeforeClose = new Date(
+			Date.parse(fixture.registrationClosesAt ?? "") - 10,
+		);
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(tenMsBeforeClose);
+		render(<PublicEventPage event={fixture} />);
+
+		// Before the boundary: active links rendered. RTL auto-act flushes
+		// the initial useEffect so `useRegistrationState` has already
+		// committed the post-mount "open" state.
+		expect(
+			screen.queryAllByRole("link", { name: /^Register now$/ }).length,
+		).toBe(2);
+
+		// Advance just past the close boundary; the chained setTimeout in
+		// useRegistrationState should fire and re-render disabled buttons.
+		act(() => {
+			vi.advanceTimersByTime(50);
+		});
+
+		expect(
+			screen.queryAllByRole("link", { name: /^Register now$/ }).length,
+		).toBe(0);
+		expect(
+			screen.queryAllByRole("button", { name: /^Registration closed$/ })
+				.length,
+		).toBe(2);
 	});
 });
