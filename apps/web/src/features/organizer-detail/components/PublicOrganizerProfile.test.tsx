@@ -1,4 +1,5 @@
 import { organizerPublicProfileSchema } from "@repo/shared/schemas";
+import { VERIFICATION_EXPLANATION } from "@repo/ui/lib/verification-copy";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { OrganizerPublicProfile } from "../types";
@@ -95,5 +96,26 @@ describe("PublicOrganizerProfile", () => {
 		expect(container.textContent).toContain(
 			"<script>alert('xss')</script><b>bold</b>",
 		);
+	});
+
+	it("renders the verification explainer (with anchor id) when verified", () => {
+		const { container } = render(
+			<PublicOrganizerProfile profile={buildFixture({ isVerified: true })} />,
+		);
+
+		const anchor = container.querySelector("#about-verification");
+		expect(anchor).not.toBeNull();
+		expect(anchor?.textContent).toContain(VERIFICATION_EXPLANATION.heading);
+		expect(screen.getByText(VERIFICATION_EXPLANATION.body)).toBeTruthy();
+	});
+
+	it("hides the verification explainer when unverified", () => {
+		const { container } = render(
+			<PublicOrganizerProfile profile={buildFixture({ isVerified: false })} />,
+		);
+
+		expect(container.querySelector("#about-verification")).toBeNull();
+		expect(screen.queryByText(VERIFICATION_EXPLANATION.heading)).toBeNull();
+		expect(screen.queryByText(VERIFICATION_EXPLANATION.body)).toBeNull();
 	});
 });

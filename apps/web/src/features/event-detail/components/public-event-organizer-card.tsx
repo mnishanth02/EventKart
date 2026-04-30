@@ -4,6 +4,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@repo/ui/components/ui/card";
+import { VerificationExplainer } from "@repo/ui/components/verification-explainer";
 import { VerifiedBadge } from "@repo/ui/components/verified-badge";
 import { Link } from "@tanstack/react-router";
 import type { EventPublicOrganizerSummary } from "../types";
@@ -26,7 +27,10 @@ export function PublicEventOrganizerCard({
 						{organizer.businessName}
 					</p>
 					{organizer.isVerified === true ? (
-						<VerifiedBadge variant="inline" />
+						<>
+							<VerifiedBadge variant="inline" />
+							<VerificationExplainer variant="popover" />
+						</>
 					) : null}
 				</div>
 				<p className="text-muted-foreground text-sm">

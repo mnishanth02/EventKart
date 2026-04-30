@@ -5,6 +5,7 @@ import {
 	CardTitle,
 } from "@repo/ui/components/ui/card";
 import { Separator } from "@repo/ui/components/ui/separator";
+import { VerificationExplainer } from "@repo/ui/components/verification-explainer";
 import { VerifiedBadge } from "@repo/ui/components/verified-badge";
 import type { OrganizerPublicProfile } from "../types";
 
@@ -51,6 +52,12 @@ export function PublicOrganizerProfile({
 						<p className="text-muted-foreground text-sm">
 							Based in {profile.city}
 						</p>
+						{profile.isVerified === true ? (
+							<VerificationExplainer
+								variant="inline-note"
+								id="about-verification"
+							/>
+						) : null}
 					</CardHeader>
 					<Separator />
 					<CardContent className="space-y-3 pt-6 text-sm">

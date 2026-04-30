@@ -5,9 +5,11 @@ import {
 	screen,
 	within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { eventPublicDetailSchema } from "@repo/shared/schemas";
+import { VERIFICATION_EXPLANATION } from "@repo/ui/lib/verification-copy";
 import type { EventPublicDetail } from "../types";
 import { PublicEventOrganizerCard } from "./public-event-organizer-card";
 import { PublicEventPage } from "./public-event-page";
@@ -51,6 +53,14 @@ const publicEnvMock = vi.hoisted(() => ({
 vi.mock("#/lib/env/public", () => ({
 	publicEnv: publicEnvMock,
 }));
+
+beforeAll(() => {
+	// Radix Popover relies on these pointer-capture APIs that jsdom omits.
+	Element.prototype.hasPointerCapture ??= vi.fn(() => false);
+	Element.prototype.setPointerCapture ??= vi.fn();
+	Element.prototype.releasePointerCapture ??= vi.fn();
+	HTMLElement.prototype.scrollIntoView ??= vi.fn();
+});
 
 afterEach(() => {
 	publicEnvMock.VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED = false;
@@ -364,6 +374,51 @@ describe("PublicEventOrganizerCard", () => {
 
 		const paragraph = screen.getByText(longDescription);
 		expect(paragraph.textContent).toHaveLength(2000);
+	});
+
+	it("renders the verification explainer popover trigger when verified", () => {
+		render(<PublicEventOrganizerCard organizer={buildFixture().organizer} />);
+
+		const trigger = screen.getByRole("button", {
+			name: VERIFICATION_EXPLANATION.triggerLabel,
+		});
+		expect(trigger).toBeTruthy();
+		// Body copy is hidden until activation.
+		expect(screen.queryByText(VERIFICATION_EXPLANATION.body)).toBeNull();
+		// Trigger must be focusable so keyboard users can open it.
+		trigger.focus();
+		expect(document.activeElement).toBe(trigger);
+	});
+
+	it("hides the verification explainer popover trigger when unverified", () => {
+		render(
+			<PublicEventOrganizerCard
+				organizer={buildFixture({ isVerified: false }).organizer}
+			/>,
+		);
+
+		expect(
+			screen.queryByRole("button", {
+				name: VERIFICATION_EXPLANATION.triggerLabel,
+			}),
+		).toBeNull();
+	});
+
+	it("reveals the explainer body copy when the trigger is activated", async () => {
+		const user = userEvent.setup();
+		render(<PublicEventOrganizerCard organizer={buildFixture().organizer} />);
+
+		await user.click(
+			screen.getByRole("button", {
+				name: VERIFICATION_EXPLANATION.triggerLabel,
+			}),
+		);
+
+		expect(
+			await screen.findByText(VERIFICATION_EXPLANATION.heading),
+		).toBeTruthy();
+		const body = await screen.findByText(VERIFICATION_EXPLANATION.body);
+		expect(body.textContent).toBe(VERIFICATION_EXPLANATION.body);
 	});
 });
 
