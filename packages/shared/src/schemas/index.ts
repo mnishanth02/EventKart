@@ -135,6 +135,14 @@ export {
 	eventPricingTierWithCategorySchema,
 } from "./event-pricing.js";
 export type {
+	EventPublicCard,
+	EventPublicCardCategory,
+} from "./event-public-card.js";
+export {
+	eventPublicCardCategorySchema,
+	eventPublicCardSchema,
+} from "./event-public-card.js";
+export type {
 	EventPublicCategory,
 	EventPublicDetail,
 	EventPublicImage,

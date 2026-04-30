@@ -28,6 +28,7 @@ const mockPublishEvent = vi.fn();
 const mockUnpublishEvent = vi.fn();
 const mockUpdatePublishedEvent = vi.fn();
 const mockUpdateEventCategoryCapacity = vi.fn();
+const mockListPublicEvents = vi.fn();
 
 vi.mock("../../../src/modules/events/service.js", async (importOriginal) => {
 	const actual =
@@ -71,6 +72,10 @@ vi.mock("../../../src/modules/events/event-image-service.js", () => ({
 		mockConfirmEventImageUpload(...args),
 	listEventImages: (...args: unknown[]) => mockListEventImages(...args),
 	deleteEventImage: (...args: unknown[]) => mockDeleteEventImage(...args),
+}));
+
+vi.mock("../../../src/modules/events/public-listing-service.js", () => ({
+	listPublicEvents: (...args: unknown[]) => mockListPublicEvents(...args),
 }));
 
 import {
@@ -328,6 +333,37 @@ const mockPublishReadiness = {
 	],
 };
 
+const mockPublicEventCard = {
+	slug: "coimbatore-city-10k",
+	title: "Coimbatore City 10K",
+	startAt: "2026-08-15T00:30:00.000Z",
+	endAt: "2026-08-15T03:30:00.000Z",
+	timezone: "Asia/Kolkata",
+	city: "Coimbatore",
+	venueName: "Race Course Grounds",
+	registrationOpensAt: "2026-07-01T03:30:00.000Z",
+	registrationClosesAt: "2026-08-14T12:30:00.000Z",
+	isPaid: true,
+	heroImage: null,
+	categories: [
+		{
+			name: "10K",
+			slug: "10k",
+			distanceMeters: 10000,
+			capacity: null,
+		},
+	],
+	pricingTiers: [
+		{
+			categorySlug: "10k",
+			basePrice: 129900,
+			earlyBirdPrice: null,
+			earlyBirdDeadline: null,
+			currency: "INR",
+		},
+	],
+};
+
 function getSessionRedisMock(app: FastifyInstance) {
 	return app.redis.session.get as ReturnType<typeof vi.fn>;
 }
@@ -560,6 +596,127 @@ describe("POST /api/v1/events", () => {
 			error: { code: "CSRF_VALIDATION_FAILED" },
 		});
 		expect(mockCreateDraftEvent).not.toHaveBeenCalled();
+	});
+});
+
+describe("GET /api/v1/events/public", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		mockListPublicEvents.mockReset();
+	});
+
+	it("returns 200 with the listing handler envelope before /:eventId can match public", async () => {
+		mockListPublicEvents.mockResolvedValue({
+			data: [mockPublicEventCard],
+			meta: {
+				page: 1,
+				limit: 20,
+				total: 1,
+				totalPages: 1,
+				hasNext: false,
+				hasPrev: false,
+			},
+		});
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/public`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			success: true,
+			data: [mockPublicEventCard],
+			meta: {
+				page: 1,
+				limit: 20,
+				total: 1,
+				totalPages: 1,
+				hasNext: false,
+				hasPrev: false,
+			},
+		});
+		expect(mockListPublicEvents).toHaveBeenCalledOnce();
+	});
+
+	it("passes parsed query params and a route-created now Date to the service", async () => {
+		mockListPublicEvents.mockResolvedValue({
+			data: [],
+			meta: {
+				page: 2,
+				limit: 5,
+				total: 5,
+				totalPages: 1,
+				hasNext: false,
+				hasPrev: true,
+			},
+		});
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/public?page=2&limit=5&sort=startAtAsc`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		const [_deps, params] = mockListPublicEvents.mock.calls[0] as [
+			unknown,
+			{ page: number; limit: number; sort: string; now: Date },
+		];
+		expect(params).toMatchObject({ page: 2, limit: 5, sort: "startAtAsc" });
+		expect(params.now).toBeInstanceOf(Date);
+	});
+
+	it.each(["limit=999", "sort=startAtDesc"])(
+		"returns 400 for invalid query %s",
+		async (query) => {
+			const response = await app.inject({
+				method: "GET",
+				url: `${EVENTS_URL}/public?${query}`,
+			});
+
+			expect(response.statusCode).toBe(400);
+			expect(mockListPublicEvents).not.toHaveBeenCalled();
+		},
+	);
+
+	it("returns deterministic empty-list pagination metadata", async () => {
+		mockListPublicEvents.mockResolvedValue({
+			data: [],
+			meta: {
+				page: 1,
+				limit: 20,
+				total: 0,
+				totalPages: 0,
+				hasNext: false,
+				hasPrev: false,
+			},
+		});
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/public`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			success: true,
+			data: [],
+			meta: {
+				total: 0,
+				totalPages: 0,
+				hasNext: false,
+				hasPrev: false,
+			},
+		});
 	});
 });
 

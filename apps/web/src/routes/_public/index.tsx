@@ -6,6 +6,9 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 import { useRequireAuth } from "#/features/auth/hooks";
+import { setPublicEventCacheHeaders } from "#/features/event-detail/cache-headers";
+import { PublicEventsList } from "#/features/events-discovery/components/public-events-list";
+import { resolvePublicEventsListLoader } from "#/features/events-discovery/loader";
 
 const searchSchema = z.object({
 	reason: z.enum(["auth-required", "forbidden"]).optional().catch(undefined),
@@ -14,11 +17,18 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/_public/")({
 	component: Home,
+	loader: async ({ context }) =>
+		resolvePublicEventsListLoader({
+			queryClient: context.queryClient,
+			setResponseHeaders: setPublicEventCacheHeaders,
+			params: { page: 1, limit: 20, sort: "startAtAsc" },
+		}),
 	validateSearch: searchSchema,
 });
 
 function Home() {
 	const { reason, redirect } = Route.useSearch();
+	const { events, meta } = Route.useLoaderData();
 	const navigate = useNavigate();
 	const { requireAuth, loginDialog } = useRequireAuth();
 	const safeRedirect = getSafeRedirect(redirect);
@@ -80,32 +90,7 @@ function Home() {
 
 			<Separator className="my-12 md:my-16" />
 
-			{/* Placeholder sections — to be replaced with real event discovery */ }
-			<section className="space-y-6">
-				<h2 className="font-display text-xl font-semibold">
-					This Weekend in Coimbatore
-				</h2>
-				<div className="rounded-xl border border-dashed border-border bg-card/50 px-6 py-10 text-center">
-					<p className="text-sm text-muted-foreground">
-						No events scheduled this weekend — check back soon!
-					</p>
-				</div>
-			</section>
-
-			<section className="mt-12 space-y-6 md:mt-16">
-				<h2 className="font-display text-xl font-semibold">
-					Browse by Category
-				</h2>
-				<div className="flex flex-wrap gap-2">
-					{ ["Fun Run", "5K", "10K", "Half Marathon", "Full Marathon"].map(
-						(cat) => (
-							<Badge key={ cat } variant="outline" className="px-3 py-1.5">
-								{ cat }
-							</Badge>
-						),
-					) }
-				</div>
-			</section>
+			<PublicEventsList events={ events } meta={ meta } />
 			{ loginDialog }
 		</div>
 	);

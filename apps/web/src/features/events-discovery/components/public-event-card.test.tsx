@@ -52,9 +52,13 @@ function categorySlug(value: string): EventCardData["categories"][number]["slug"
 	return value as EventCardData["categories"][number]["slug"];
 }
 
+function eventSlug(value: string): EventCardData["slug"] {
+	return value as EventCardData["slug"];
+}
+
 function fixture(overrides: Partial<EventCardData> = {}): EventCardData {
 	return {
-		slug: "coimbatore-city-10k",
+		slug: eventSlug("coimbatore-city-10k"),
 		title: "Coimbatore City 10K",
 		startAt: "2026-08-15T00:30:00.000Z",
 		endAt: "2026-08-15T03:30:00.000Z",
