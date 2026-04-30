@@ -33,8 +33,12 @@ describe("setOrganizerDetailCacheHeaders", () => {
 			"Cache-Control": ORGANIZER_DETAIL_CACHE_CONTROL,
 		});
 
+		// `createIsomorphicFn` resolves to the client variant under jsdom,
+		// which returns `undefined` synchronously. Wrap in `Promise.resolve`
+		// so the assertion handles either branch without coupling the test
+		// to a specific runtime mode.
 		await expect(
-			setOrganizerDetailCacheHeaders(headers),
+			Promise.resolve(setOrganizerDetailCacheHeaders(headers)),
 		).resolves.not.toThrow();
 
 		expect(headers.get("Cache-Control")).toBe(ORGANIZER_DETAIL_CACHE_CONTROL);

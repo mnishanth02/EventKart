@@ -39,7 +39,9 @@ describe("setPublicEventCacheHeaders", () => {
 			"Cache-Control": PUBLIC_EVENT_CACHE_CONTROL,
 		});
 
-		await expect(setPublicEventCacheHeaders(headers)).resolves.not.toThrow();
+		await expect(
+			Promise.resolve(setPublicEventCacheHeaders(headers)),
+		).resolves.not.toThrow();
 
 		// The Headers instance the helper receives must remain free of
 		// `Vary: Cookie`. If a future refactor adds it for any reason, the
