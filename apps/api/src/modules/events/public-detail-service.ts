@@ -131,6 +131,7 @@ function truncateNoSurrogateSplit(value: string, maxCodeUnits: number): string {
 async function selectPublicCategories(
 	db: Pick<Database, "select">,
 	eventId: string,
+	log: Pick<FastifyBaseLogger, "warn">,
 ): Promise<{
 	publicCategories: EventPublicDetail["categories"];
 	categoryById: Map<string, EventCategoryRow>;
@@ -142,14 +143,37 @@ async function selectPublicCategories(
 		.orderBy(eventCategories.sortOrder);
 
 	return {
-		publicCategories: rows.map((category) =>
-			eventPublicCategorySchema.parse({
+		publicCategories: rows.map((category) => {
+			const capacity =
+				category.spotsTotal <= 0 ||
+				category.spotsRemaining < 0 ||
+				category.spotsRemaining > category.spotsTotal
+					? null
+					: {
+							spotsTotal: category.spotsTotal,
+							spotsRemaining: category.spotsRemaining,
+						};
+
+			if (capacity === null) {
+				log.warn(
+					{
+						eventId,
+						categoryId: category.id,
+						spotsTotal: category.spotsTotal,
+						spotsRemaining: category.spotsRemaining,
+					},
+					"Invalid public event category capacity; projecting null capacity",
+				);
+			}
+
+			return eventPublicCategorySchema.parse({
 				name: category.name,
 				slug: category.slug,
 				distanceMeters: category.distanceMeters,
 				sortOrder: category.sortOrder,
-			}),
-		),
+				capacity,
+			});
+		}),
 		categoryById: new Map(rows.map((category) => [category.id, category])),
 	};
 }
@@ -262,6 +286,7 @@ async function buildPublicEventDetail(
 	const { publicCategories, categoryById } = await selectPublicCategories(
 		deps.db,
 		event.id,
+		deps.log,
 	);
 	const pricingTiers = await selectPublicPricingTiers(
 		deps.db,

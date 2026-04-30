@@ -55,6 +55,7 @@ const baseFixtureInput = {
 			slug: "10k",
 			distanceMeters: 10000,
 			sortOrder: 1,
+			capacity: { spotsTotal: 200, spotsRemaining: 150 },
 		},
 	],
 	pricingTiers: [

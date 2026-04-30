@@ -279,6 +279,12 @@ describe("GET /api/v1/events/by-slug/:slug", () => {
 		expect(
 			detail.categories.map((category: { slug: string }) => category.slug),
 		).toEqual(["5k", "10k"]);
+		expect(detail.categories[0]).toMatchObject({
+			capacity: { spotsTotal: 100, spotsRemaining: 95 },
+		});
+		expect(detail.categories[1]).toMatchObject({
+			capacity: { spotsTotal: 200, spotsRemaining: 190 },
+		});
 		expect(detail.categories[0]).not.toHaveProperty("spotsTotal");
 		expect(detail.categories[0]).not.toHaveProperty("spotsRemaining");
 		const categorySlugs = new Set(
@@ -289,6 +295,48 @@ describe("GET /api/v1/events/by-slug/:slug", () => {
 				categorySlugs.has(tier.categorySlug),
 			),
 		).toBe(true);
+	});
+
+	it("projects null capacity for a corrupt category row while preserving the rest of the event", async () => {
+		const warnSpy = vi.spyOn(app.log, "warn");
+		const invalidRows = buildCategoryRows().map((category) =>
+			category.id === CATEGORY_5K_ID
+				? { ...category, spotsTotal: 10, spotsRemaining: 99 }
+				: category,
+		);
+		const { db } = createMockDb([
+			[buildEventRow()],
+			[buildOrganizerSummaryRow()],
+			invalidRows,
+			buildPricingRows(),
+			[],
+		]);
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		const categories = response.json().data.data.categories;
+		expect(categories).toEqual([
+			expect.objectContaining({
+				slug: "5k",
+				capacity: null,
+			}),
+			expect.objectContaining({
+				slug: "10k",
+				capacity: { spotsTotal: 200, spotsRemaining: 190 },
+			}),
+		]);
+		expect(warnSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventId: EVENT_ID,
+				categoryId: CATEGORY_5K_ID,
+				spotsTotal: 10,
+				spotsRemaining: 99,
+			}),
+			"Invalid public event category capacity; projecting null capacity",
+		);
+		warnSpy.mockRestore();
 	});
 
 	it("includes a verified organizer description verbatim", async () => {

@@ -44,7 +44,16 @@ vi.mock("@tanstack/react-router", () => ({
 	},
 }));
 
+const publicEnvMock = vi.hoisted(() => ({
+	VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED: false,
+}));
+
+vi.mock("#/lib/env/public", () => ({
+	publicEnv: publicEnvMock,
+}));
+
 afterEach(() => {
+	publicEnvMock.VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED = false;
 	cleanup();
 });
 
@@ -107,12 +116,14 @@ const fixtureInput = {
 			slug: "10k",
 			distanceMeters: 10000,
 			sortOrder: 2,
+			capacity: { spotsTotal: 200, spotsRemaining: 150 },
 		},
 		{
 			name: "5K Fun Run",
 			slug: "5k",
 			distanceMeters: 5000,
 			sortOrder: 1,
+			capacity: { spotsTotal: 100, spotsRemaining: 8 },
 		},
 	],
 	pricingTiers: [
@@ -135,14 +146,33 @@ const fixtureInput = {
 
 function buildFixture(
 	organizerOverrides: Partial<EventPublicDetail["organizer"]> = {},
+	eventOverrides: Partial<EventPublicDetail> = {},
 ): EventPublicDetail {
+	const { organizer: eventOrganizerOverrides, ...restEventOverrides } =
+		eventOverrides;
 	return eventPublicDetailSchema.parse({
 		...fixtureInput,
+		...restEventOverrides,
 		organizer: {
 			...fixtureInput.organizer,
+			...eventOrganizerOverrides,
 			...organizerOverrides,
 		},
 	});
+}
+
+function eventWithCategoryCapacities(
+	capacityBySlug: Record<string, EventPublicDetail["categories"][number]["capacity"]>,
+): EventPublicDetail {
+	return buildFixture(
+		{},
+		{
+			categories: fixture.categories.map((category) => {
+				const capacity = capacityBySlug[category.slug];
+				return capacity === undefined ? category : { ...category, capacity };
+			}),
+		},
+	);
 }
 
 const fixture = buildFixture();
@@ -628,6 +658,212 @@ describe("PublicEventPage registration CTA (I-2.1.7)", () => {
 			screen.queryAllByRole("button", { name: /^Registration closed$/ })
 				.length,
 		).toBe(2);
+	});
+});
+
+describe("PublicEventPage spots-remaining badge (I-2.1.9)", () => {
+	const insideWindow = new Date("2026-07-15T00:00:00.000Z");
+
+	function renderAtTime(now: Date, event: EventPublicDetail = fixture) {
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(now);
+		return render(<PublicEventPage event={event} />);
+	}
+
+	function enableFlag() {
+		publicEnvMock.VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED = true;
+		vi.stubEnv("VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED", "true");
+	}
+
+	function queryBadge(surface: "desktop" | "mobile", slug: string): Element | null {
+		return document.querySelector(
+			`[data-testid="spots-remaining-badge"][data-surface="${surface}"][data-category-slug="${slug}"]`,
+		);
+	}
+
+	afterEach(() => {
+		publicEnvMock.VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED = false;
+		vi.unstubAllEnvs();
+		vi.useRealTimers();
+		cleanup();
+	});
+
+	it("renders no badge when the feature flag is off by default", () => {
+		renderAtTime(insideWindow);
+
+		act(() => {
+			vi.advanceTimersByTime(100);
+		});
+
+		expect(screen.queryAllByTestId("spots-remaining-badge").length).toBe(0);
+	});
+
+	it("renders no badge in SSR HTML when the feature flag is on", async () => {
+		enableFlag();
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(insideWindow);
+		const { renderToString } = await import("react-dom/server");
+
+		const html = renderToString(<PublicEventPage event={fixture} />);
+
+		expect(html).not.toContain('data-testid="spots-remaining-badge"');
+	});
+
+	it("renders low-spots badges on desktop and mobile after mount while registration is open", () => {
+		enableFlag();
+		renderAtTime(insideWindow);
+
+		const desktopBadge = queryBadge("desktop", "5k");
+		const mobileBadge = queryBadge("mobile", "5k");
+		expect(desktopBadge?.textContent).toContain("8 spots remaining");
+		expect(mobileBadge?.textContent).toContain("8 spots remaining");
+		expect(queryBadge("desktop", "10k")).toBeNull();
+		expect(queryBadge("mobile", "10k")).toBeNull();
+	});
+
+	it("shows at the threshold boundary", () => {
+		enableFlag();
+		renderAtTime(
+			insideWindow,
+			eventWithCategoryCapacities({
+				"5k": { spotsTotal: 100, spotsRemaining: 20 },
+				"10k": { spotsTotal: 200, spotsRemaining: 150 },
+			}),
+		);
+
+		expect(queryBadge("desktop", "5k")?.textContent).toContain(
+			"20 spots remaining",
+		);
+	});
+
+	it("hides just above the threshold boundary", () => {
+		enableFlag();
+		renderAtTime(
+			insideWindow,
+			eventWithCategoryCapacities({
+				"5k": { spotsTotal: 100, spotsRemaining: 21 },
+				"10k": { spotsTotal: 200, spotsRemaining: 150 },
+			}),
+		);
+
+		expect(queryBadge("desktop", "5k")).toBeNull();
+		expect(screen.queryAllByTestId("spots-remaining-badge").length).toBe(0);
+	});
+
+	it("uses the singular label at exactly one remaining spot", () => {
+		enableFlag();
+		renderAtTime(
+			insideWindow,
+			eventWithCategoryCapacities({
+				"5k": { spotsTotal: 100, spotsRemaining: 1 },
+				"10k": { spotsTotal: 200, spotsRemaining: 150 },
+			}),
+		);
+
+		expect(queryBadge("desktop", "5k")?.textContent).toContain(
+			"1 spot remaining",
+		);
+		expect(queryBadge("desktop", "5k")?.textContent).not.toContain("1 spots");
+	});
+
+	it("renders a destructive sold-out badge at zero remaining spots", () => {
+		enableFlag();
+		renderAtTime(
+			insideWindow,
+			eventWithCategoryCapacities({
+				"5k": { spotsTotal: 100, spotsRemaining: 0 },
+				"10k": { spotsTotal: 200, spotsRemaining: 150 },
+			}),
+		);
+
+		const badge = queryBadge("desktop", "5k");
+		expect(badge?.textContent).toContain("Sold out");
+		expect(badge?.getAttribute("data-variant")).toBe("destructive");
+	});
+
+	it("hides when the registration window closes mid-page", () => {
+		enableFlag();
+		const tenMsBeforeClose = new Date(
+			Date.parse(fixture.registrationClosesAt ?? "") - 10,
+		);
+		renderAtTime(tenMsBeforeClose);
+		expect(screen.queryAllByTestId("spots-remaining-badge").length).toBe(2);
+
+		act(() => {
+			vi.advanceTimersByTime(50);
+		});
+
+		expect(screen.queryAllByTestId("spots-remaining-badge").length).toBe(0);
+	});
+
+	it("hides after the event has ended", () => {
+		enableFlag();
+		renderAtTime(new Date("2026-08-16T00:00:00.000Z"));
+
+		expect(screen.queryAllByTestId("spots-remaining-badge").length).toBe(0);
+	});
+
+	it("hides rows with null capacity", () => {
+		enableFlag();
+		renderAtTime(
+			insideWindow,
+			eventWithCategoryCapacities({
+				"5k": null,
+				"10k": { spotsTotal: 200, spotsRemaining: 150 },
+			}),
+		);
+
+		expect(queryBadge("desktop", "5k")).toBeNull();
+		expect(screen.queryAllByTestId("spots-remaining-badge").length).toBe(0);
+	});
+
+	it("omits the Availability column when no row qualifies", () => {
+		enableFlag();
+		renderAtTime(
+			insideWindow,
+			eventWithCategoryCapacities({
+				"5k": { spotsTotal: 100, spotsRemaining: 21 },
+				"10k": { spotsTotal: 200, spotsRemaining: 150 },
+			}),
+		);
+		const breakdownTable = screen.getByRole("table", {
+			name: /race categories with distance and registration pricing/i,
+		});
+
+		expect(
+			within(breakdownTable).queryByRole("columnheader", {
+				name: "Availability",
+			}),
+		).toBeNull();
+	});
+
+	it("renders the Availability column when at least one row qualifies", () => {
+		enableFlag();
+		renderAtTime(insideWindow);
+		const breakdownTable = screen.getByRole("table", {
+			name: /race categories with distance and registration pricing/i,
+		});
+
+		expect(
+			within(breakdownTable).getByRole("columnheader", {
+				name: "Availability",
+			}),
+		).toBeTruthy();
+	});
+
+	it("sets the category slug data attribute on the desktop badge", () => {
+		enableFlag();
+		renderAtTime(insideWindow);
+
+		const matches = document.querySelectorAll(
+			'[data-testid="spots-remaining-badge"][data-surface="desktop"][data-category-slug="5k"]',
+		);
+		expect(matches.length).toBe(1);
+		expect(matches[0]?.textContent).toContain("8 spots remaining");
 	});
 });
 

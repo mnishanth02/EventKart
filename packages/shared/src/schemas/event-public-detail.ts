@@ -54,15 +54,41 @@ export type EventPublicOrganizerSummary = z.infer<
 >;
 
 /**
- * Public category projection — name, slug, distance, and ordering only.
- * Capacity (`spotsTotal`/`spotsRemaining`) is intentionally omitted; it is
- * surfaced separately by I-2.1.9.
+ * Public capacity projection for a category.
+ *
+ * Wrapped as a nullable object so future organizer-selected "unlimited"
+ * capacity can be represented as `null` without changing the contract shape.
+ * Today the API emits a non-null object for stored bounded categories.
+ */
+export const eventPublicCategoryCapacitySchema = z
+	.object({
+		spotsTotal: z.number().int().positive(),
+		spotsRemaining: z.number().int().min(0),
+	})
+	.superRefine((value, ctx) => {
+		if (value.spotsRemaining > value.spotsTotal) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "spotsRemaining must be <= spotsTotal",
+				path: ["spotsRemaining"],
+			});
+		}
+	});
+
+export type EventPublicCategoryCapacity = z.infer<
+	typeof eventPublicCategoryCapacitySchema
+>;
+
+/**
+ * Public category projection — name, slug, distance, ordering, and wrapped
+ * capacity. `capacity: null` is reserved for a future "unlimited" toggle.
  */
 export const eventPublicCategorySchema = z.object({
 	name: z.string().min(1),
 	slug: eventCategorySlugSchema,
 	distanceMeters: z.number().int().positive(),
 	sortOrder: z.number().int().min(0),
+	capacity: eventPublicCategoryCapacitySchema.nullable(),
 });
 
 export type EventPublicCategory = z.infer<typeof eventPublicCategorySchema>;

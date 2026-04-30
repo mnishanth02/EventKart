@@ -54,6 +54,7 @@ const baseFixtureInput = {
 			slug: "10k",
 			distanceMeters: 10000,
 			sortOrder: 1,
+			capacity: { spotsTotal: 200, spotsRemaining: 150 },
 		},
 	],
 	pricingTiers: [
@@ -231,12 +232,19 @@ describe("buildPublicEventJsonLd", () => {
 	it("emits one Offer per pricing tier with price as a JSON Number (paise / 100)", () => {
 		const event = buildFixture({
 			categories: [
-				{ name: "10K Open", slug: "10k", distanceMeters: 10000, sortOrder: 1 },
+				{
+					name: "10K Open",
+					slug: "10k",
+					distanceMeters: 10000,
+					sortOrder: 1,
+					capacity: { spotsTotal: 200, spotsRemaining: 150 },
+				},
 				{
 					name: "Half Marathon",
 					slug: "21k",
 					distanceMeters: 21097,
 					sortOrder: 2,
+					capacity: { spotsTotal: 300, spotsRemaining: 275 },
 				},
 			],
 			pricingTiers: [
@@ -338,9 +346,27 @@ describe("buildPublicEventJsonLd", () => {
 	it("preserves pricingTiers input order in the offers array", () => {
 		const event = buildFixture({
 			categories: [
-				{ name: "5K", slug: "5k", distanceMeters: 5000, sortOrder: 1 },
-				{ name: "10K", slug: "10k", distanceMeters: 10000, sortOrder: 2 },
-				{ name: "21K", slug: "21k", distanceMeters: 21097, sortOrder: 3 },
+				{
+					name: "5K",
+					slug: "5k",
+					distanceMeters: 5000,
+					sortOrder: 1,
+					capacity: { spotsTotal: 100, spotsRemaining: 80 },
+				},
+				{
+					name: "10K",
+					slug: "10k",
+					distanceMeters: 10000,
+					sortOrder: 2,
+					capacity: { spotsTotal: 200, spotsRemaining: 150 },
+				},
+				{
+					name: "21K",
+					slug: "21k",
+					distanceMeters: 21097,
+					sortOrder: 3,
+					capacity: { spotsTotal: 300, spotsRemaining: 250 },
+				},
 			],
 			pricingTiers: [
 				{
