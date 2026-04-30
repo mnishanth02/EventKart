@@ -101,7 +101,7 @@ describe("Queue Plugin", () => {
 		mockQueueClose.mockClear();
 		await localApp.close();
 
-		expect(mockQueueClose).toHaveBeenCalledTimes(6);
+		expect(mockQueueClose).toHaveBeenCalledTimes(7);
 	});
 
 	it("closes BullMQ connection on app close", async () => {

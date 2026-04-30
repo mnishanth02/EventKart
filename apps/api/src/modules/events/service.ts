@@ -53,6 +53,10 @@ import { invalidatePublicEventCache } from "../../lib/cache-stampede.js";
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
 import type { FastifyBaseLogger } from "fastify";
 import type { AuditLogger } from "../../lib/audit.js";
+import {
+	eventCacheUrls,
+	sitemapCacheUrls,
+} from "../../lib/cdn-invalidation.js";
 import { emitEmailStub } from "../../lib/email-stub.js";
 import {
 	AppError,
@@ -62,6 +66,11 @@ import {
 	ValidationError,
 } from "../../lib/errors.js";
 import { getOrganizerByUserId } from "../organizer/service.js";
+import {
+	type CdnPurgePayload,
+	enqueueCdnPurge,
+} from "../../queues/cdn-purge.js";
+import type { Queue } from "bullmq";
 
 export const EVENT_SLUG_RESOURCE_TYPE = "event";
 export const DEFAULT_EVENT_SLUG_MAX_ATTEMPTS = 50;
@@ -125,6 +134,18 @@ export interface EventPublishDeps {
 	 * and behaviour is unchanged from the pre-2.4.3 stub.
 	 */
 	cache?: Redis;
+	/**
+	 * Optional BullMQ queue for scheduling Cloudflare CDN cache purges
+	 * (I-2.4.2). When present alongside `cdnBaseUrl`,
+	 * `invalidateEventCache` enqueues a fail-soft purge for the event's
+	 * detail URL + `/sitemap.xml`. Fail-soft: if the queue is undefined
+	 * OR `CDN_BASE_URL` is unset, no purge is scheduled and the mutation
+	 * still succeeds. Tests typically omit both the queue and base URL
+	 * — the existing behaviour is unchanged in that branch.
+	 */
+	cdnPurgeQueue?: Queue<CdnPurgePayload>;
+	/** Absolute origin URL used to build CDN purge URLs. Required when `cdnPurgeQueue` is set. */
+	cdnBaseUrl?: string;
 }
 
 type EventRow = typeof events.$inferSelect;
@@ -198,6 +219,14 @@ export interface EventPoliciesDeps {
 	db: EventPoliciesWriteStore;
 	log: Pick<FastifyBaseLogger, "info">;
 	auditLogger?: AuditLogger;
+	/** See `EventPublishDeps.cache` (I-2.4.3). */
+	cache?: Redis;
+	/** See `EventPublishDeps.cdnPurgeQueue` (I-2.4.2). */
+	cdnPurgeQueue?: Queue<CdnPurgePayload>;
+	/** See `EventPublishDeps.cdnBaseUrl` (I-2.4.2). */
+	cdnBaseUrl?: string;
+	/** See `EventPublishDeps.sitemapRegenQueue` (I-2.4.4). */
+	sitemapRegenQueue?: Queue;
 }
 
 export type EventRegistrationFormStore = Pick<Database, "select" | "update">;
@@ -361,10 +390,13 @@ export async function requiresAdminReview(
 function invalidateEventCache(
 	deps: {
 		cache?: Redis;
+		cdnPurgeQueue?: Queue<CdnPurgePayload>;
+		cdnBaseUrl?: string;
 		log: Pick<FastifyBaseLogger, "info"> &
-			Partial<Pick<FastifyBaseLogger, "warn">>;
+			Partial<Pick<FastifyBaseLogger, "warn" | "debug">>;
 	},
-	event: Pick<Event, "slug">,
+	event: { slug: string },
+	reason = "event_mutation",
 ): void {
 	// I-2.4.3: Best-effort eviction of the origin Redis single-flight
 	// entry. Fire-and-forget — the publish/unpublish DB transaction has
@@ -383,7 +415,36 @@ function invalidateEventCache(
 			);
 		});
 	}
-	// TODO(I-2.4.2): Purge CDN/public-event cache on publish and unpublish.
+
+	// I-2.4.2: Cloudflare CDN purge. Purging is a separate concern from
+	// origin Redis eviction — the edge serves bytes that bypass our
+	// origin entirely. Enqueue the purge so the request returns fast;
+	// the worker handles retries against the rate-limited Cloudflare
+	// API. We always purge `/sitemap.xml` alongside the event URL since
+	// publish/unpublish changes the sitemap (CDN-cached separately).
+	//
+	// Fail-soft layering:
+	//   1. If `cdnPurgeQueue` is undefined → enqueueCdnPurge no-ops + debug-logs.
+	//   2. If `cdnBaseUrl` is unset → we can't build URLs; skip silently.
+	//   3. If the enqueue itself throws → enqueueCdnPurge swallows + warn-logs.
+	// The publish/unpublish mutation has already committed; nothing
+	// here is allowed to surface to the caller.
+	if (deps.cdnPurgeQueue && deps.cdnBaseUrl) {
+		const urls = [
+			...eventCacheUrls(deps.cdnBaseUrl, event.slug),
+			...sitemapCacheUrls(deps.cdnBaseUrl),
+		];
+		void enqueueCdnPurge(deps.cdnPurgeQueue, { urls, reason }, deps.log).catch(
+			(err: unknown) => {
+				// `enqueueCdnPurge` already swallows internally; this catch
+				// is defence-in-depth in case a future change makes it throw.
+				deps.log.warn?.(
+					{ err, slug: event.slug, reason },
+					"Failed to enqueue CDN purge job",
+				);
+			},
+		);
+	}
 }
 
 const PUBLISHED_HIGH_RISK_EDIT_MESSAGE =
@@ -1292,8 +1353,27 @@ export async function updateEventPolicies(
 			});
 		}
 
-		return toEventPoliciesResponse(updated);
+		return {
+			policies: toEventPoliciesResponse(updated),
+			// I-2.4.2: capture state needed for cache invalidation BEFORE
+			// the transaction returns. We must purge only when the change
+			// actually altered something AND the event was on the public
+			// CDN — so we hand back enough context to decide outside the tx.
+			wasPublished: event.status === "published",
+			slug: event.slug,
+			changedAnything: changedFields.length > 0,
+		};
 	});
+
+	// I-2.4.2: invalidate caches AFTER tx commit so a CDN purge is never
+	// scheduled for a rolled-back update. Both helpers are best-effort.
+	if (policies.wasPublished && policies.changedAnything) {
+		invalidateEventCache(
+			deps,
+			{ slug: policies.slug },
+			"event_policies_update",
+		);
+	}
 
 	deps.log.info(
 		{
@@ -1304,7 +1384,7 @@ export async function updateEventPolicies(
 		"Event policies updated",
 	);
 
-	return policies;
+	return policies.policies;
 }
 
 export async function getEventRegistrationForm(
@@ -1753,9 +1833,14 @@ export async function publishEvent(
 		});
 
 		const responseEvent = toEventResponse(updated);
-		invalidateEventCache(deps, responseEvent);
 		return { event: responseEvent, transition, readiness, organizer };
 	});
+
+	// I-2.4.2 fix: invalidate caches AFTER tx commit so a CDN purge is
+	// never scheduled for a rolled-back publish (e.g. constraint violation
+	// in a later step or audit-log failure inside the tx). Mirrors the
+	// `updateEventPolicies` and `adminRejectEvent` pattern.
+	invalidateEventCache(deps, result.event, "event_publish");
 
 	deps.log.info(
 		{
@@ -1857,12 +1942,15 @@ export async function unpublishEvent(
 		});
 
 		const responseEvent = toEventResponse(updated);
-		invalidateEventCache(deps, responseEvent);
 		return {
 			event: responseEvent,
 			transition: "published_to_draft" as const,
 		};
 	});
+
+	// I-2.4.2 fix: invalidate caches AFTER tx commit so a CDN purge is
+	// never scheduled for a rolled-back unpublish.
+	invalidateEventCache(deps, result.event, "event_unpublish");
 
 	deps.log.info(
 		{
@@ -1950,7 +2038,6 @@ export async function adminApproveEvent(
 			},
 		});
 		const responseEvent = toEventResponse(updated);
-		invalidateEventCache(deps, responseEvent);
 		return {
 			event: responseEvent,
 			transition: "under_review_to_published" as const,
@@ -1958,6 +2045,10 @@ export async function adminApproveEvent(
 			organizer,
 		};
 	});
+
+	// I-2.4.2 fix: invalidate caches AFTER tx commit so a CDN purge is
+	// never scheduled for a rolled-back admin approval.
+	invalidateEventCache(deps, result.event, "admin_approve_publish");
 
 	// Wave B: log-only email stub. Failures must NEVER break admin approval.
 	try {
@@ -2047,6 +2138,14 @@ export async function adminRejectEvent(
 			organizerEmail: organizer?.contactEmail ?? null,
 		};
 	});
+
+	// I-2.4.2: defense-in-depth purge for the rejected event. The
+	// `under_review → draft` transition usually affects an event that
+	// was never on the public CDN, BUT a re-submitted event could have
+	// been previously published — in that case a stale 200 at the edge
+	// after rejection would be misleading. Cheap to purge unconditionally
+	// (one URL + sitemap), and the worker is rate-limit aware.
+	invalidateEventCache(deps, result.event, "admin_reject_unpublish");
 
 	// Wave B: log-only email stub. Failures must NEVER break admin rejection.
 	if (result.organizerEmail) {
@@ -2289,6 +2388,10 @@ export interface UpdatePublishedEventDeps {
 	auditLogger: AuditLogger;
 	/** See `EventPublishDeps.cache` (I-2.4.3). */
 	cache?: Redis;
+	/** See `EventPublishDeps.cdnPurgeQueue` (I-2.4.2). */
+	cdnPurgeQueue?: Queue<CdnPurgePayload>;
+	/** See `EventPublishDeps.cdnBaseUrl` (I-2.4.2). */
+	cdnBaseUrl?: string;
 }
 
 /**
@@ -2419,9 +2522,12 @@ export async function updatePublishedEvent(
 		});
 
 		const responseEvent = toEventResponse(updated);
-		invalidateEventCache(deps, responseEvent);
 		return responseEvent;
 	});
+
+	// I-2.4.2 fix: invalidate caches AFTER tx commit so a CDN purge is
+	// never scheduled for a rolled-back published-event patch.
+	invalidateEventCache(deps, result, "published_event_patch");
 
 	deps.log.info(
 		{ eventId: parsedEventId, organizerId: organizer.id, userId },

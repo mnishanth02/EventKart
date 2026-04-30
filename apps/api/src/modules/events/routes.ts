@@ -196,6 +196,10 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					log: request.log,
 					auditLogger,
 					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
 				},
 				session.userId,
 				request.params.eventId,
@@ -235,6 +239,10 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					log: request.log,
 					auditLogger,
 					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
 				},
 				session.userId,
 				request.params.eventId,
@@ -456,6 +464,11 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					db: app.db,
 					log: request.log,
 					auditLogger: createAuditLogger(app.db, request.log),
+					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
 				},
 				session.userId,
 				request.params.eventId,
@@ -495,6 +508,10 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					log: request.log,
 					auditLogger: createAuditLogger(app.db, request.log),
 					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
 				},
 				session.userId,
 				request.params.eventId,
