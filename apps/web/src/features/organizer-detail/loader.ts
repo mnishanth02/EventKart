@@ -1,3 +1,4 @@
+import type { EventPublicCard } from "@repo/shared/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 import { notFound, redirect } from "@tanstack/react-router";
 import { ORGANIZER_DETAIL_CACHE_CONTROL } from "./cache-headers";
@@ -6,12 +7,20 @@ import type {
 	OrganizerPublicLookupResponse,
 	OrganizerPublicProfile,
 } from "./types";
+import { organizerUpcomingEventsQueryOptions } from "./upcoming-events-queries";
 
 export interface ResolvePublicOrganizerLoaderArgs {
 	slug: string;
 	queryClient: QueryClient;
 	setResponseHeaders?: (headers: Headers) => void | Promise<void>;
 }
+
+export interface PublicOrganizerLoaderData {
+	profile: OrganizerPublicProfile;
+	events: EventPublicCard[];
+}
+
+const UPCOMING_EVENTS_LIMIT = 12;
 
 /**
  * Loader for the public organizer profile route.
@@ -26,6 +35,12 @@ export interface ResolvePublicOrganizerLoaderArgs {
  *  - 404 from the API → throws a TanStack `notFound()` so the route
  *    error/notFound boundary can render the standard 404 surface.
  *
+ * After the profile resolves successfully (i.e. neither redirect nor
+ * notFound), prefetches the organizer's upcoming events list (I-2.3.2)
+ * via `ensureQueryData`. If that fetch fails for any reason the error
+ * is intentionally swallowed and an empty `events` array is returned —
+ * a transient backend failure must not 500 the whole organizer page.
+ *
  * Mirrors `resolvePublicEventLoader` so behavior is consistent across
  * the two SSR-cached public routes.
  */
@@ -33,7 +48,7 @@ export async function resolvePublicOrganizerLoader({
 	slug,
 	queryClient,
 	setResponseHeaders,
-}: ResolvePublicOrganizerLoaderArgs): Promise<OrganizerPublicProfile> {
+}: ResolvePublicOrganizerLoaderArgs): Promise<PublicOrganizerLoaderData> {
 	let payload: OrganizerPublicLookupResponse;
 	try {
 		payload = await queryClient.ensureQueryData(
@@ -55,13 +70,40 @@ export async function resolvePublicOrganizerLoader({
 		});
 	}
 
+	const profile = payload.data;
+
+	const events = await fetchUpcomingEventsResilient(queryClient, profile.slug);
+
 	if (setResponseHeaders) {
 		await setResponseHeaders(
 			new Headers({ "Cache-Control": ORGANIZER_DETAIL_CACHE_CONTROL }),
 		);
 	}
 
-	return payload.data;
+	return { profile, events };
+}
+
+async function fetchUpcomingEventsResilient(
+	queryClient: QueryClient,
+	organizerSlug: string,
+): Promise<EventPublicCard[]> {
+	try {
+		const envelope = await queryClient.ensureQueryData(
+			organizerUpcomingEventsQueryOptions({
+				organizerSlug,
+				page: 1,
+				limit: UPCOMING_EVENTS_LIMIT,
+				sort: "startAtAsc",
+			}),
+		);
+		return envelope.data;
+	} catch (error) {
+		console.warn(
+			"[organizer-detail] upcoming events fetch failed; rendering empty list",
+			error,
+		);
+		return [];
+	}
 }
 
 function hasStatus(error: unknown, status: number): boolean {

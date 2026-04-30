@@ -1,12 +1,59 @@
-import { organizerPublicProfileSchema } from "@repo/shared/schemas";
+import {
+	type EventPublicCard,
+	eventPublicCardSchema,
+	organizerPublicProfileSchema,
+} from "@repo/shared/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 import { isNotFound, isRedirect } from "@tanstack/react-router";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolvePublicOrganizerLoader } from "#/features/organizer-detail/loader";
 import type {
 	OrganizerPublicLookupResponse,
 	OrganizerPublicProfile,
 } from "#/features/organizer-detail/types";
+import type { UpcomingEventsApiEnvelope } from "#/features/organizer-detail/upcoming-events-api.server";
+
+vi.mock("@number-flow/react", () => ({
+	default: ({ value }: { value: number }) => (
+		<span data-testid="number-flow">₹{value.toLocaleString("en-IN")}</span>
+	),
+}));
+
+vi.mock("@tanstack/react-router", async () => {
+	const actual =
+		await vi.importActual<typeof import("@tanstack/react-router")>(
+			"@tanstack/react-router",
+		);
+	return {
+		...actual,
+		Link: ({
+			children,
+			to,
+			params,
+			...rest
+		}: {
+			children: ReactNode;
+			to: string;
+			params?: Record<string, string>;
+		} & Record<string, unknown>) => {
+			let href = to;
+			if (params) {
+				for (const [key, value] of Object.entries(params)) {
+					href = href.replace(`$${key}`, String(value));
+				}
+			}
+			return (
+				<a href={href} {...rest}>
+					{children}
+				</a>
+			);
+		},
+	};
+});
+
+import { OrganizerDetailView } from "#/routes/_public/organizers/$slug";
 
 const profileInput = {
 	slug: "race-coimbatore",
@@ -19,18 +66,87 @@ const profileInput = {
 const profile: OrganizerPublicProfile =
 	organizerPublicProfileSchema.parse(profileInput);
 
+const emptyEventsEnvelope: UpcomingEventsApiEnvelope = {
+	success: true,
+	data: [],
+	meta: {
+		page: 1,
+		limit: 12,
+		total: 0,
+		totalPages: 0,
+		hasNext: false,
+		hasPrev: false,
+	},
+};
+
+interface QueryFn {
+	queryKey: ReadonlyArray<unknown>;
+}
+
 function queryClientReturning(
 	payload: OrganizerPublicLookupResponse,
 ): QueryClient {
 	return {
-		ensureQueryData: vi.fn().mockResolvedValue(payload),
+		ensureQueryData: vi.fn(async (options: QueryFn) => {
+			const head = options.queryKey[0];
+			if (head === "organizer-detail") return payload;
+			if (head === "organizer-upcoming-events") return emptyEventsEnvelope;
+			throw new Error(`Unexpected query key: ${String(head)}`);
+		}),
 	} as unknown as QueryClient;
 }
 
 function queryClientRejecting(error: unknown): QueryClient {
 	return {
-		ensureQueryData: vi.fn().mockRejectedValue(error),
+		ensureQueryData: vi.fn(async (options: QueryFn) => {
+			const head = options.queryKey[0];
+			if (head === "organizer-detail") throw error;
+			if (head === "organizer-upcoming-events") return emptyEventsEnvelope;
+			throw new Error(`Unexpected query key: ${String(head)}`);
+		}),
 	} as unknown as QueryClient;
+}
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+	warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+
+afterEach(() => {
+	warnSpy.mockRestore();
+	cleanup();
+});
+
+function eventFixture(
+	overrides: Record<string, unknown> = {},
+): EventPublicCard {
+	return eventPublicCardSchema.parse({
+		slug: "coimbatore-city-10k",
+		title: "Coimbatore City 10K",
+		startAt: "2026-08-15T00:30:00.000Z",
+		endAt: "2026-08-15T03:30:00.000Z",
+		timezone: "Asia/Kolkata",
+		city: "Coimbatore",
+		venueName: "Race Course Grounds",
+		registrationOpensAt: "2026-07-01T03:30:00.000Z",
+		registrationClosesAt: "2026-08-14T12:30:00.000Z",
+		isPaid: true,
+		heroImage: null,
+		categories: [
+			{ name: "10K", slug: "10k", distanceMeters: 10000, capacity: null },
+		],
+		pricingTiers: [
+			{
+				categorySlug: "10k",
+				basePrice: 129900,
+				earlyBirdPrice: null,
+				earlyBirdDeadline: null,
+				currency: "INR",
+			},
+		],
+		...overrides,
+	});
 }
 
 describe("/_public/organizers/$slug — resolvePublicOrganizerLoader", () => {
@@ -43,7 +159,8 @@ describe("/_public/organizers/$slug — resolvePublicOrganizerLoader", () => {
 			setResponseHeaders,
 		});
 
-		expect(result).toBe(profile);
+		expect(result.profile).toBe(profile);
+		expect(result.events).toEqual([]);
 		expect(setResponseHeaders).toHaveBeenCalledOnce();
 		const headers = setResponseHeaders.mock.calls[0]?.[0] as Headers;
 		expect(headers.get("Cache-Control")).toBe(
@@ -103,12 +220,13 @@ describe("/_public/organizers/$slug — resolvePublicOrganizerLoader", () => {
 	});
 
 	it("does not set headers when no SSR header sink is passed (CSR navigation path)", async () => {
-		await expect(
-			resolvePublicOrganizerLoader({
-				slug: profile.slug,
-				queryClient: queryClientReturning({ kind: "organizer", data: profile }),
-			}),
-		).resolves.toBe(profile);
+		const result = await resolvePublicOrganizerLoader({
+			slug: profile.slug,
+			queryClient: queryClientReturning({ kind: "organizer", data: profile }),
+		});
+
+		expect(result.profile).toBe(profile);
+		expect(result.events).toEqual([]);
 	});
 
 	it("rejects malformed slugs at the createServerFn validator boundary", async () => {
@@ -121,5 +239,39 @@ describe("/_public/organizers/$slug — resolvePublicOrganizerLoader", () => {
 		expect(() => organizerSlugSchema.parse("UPPER")).toThrow();
 		expect(() => organizerSlugSchema.parse("")).toThrow();
 		expect(() => organizerSlugSchema.parse("race-coimbatore")).not.toThrow();
+	});
+});
+
+describe("/_public/organizers/$slug — OrganizerDetailView", () => {
+	it("renders the profile and the upcoming events section with one card per event", () => {
+		const events = [
+			eventFixture(),
+			eventFixture({
+				slug: "coimbatore-half-marathon",
+				title: "Coimbatore Half Marathon",
+			}),
+		];
+
+		render(<OrganizerDetailView profile={profile} events={events} />);
+
+		expect(screen.getByText("Race Coimbatore Collective")).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { level: 2, name: "Upcoming events" }),
+		).toBeTruthy();
+		expect(screen.getByText("Coimbatore City 10K")).toBeTruthy();
+		expect(screen.getByText("Coimbatore Half Marathon")).toBeTruthy();
+		expect(
+			screen.queryByText(/has no upcoming events listed yet\./),
+		).toBeNull();
+	});
+
+	it("renders the empty-state copy with the organizer name when no events are present", () => {
+		render(<OrganizerDetailView profile={profile} events={[]} />);
+
+		expect(
+			screen.getByText(
+				"Race Coimbatore Collective has no upcoming events listed yet.",
+			),
+		).toBeTruthy();
 	});
 });

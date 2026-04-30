@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { setOrganizerDetailCacheHeaders } from "#/features/organizer-detail/cache-headers";
 import { PublicOrganizerProfile } from "#/features/organizer-detail/components/PublicOrganizerProfile";
-import { resolvePublicOrganizerLoader } from "#/features/organizer-detail/loader";
+import { UpcomingEventsSection } from "#/features/organizer-detail/components/upcoming-events-section";
+import {
+	type PublicOrganizerLoaderData,
+	resolvePublicOrganizerLoader,
+} from "#/features/organizer-detail/loader";
 import { buildOrganizerDetailHead } from "#/features/organizer-detail/seo";
-import type { OrganizerPublicProfile } from "#/features/organizer-detail/types";
 import { publicEnv } from "#/lib/env/public";
 
 /**
@@ -30,9 +33,9 @@ export const Route = createFileRoute("/_public/organizers/$slug")({
 			setResponseHeaders: setOrganizerDetailCacheHeaders,
 		}),
 	head: ({ loaderData }) => {
-		const profile = loaderData as OrganizerPublicProfile | undefined;
-		if (!profile) return {};
-		return buildOrganizerDetailHead(profile, {
+		const data = loaderData as PublicOrganizerLoaderData | undefined;
+		if (!data) return {};
+		return buildOrganizerDetailHead(data.profile, {
 			siteUrl: publicEnv.VITE_SITE_URL,
 		});
 	},
@@ -40,6 +43,30 @@ export const Route = createFileRoute("/_public/organizers/$slug")({
 });
 
 function OrganizerDetailRouteComponent() {
-	const profile = Route.useLoaderData() as OrganizerPublicProfile;
-	return <PublicOrganizerProfile profile={profile} />;
+	const { profile, events } =
+		Route.useLoaderData() as PublicOrganizerLoaderData;
+	return <OrganizerDetailView profile={profile} events={events} />;
+}
+
+/**
+ * Pure view for the organizer detail route. Split out from the route
+ * `component` so it can be unit-tested without mocking the router's
+ * loader-data hooks. Stacks the profile card and the upcoming events
+ * section vertically inside the shared profile container.
+ */
+export function OrganizerDetailView({
+	profile,
+	events,
+}: PublicOrganizerLoaderData) {
+	return (
+		<>
+			<PublicOrganizerProfile profile={profile} />
+			<div className="mx-auto w-full max-w-3xl px-4 pb-12 sm:px-6 lg:px-8">
+				<UpcomingEventsSection
+					events={events}
+					organizerName={profile.businessName}
+				/>
+			</div>
+		</>
+	);
 }

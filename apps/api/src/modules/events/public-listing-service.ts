@@ -4,11 +4,13 @@ import {
 	eventImages,
 	eventPricingTiers,
 	events,
+	organizers,
 } from "@repo/db/schema";
 import {
 	type EventPublicCard,
 	eventPublicCardSchema,
 	type OffsetPaginationMeta,
+	type OrganizerSlug,
 } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
 import type { StorageClient } from "../../lib/storage.js";
@@ -40,6 +42,7 @@ export interface PublicEventListingParams {
 	limit: number;
 	sort: "startAtAsc" | "startAtDesc";
 	now: Date;
+	organizerSlug?: OrganizerSlug;
 }
 
 export interface PublicEventListingResult {
@@ -107,10 +110,16 @@ async function selectListingRows(
 	deps: PublicEventListingDeps,
 	params: PublicEventListingParams,
 ) {
-	const condition = and(
+	const baseConditions = [
 		eq(events.status, "published"),
 		sql`${events.endAt} > ${params.now}`,
-	);
+	];
+	if (params.organizerSlug !== undefined) {
+		baseConditions.push(
+			sql`${events.organizerId} IN (SELECT ${organizers.id} FROM ${organizers} WHERE ${organizers.slug} = ${params.organizerSlug})`,
+		);
+	}
+	const condition = and(...baseConditions);
 	const offset = (params.page - 1) * params.limit;
 	const orderBy =
 		params.sort === "startAtDesc"
