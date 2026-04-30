@@ -141,6 +141,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 					log: request.log,
 					auditLogger,
 					cache: app.redis.cache,
+					sitemapRegenQueue: app.queues.sitemapRegen,
 				},
 				request.params.eventId,
 				session.userId,
@@ -176,7 +177,12 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 				throw new UnauthorizedError();
 			}
 			const result = await rejectEventReview(
-				{ db: app.db, log: request.log, auditLogger },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger,
+					sitemapRegenQueue: app.queues.sitemapRegen,
+				},
 				request.params.eventId,
 				session.userId,
 				request.body.reason,

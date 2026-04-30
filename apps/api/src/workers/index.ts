@@ -1,6 +1,13 @@
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
+import { createDatabase } from "@repo/db";
+import type { FastifyBaseLogger } from "fastify";
 import { createDLQHandler, QUEUE_NAMES } from "../lib/queue.js";
+import { createRedisClient, REDIS_NAMESPACES } from "../lib/redis.js";
+import {
+	createSitemapRegenWorker,
+	type SitemapRegenWorkerDeps,
+} from "../queues/sitemap-regen.js";
 import { createCleanupWorker } from "./cleanup.js";
 import { createEmailWorker } from "./email.js";
 import { createExportsWorker } from "./exports.js";
@@ -26,6 +33,7 @@ function getRequiredEnv(name: string): string {
 export async function startWorkers(
 	redisUrl?: string,
 	razorpayDeps?: RazorpayAccountWorkerDeps,
+	sitemapDeps?: SitemapRegenWorkerDeps,
 ) {
 	const url = redisUrl ?? getRequiredEnv("REDIS_URL");
 
@@ -46,6 +54,13 @@ export async function startWorkers(
 		...(razorpayDeps
 			? [createRazorpayAccountWorker(connection, dlqHandler, razorpayDeps)]
 			: []),
+		// I-2.4.4: sitemap regen worker. Optional like razorpay — the
+		// production direct-run entrypoint below builds and passes
+		// `sitemapDeps`; tests can omit deps to keep the worker stack
+		// minimal.
+		...(sitemapDeps
+			? [createSitemapRegenWorker(connection, dlqHandler, sitemapDeps)]
+			: []),
 	];
 
 	// Graceful shutdown
@@ -64,13 +79,56 @@ export async function startWorkers(
 	return { workers, connection, failedJobsQueue };
 }
 
+/**
+ * I-2.4.4: build production sitemap regen worker deps from the
+ * environment. Mirrors what `app.ts` wires for the API process: a DB
+ * client (DATABASE_URL), a namespaced cache Redis client (the same
+ * `cache:` prefix the route reads from), a logger, and the optional
+ * CDN host. Kept here (not in `startWorkers`) so test callers that
+ * pass their own `sitemapDeps` aren't forced to construct DB/Redis.
+ */
+function buildProductionSitemapDeps(): SitemapRegenWorkerDeps {
+	const databaseUrl = getRequiredEnv("DATABASE_URL");
+	const redisUrl = getRequiredEnv("REDIS_URL");
+	// Mirror the console-shim pattern other workers use
+	// (see workers/email.ts) — keeps deps light and avoids dragging
+	// in a full pino instance into the worker entrypoint.
+	const log = {
+		info: console.info,
+		warn: console.warn,
+		error: console.error,
+	} as unknown as FastifyBaseLogger;
+	const db = createDatabase(databaseUrl);
+	const cache = createRedisClient(redisUrl, {
+		keyPrefix: REDIS_NAMESPACES.cache,
+	});
+	const cdnBaseUrl = process.env.CDN_BASE_URL;
+	return {
+		db,
+		cache,
+		log,
+		...(cdnBaseUrl !== undefined ? { cdnBaseUrl } : {}),
+	};
+}
+
 // Auto-start when run directly as entrypoint
 const isDirectRun =
 	import.meta.url === `file://${process.argv[1]}` ||
 	process.argv[1]?.endsWith("workers/index.ts");
 
 if (isDirectRun) {
-	startWorkers().catch((error) => {
+	const sitemapDeps = (() => {
+		try {
+			return buildProductionSitemapDeps();
+		} catch (err) {
+			console.warn(
+				"Sitemap regen worker disabled — failed to build deps:",
+				err,
+			);
+			return undefined;
+		}
+	})();
+	startWorkers(undefined, undefined, sitemapDeps).catch((error) => {
 		console.error("Failed to start workers:", error);
 		process.exit(1);
 	});

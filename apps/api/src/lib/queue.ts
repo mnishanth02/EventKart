@@ -9,6 +9,8 @@ export const QUEUE_NAMES = {
 	exports: "exports",
 	failedJobs: "failed-jobs",
 	razorpayAccount: "razorpay-account",
+	// I-2.4.4: nightly + on-publish sitemap.xml regeneration.
+	sitemapRegen: "sitemap-regen",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -70,6 +72,25 @@ export const QUEUE_CONFIGS: Record<
 			removeOnFail: { count: 5000 },
 		},
 	},
+	[QUEUE_NAMES.sitemapRegen]: {
+		// I-2.4.4: Concurrency 1 — only one regen at a time. Multiple
+		// regens in flight would race on the SETEX of
+		// `cache:sitemap:current` and waste DB cycles producing identical
+		// XML.
+		concurrency: 1,
+		defaultJobOptions: {
+			attempts: 2,
+			backoff: { type: "exponential" as const, delay: 5000 },
+			// Remove completed jobs IMMEDIATELY (not after N kept). The
+			// ad-hoc enqueue path uses a fixed `jobId` for debounce; if
+			// completed jobs are retained, BullMQ's "duplicate jobId
+			// rejects new add()" semantics would silently suppress all
+			// future ad-hoc enqueues until the retained job is GC'd.
+			// Failed jobs DO stay (count: 200) so DLQ + ops have history.
+			removeOnComplete: true,
+			removeOnFail: { count: 200 },
+		},
+	},
 };
 
 // Typed queue container
@@ -80,6 +101,7 @@ export interface AppQueues {
 	exports: Queue;
 	failedJobs: Queue;
 	razorpayAccount: Queue;
+	sitemapRegen: Queue;
 }
 
 // Factory: creates all queue instances
@@ -102,6 +124,10 @@ export function createQueues(connection: Redis): AppQueues {
 			QUEUE_NAMES.razorpayAccount,
 			opts(QUEUE_NAMES.razorpayAccount),
 		),
+		sitemapRegen: new Queue(
+			QUEUE_NAMES.sitemapRegen,
+			opts(QUEUE_NAMES.sitemapRegen),
+		),
 	};
 }
 
@@ -114,6 +140,7 @@ export async function closeQueues(queues: AppQueues): Promise<void> {
 		queues.exports.close(),
 		queues.failedJobs.close(),
 		queues.razorpayAccount.close(),
+		queues.sitemapRegen.close(),
 	]);
 }
 

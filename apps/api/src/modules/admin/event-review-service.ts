@@ -3,6 +3,7 @@ import { and, eq, inArray, sql } from "@repo/db";
 import { events, organizers } from "@repo/db/schema";
 import type { AdminEventReviewListParams, Event } from "@repo/shared/schemas";
 import { eventSchema } from "@repo/shared/schemas";
+import type { Queue } from "bullmq";
 import type { FastifyBaseLogger } from "fastify";
 import type { Redis } from "ioredis";
 import type { AuditLogger } from "../../lib/audit.js";
@@ -24,6 +25,14 @@ interface AdminEventReviewDeps {
 	 * and therefore does not need cache.
 	 */
 	cache?: Redis;
+	/**
+	 * I-2.4.4: Sitemap regen queue. Spread through to
+	 * `adminApproveEvent` (and `adminRejectEvent` for symmetry — a
+	 * reject of a draft event has no sitemap impact, but the queue
+	 * is harmless if `invalidateEventCache` doesn't fire on the
+	 * non-publish path).
+	 */
+	sitemapRegenQueue?: Queue;
 }
 
 function eventDate(value: Date | null): string | null {

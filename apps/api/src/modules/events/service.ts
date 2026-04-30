@@ -48,6 +48,7 @@ import {
 	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
+import type { Queue } from "bullmq";
 import type { Redis } from "ioredis";
 import { invalidatePublicEventCache } from "../../lib/cache-stampede.js";
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
@@ -61,6 +62,7 @@ import {
 	NotFoundError,
 	ValidationError,
 } from "../../lib/errors.js";
+import { enqueueSitemapRegen } from "../../queues/sitemap-regen.js";
 import { getOrganizerByUserId } from "../organizer/service.js";
 
 export const EVENT_SLUG_RESOURCE_TYPE = "event";
@@ -125,6 +127,14 @@ export interface EventPublishDeps {
 	 * and behaviour is unchanged from the pre-2.4.3 stub.
 	 */
 	cache?: Redis;
+	/**
+	 * I-2.4.4: Optional sitemap regen queue. When present,
+	 * `invalidateEventCache` enqueues a debounced regen so the public
+	 * `/sitemap.xml` reflects the publish/unpublish/admin-approve
+	 * within ~one cron tick. Tests omit safely — enqueue becomes a
+	 * no-op when undefined.
+	 */
+	sitemapRegenQueue?: Queue;
 }
 
 type EventRow = typeof events.$inferSelect;
@@ -198,6 +208,10 @@ export interface EventPoliciesDeps {
 	db: EventPoliciesWriteStore;
 	log: Pick<FastifyBaseLogger, "info">;
 	auditLogger?: AuditLogger;
+	/** I-2.4.4: see `EventPublishDeps.sitemapRegenQueue`. */
+	sitemapRegenQueue?: Queue;
+	/** See `EventPublishDeps.cache` (I-2.4.3). */
+	cache?: Redis;
 }
 
 export type EventRegistrationFormStore = Pick<Database, "select" | "update">;
@@ -361,6 +375,7 @@ export async function requiresAdminReview(
 function invalidateEventCache(
 	deps: {
 		cache?: Redis;
+		sitemapRegenQueue?: Queue;
 		log: Pick<FastifyBaseLogger, "info"> &
 			Partial<Pick<FastifyBaseLogger, "warn">>;
 	},
@@ -380,6 +395,22 @@ function invalidateEventCache(
 			deps.log.warn?.(
 				{ err, slug: event.slug },
 				"Failed to invalidate public event cache",
+			);
+		});
+	}
+	// I-2.4.4: Enqueue a debounced sitemap regen. The shared `jobId`
+	// inside `enqueueSitemapRegen` coalesces a burst of publish toggles
+	// into one job. `enqueueSitemapRegen` no-ops when the queue is
+	// undefined (tests, partial wiring). Errors must never bubble —
+	// the publish/unpublish has already committed.
+	const enqueueResult = enqueueSitemapRegen(deps.sitemapRegenQueue, {
+		reason: "event_publish_state_changed",
+	});
+	if (enqueueResult) {
+		enqueueResult.catch((err: unknown) => {
+			deps.log.warn?.(
+				{ err, slug: event.slug },
+				"Failed to enqueue sitemap regen after event mutation",
 			);
 		});
 	}
@@ -1292,8 +1323,29 @@ export async function updateEventPolicies(
 			});
 		}
 
-		return toEventPoliciesResponse(updated);
+		return {
+			response: toEventPoliciesResponse(updated),
+			// Cache invalidation must happen OUTSIDE the transaction (and
+			// only when the row was published + something actually
+			// changed). Capture the slug here while we still hold the
+			// row read. `event.slug` is branded `EventSlug` in the Event
+			// type but the raw DB column is plain string; cast through
+			// `Event["slug"]` so we don't redundantly re-validate.
+			cacheInvalidate:
+				event.status === "published" && changedFields.length > 0
+					? { slug: event.slug as Event["slug"] }
+					: null,
+		};
 	});
+
+	// I-2.4.4 + I-2.4.3: A published-event policy change advances
+	// `events.updatedAt` (the sitemap `<lastmod>` source) AND mutates a
+	// field that's part of the public projection. Fire the same
+	// invalidate-and-enqueue path used by publish/unpublish. No-op for
+	// draft edits (no public surface, nothing in the sitemap).
+	if (policies.cacheInvalidate) {
+		invalidateEventCache(deps, policies.cacheInvalidate);
+	}
 
 	deps.log.info(
 		{
@@ -1304,7 +1356,7 @@ export async function updateEventPolicies(
 		"Event policies updated",
 	);
 
-	return policies;
+	return policies.response;
 }
 
 export async function getEventRegistrationForm(
@@ -2289,6 +2341,8 @@ export interface UpdatePublishedEventDeps {
 	auditLogger: AuditLogger;
 	/** See `EventPublishDeps.cache` (I-2.4.3). */
 	cache?: Redis;
+	/** I-2.4.4: see `EventPublishDeps.sitemapRegenQueue`. */
+	sitemapRegenQueue?: Queue;
 }
 
 /**
