@@ -1,4 +1,4 @@
-import { and, type Database, desc, eq, inArray, sql } from "@repo/db";
+import { and, type Database, desc, eq, inArray, type SQL, sql } from "@repo/db";
 import {
 	eventCategories,
 	eventImages,
@@ -42,6 +42,7 @@ export interface PublicEventListingParams {
 	limit: number;
 	sort: "startAtAsc" | "startAtDesc";
 	now: Date;
+	timeWindow: "upcoming" | "past";
 	organizerSlug?: OrganizerSlug;
 }
 
@@ -110,10 +111,14 @@ async function selectListingRows(
 	deps: PublicEventListingDeps,
 	params: PublicEventListingParams,
 ) {
-	const baseConditions = [
-		eq(events.status, "published"),
-		sql`${events.endAt} > ${params.now}`,
-	];
+	const baseConditions: SQL[] = [];
+	if (params.timeWindow === "past") {
+		baseConditions.push(inArray(events.status, ["published", "completed"]));
+		baseConditions.push(sql`${events.endAt} <= ${params.now}`);
+	} else {
+		baseConditions.push(eq(events.status, "published"));
+		baseConditions.push(sql`${events.endAt} > ${params.now}`);
+	}
 	if (params.organizerSlug !== undefined) {
 		baseConditions.push(
 			sql`${events.organizerId} IN (SELECT ${organizers.id} FROM ${organizers} WHERE ${organizers.slug} = ${params.organizerSlug})`,

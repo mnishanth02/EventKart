@@ -707,6 +707,7 @@ describe("GET /api/v1/events/public", () => {
 		"limit=999",
 		"sort=hax",
 		"organizerSlug=@bad!",
+		"timeWindow=tomorrow",
 	])("returns 400 for invalid query %s", async (query) => {
 		const response = await app.inject({
 			method: "GET",
@@ -772,6 +773,32 @@ describe("GET /api/v1/events/public", () => {
 			{ organizerSlug: string },
 		];
 		expect(params.organizerSlug).toBe("acme-runners");
+	});
+
+	it("forwards timeWindow=past to the service when provided", async () => {
+		mockListPublicEvents.mockResolvedValue({
+			data: [],
+			meta: {
+				page: 1,
+				limit: 20,
+				total: 0,
+				totalPages: 0,
+				hasNext: false,
+				hasPrev: false,
+			},
+		});
+
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/public?timeWindow=past`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		const [_deps, params] = mockListPublicEvents.mock.calls[0] as [
+			unknown,
+			{ timeWindow: string },
+		];
+		expect(params.timeWindow).toBe("past");
 	});
 });
 

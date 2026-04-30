@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { setOrganizerDetailCacheHeaders } from "#/features/organizer-detail/cache-headers";
+import { PastEventsSection } from "#/features/organizer-detail/components/past-events-section";
 import { PublicOrganizerProfile } from "#/features/organizer-detail/components/PublicOrganizerProfile";
 import { UpcomingEventsSection } from "#/features/organizer-detail/components/upcoming-events-section";
 import {
@@ -43,27 +44,39 @@ export const Route = createFileRoute("/_public/organizers/$slug")({
 });
 
 function OrganizerDetailRouteComponent() {
-	const { profile, events } =
+	const { profile, upcomingEvents, pastEvents } =
 		Route.useLoaderData() as PublicOrganizerLoaderData;
-	return <OrganizerDetailView profile={profile} events={events} />;
+	return (
+		<OrganizerDetailView
+			profile={profile}
+			upcomingEvents={upcomingEvents}
+			pastEvents={pastEvents}
+		/>
+	);
 }
 
 /**
  * Pure view for the organizer detail route. Split out from the route
  * `component` so it can be unit-tested without mocking the router's
- * loader-data hooks. Stacks the profile card and the upcoming events
- * section vertically inside the shared profile container.
+ * loader-data hooks. Stacks the profile card, upcoming events section,
+ * and past events section vertically inside the shared profile
+ * container, with `space-y-12` matching event-detail spacing rhythm.
  */
 export function OrganizerDetailView({
 	profile,
-	events,
+	upcomingEvents,
+	pastEvents,
 }: PublicOrganizerLoaderData) {
 	return (
 		<>
 			<PublicOrganizerProfile profile={profile} />
-			<div className="mx-auto w-full max-w-3xl px-4 pb-12 sm:px-6 lg:px-8">
+			<div className="mx-auto w-full max-w-3xl space-y-12 px-4 pb-12 sm:px-6 lg:px-8">
 				<UpcomingEventsSection
-					events={events}
+					events={upcomingEvents}
+					organizerName={profile.businessName}
+				/>
+				<PastEventsSection
+					events={pastEvents}
 					organizerName={profile.businessName}
 				/>
 			</div>

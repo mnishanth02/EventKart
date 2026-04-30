@@ -7,6 +7,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { isNotFound, isRedirect } from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolvePublicOrganizerLoader } from "./loader";
+import type { PastEventsApiEnvelope } from "./past-events-api.server";
 import type {
 	OrganizerPublicLookupResponse,
 	OrganizerPublicProfile,
@@ -52,7 +53,20 @@ function eventFixture(
 	});
 }
 
-const emptyEventsEnvelope: UpcomingEventsApiEnvelope = {
+const emptyUpcomingEnvelope: UpcomingEventsApiEnvelope = {
+	success: true,
+	data: [],
+	meta: {
+		page: 1,
+		limit: 12,
+		total: 0,
+		totalPages: 0,
+		hasNext: false,
+		hasPrev: false,
+	},
+};
+
+const emptyPastEnvelope: PastEventsApiEnvelope = {
 	success: true,
 	data: [],
 	meta: {
@@ -70,25 +84,45 @@ interface QueryFn {
 	queryFn: () => Promise<unknown>;
 }
 
-function makeQueryClient(handlers: {
+interface MakeQueryClientHandlers {
 	profile: () => Promise<OrganizerPublicLookupResponse>;
-	events?: () => Promise<UpcomingEventsApiEnvelope>;
-}): { client: QueryClient; ensureQueryData: ReturnType<typeof vi.fn> } {
+	upcoming?: () => Promise<UpcomingEventsApiEnvelope>;
+	past?: () => Promise<PastEventsApiEnvelope>;
+}
+
+function makeQueryClient(handlers: MakeQueryClientHandlers): {
+	client: QueryClient;
+	ensureQueryData: ReturnType<typeof vi.fn>;
+	upcomingHandler: ReturnType<typeof vi.fn>;
+	pastHandler: ReturnType<typeof vi.fn>;
+} {
+	const upcomingHandler = vi.fn(async () => {
+		if (!handlers.upcoming) {
+			throw new Error("upcoming handler not configured");
+		}
+		return handlers.upcoming();
+	});
+	const pastHandler = vi.fn(async () => {
+		if (!handlers.past) {
+			throw new Error("past handler not configured");
+		}
+		return handlers.past();
+	});
 	const ensureQueryData = vi.fn(async (options: QueryFn) => {
 		const head = options.queryKey[0];
 		if (head === "organizer-detail") {
 			return handlers.profile();
 		}
 		if (head === "organizer-upcoming-events") {
-			if (!handlers.events) {
-				throw new Error("events handler not configured");
-			}
-			return handlers.events();
+			return upcomingHandler();
+		}
+		if (head === "organizer-past-events") {
+			return pastHandler();
 		}
 		throw new Error(`Unexpected query key: ${String(head)}`);
 	});
 	const client = { ensureQueryData } as unknown as QueryClient;
-	return { client, ensureQueryData };
+	return { client, ensureQueryData, upcomingHandler, pastHandler };
 }
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -102,17 +136,26 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe("resolvePublicOrganizerLoader (I-2.3.2 — events prefetch)", () => {
-	it("returns { profile, events } on the happy path", async () => {
-		const events = [eventFixture()];
-		const { client, ensureQueryData } = makeQueryClient({
-			profile: async () => ({ kind: "organizer", data: profile }),
-			events: async () => ({
-				success: true,
-				data: events,
-				meta: { ...emptyEventsEnvelope.meta, total: 1, totalPages: 1 },
-			}),
-		});
+describe("resolvePublicOrganizerLoader (I-2.3.2 + I-2.3.3 — events prefetch)", () => {
+	it("returns { profile, upcomingEvents, pastEvents } on the happy path with both lists populated", async () => {
+		const upcoming = [eventFixture()];
+		const past = [
+			eventFixture({ slug: "coimbatore-2024", title: "Coimbatore 2024" }),
+		];
+		const { client, ensureQueryData, upcomingHandler, pastHandler } =
+			makeQueryClient({
+				profile: async () => ({ kind: "organizer", data: profile }),
+				upcoming: async () => ({
+					success: true,
+					data: upcoming,
+					meta: { ...emptyUpcomingEnvelope.meta, total: 1, totalPages: 1 },
+				}),
+				past: async () => ({
+					success: true,
+					data: past,
+					meta: { ...emptyPastEnvelope.meta, total: 1, totalPages: 1 },
+				}),
+			});
 
 		const result = await resolvePublicOrganizerLoader({
 			slug: profile.slug,
@@ -120,16 +163,25 @@ describe("resolvePublicOrganizerLoader (I-2.3.2 — events prefetch)", () => {
 		});
 
 		expect(result.profile).toBe(profile);
-		expect(result.events).toEqual(events);
-		expect(ensureQueryData).toHaveBeenCalledTimes(2);
+		expect(result.upcomingEvents).toEqual(upcoming);
+		expect(result.pastEvents).toEqual(past);
+		expect(ensureQueryData).toHaveBeenCalledTimes(3);
+		expect(upcomingHandler).toHaveBeenCalledOnce();
+		expect(pastHandler).toHaveBeenCalledOnce();
+		// Profile is dispatched first.
 		expect(ensureQueryData.mock.calls[0]?.[0]).toEqual(
 			expect.objectContaining({
 				queryKey: ["organizer-detail", "by-slug", profile.slug],
 			}),
 		);
-		expect(ensureQueryData.mock.calls[1]?.[0]).toEqual(
-			expect.objectContaining({
-				queryKey: [
+		// Both events queries are dispatched after the profile (order
+		// within Promise.all is not guaranteed, so assert on the set).
+		const eventQueryKeys = ensureQueryData.mock.calls
+			.slice(1)
+			.map((call) => (call[0] as QueryFn).queryKey);
+		expect(eventQueryKeys).toEqual(
+			expect.arrayContaining([
+				[
 					"organizer-upcoming-events",
 					"list",
 					{
@@ -139,15 +191,59 @@ describe("resolvePublicOrganizerLoader (I-2.3.2 — events prefetch)", () => {
 						sort: "startAtAsc",
 					},
 				],
-			}),
+				[
+					"organizer-past-events",
+					"list",
+					{
+						organizerSlug: profile.slug,
+						page: 1,
+						limit: 12,
+						sort: "startAtDesc",
+					},
+				],
+			]),
 		);
 	});
 
-	it("returns events: [] (and logs a warning) when the events fetch rejects", async () => {
-		const { client, ensureQueryData } = makeQueryClient({
+	it("returns upcomingEvents: [] (and logs a warning) when the upcoming fetch rejects but past succeeds", async () => {
+		const past = [eventFixture({ slug: "old", title: "Old race" })];
+		const { client, upcomingHandler, pastHandler } = makeQueryClient({
 			profile: async () => ({ kind: "organizer", data: profile }),
-			events: async () => {
-				throw new Error("upstream events failure");
+			upcoming: async () => {
+				throw new Error("upstream upcoming failure");
+			},
+			past: async () => ({
+				success: true,
+				data: past,
+				meta: { ...emptyPastEnvelope.meta, total: 1, totalPages: 1 },
+			}),
+		});
+
+		const result = await resolvePublicOrganizerLoader({
+			slug: profile.slug,
+			queryClient: client,
+		});
+
+		expect(result.profile).toBe(profile);
+		expect(result.upcomingEvents).toEqual([]);
+		expect(result.pastEvents).toEqual(past);
+		expect(upcomingHandler).toHaveBeenCalledOnce();
+		expect(pastHandler).toHaveBeenCalledOnce();
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(warnSpy.mock.calls[0]?.[0]).toContain("upcoming events fetch failed");
+	});
+
+	it("returns pastEvents: [] (and logs ONE warning) when the past fetch rejects but upcoming succeeds", async () => {
+		const upcoming = [eventFixture()];
+		const { client, upcomingHandler, pastHandler } = makeQueryClient({
+			profile: async () => ({ kind: "organizer", data: profile }),
+			upcoming: async () => ({
+				success: true,
+				data: upcoming,
+				meta: { ...emptyUpcomingEnvelope.meta, total: 1, totalPages: 1 },
+			}),
+			past: async () => {
+				throw new Error("upstream past failure");
 			},
 		});
 
@@ -157,17 +253,55 @@ describe("resolvePublicOrganizerLoader (I-2.3.2 — events prefetch)", () => {
 		});
 
 		expect(result.profile).toBe(profile);
-		expect(result.events).toEqual([]);
-		expect(ensureQueryData).toHaveBeenCalledTimes(2);
-		expect(warnSpy).toHaveBeenCalled();
+		expect(result.upcomingEvents).toEqual(upcoming);
+		expect(result.pastEvents).toEqual([]);
+		expect(upcomingHandler).toHaveBeenCalledOnce();
+		expect(pastHandler).toHaveBeenCalledOnce();
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(warnSpy.mock.calls[0]?.[0]).toContain("past events fetch failed");
 	});
 
-	it("does NOT fetch events when the API throws a 301 slug-rename redirect", async () => {
-		const eventsHandler = vi.fn();
-		const { client, ensureQueryData } = makeQueryClient({
-			profile: async () => ({ kind: "redirect", newSlug: profile.slug }),
-			events: eventsHandler,
+	it("returns BOTH lists empty (and logs TWO warnings) when both event fetches reject", async () => {
+		const { client, upcomingHandler, pastHandler } = makeQueryClient({
+			profile: async () => ({ kind: "organizer", data: profile }),
+			upcoming: async () => {
+				throw new Error("upcoming boom");
+			},
+			past: async () => {
+				throw new Error("past boom");
+			},
 		});
+
+		const result = await resolvePublicOrganizerLoader({
+			slug: profile.slug,
+			queryClient: client,
+		});
+
+		expect(result.upcomingEvents).toEqual([]);
+		expect(result.pastEvents).toEqual([]);
+		expect(upcomingHandler).toHaveBeenCalledOnce();
+		expect(pastHandler).toHaveBeenCalledOnce();
+		expect(warnSpy).toHaveBeenCalledTimes(2);
+		const warnMessages = warnSpy.mock.calls.map((call: unknown[]) =>
+			String(call[0]),
+		);
+		expect(
+			warnMessages.some((m: string) =>
+				m.includes("upcoming events fetch failed"),
+			),
+		).toBe(true);
+		expect(
+			warnMessages.some((m: string) =>
+				m.includes("past events fetch failed"),
+			),
+		).toBe(true);
+	});
+
+	it("does NOT fetch upcoming or past events when the API throws a 301 slug-rename redirect", async () => {
+		const { client, ensureQueryData, upcomingHandler, pastHandler } =
+			makeQueryClient({
+				profile: async () => ({ kind: "redirect", newSlug: profile.slug }),
+			});
 
 		try {
 			await resolvePublicOrganizerLoader({
@@ -179,18 +313,18 @@ describe("resolvePublicOrganizerLoader (I-2.3.2 — events prefetch)", () => {
 			expect(isRedirect(error)).toBe(true);
 		}
 
-		expect(eventsHandler).not.toHaveBeenCalled();
+		expect(upcomingHandler).not.toHaveBeenCalled();
+		expect(pastHandler).not.toHaveBeenCalled();
 		expect(ensureQueryData).toHaveBeenCalledTimes(1);
 	});
 
-	it("does NOT fetch events when the profile lookup 404s", async () => {
-		const eventsHandler = vi.fn();
-		const { client, ensureQueryData } = makeQueryClient({
-			profile: async () => {
-				throw Object.assign(new Error("not found"), { status: 404 });
-			},
-			events: eventsHandler,
-		});
+	it("does NOT fetch upcoming or past events when the profile lookup 404s", async () => {
+		const { client, ensureQueryData, upcomingHandler, pastHandler } =
+			makeQueryClient({
+				profile: async () => {
+					throw Object.assign(new Error("not found"), { status: 404 });
+				},
+			});
 
 		try {
 			await resolvePublicOrganizerLoader({
@@ -202,15 +336,17 @@ describe("resolvePublicOrganizerLoader (I-2.3.2 — events prefetch)", () => {
 			expect(isNotFound(error)).toBe(true);
 		}
 
-		expect(eventsHandler).not.toHaveBeenCalled();
+		expect(upcomingHandler).not.toHaveBeenCalled();
+		expect(pastHandler).not.toHaveBeenCalled();
 		expect(ensureQueryData).toHaveBeenCalledTimes(1);
 	});
 
-	it("writes the SSR cache headers AFTER both fetches succeed", async () => {
+	it("writes the SSR cache headers AFTER profile + upcoming + past all succeed", async () => {
 		const setResponseHeaders = vi.fn();
-		const { client } = makeQueryClient({
+		const { client, ensureQueryData } = makeQueryClient({
 			profile: async () => ({ kind: "organizer", data: profile }),
-			events: async () => emptyEventsEnvelope,
+			upcoming: async () => emptyUpcomingEnvelope,
+			past: async () => emptyPastEnvelope,
 		});
 
 		await resolvePublicOrganizerLoader({
@@ -219,6 +355,8 @@ describe("resolvePublicOrganizerLoader (I-2.3.2 — events prefetch)", () => {
 			setResponseHeaders,
 		});
 
+		// Three fetches must precede the header write.
+		expect(ensureQueryData).toHaveBeenCalledTimes(3);
 		expect(setResponseHeaders).toHaveBeenCalledOnce();
 		const headers = setResponseHeaders.mock.calls[0]?.[0] as Headers;
 		expect(headers.get("Cache-Control")).toBe(

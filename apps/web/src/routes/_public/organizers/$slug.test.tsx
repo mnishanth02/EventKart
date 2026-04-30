@@ -9,6 +9,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolvePublicOrganizerLoader } from "#/features/organizer-detail/loader";
+import type { PastEventsApiEnvelope } from "#/features/organizer-detail/past-events-api.server";
 import type {
 	OrganizerPublicLookupResponse,
 	OrganizerPublicProfile,
@@ -66,7 +67,20 @@ const profileInput = {
 const profile: OrganizerPublicProfile =
 	organizerPublicProfileSchema.parse(profileInput);
 
-const emptyEventsEnvelope: UpcomingEventsApiEnvelope = {
+const emptyUpcomingEnvelope: UpcomingEventsApiEnvelope = {
+	success: true,
+	data: [],
+	meta: {
+		page: 1,
+		limit: 12,
+		total: 0,
+		totalPages: 0,
+		hasNext: false,
+		hasPrev: false,
+	},
+};
+
+const emptyPastEnvelope: PastEventsApiEnvelope = {
 	success: true,
 	data: [],
 	meta: {
@@ -90,7 +104,8 @@ function queryClientReturning(
 		ensureQueryData: vi.fn(async (options: QueryFn) => {
 			const head = options.queryKey[0];
 			if (head === "organizer-detail") return payload;
-			if (head === "organizer-upcoming-events") return emptyEventsEnvelope;
+			if (head === "organizer-upcoming-events") return emptyUpcomingEnvelope;
+			if (head === "organizer-past-events") return emptyPastEnvelope;
 			throw new Error(`Unexpected query key: ${String(head)}`);
 		}),
 	} as unknown as QueryClient;
@@ -101,7 +116,8 @@ function queryClientRejecting(error: unknown): QueryClient {
 		ensureQueryData: vi.fn(async (options: QueryFn) => {
 			const head = options.queryKey[0];
 			if (head === "organizer-detail") throw error;
-			if (head === "organizer-upcoming-events") return emptyEventsEnvelope;
+			if (head === "organizer-upcoming-events") return emptyUpcomingEnvelope;
+			if (head === "organizer-past-events") return emptyPastEnvelope;
 			throw new Error(`Unexpected query key: ${String(head)}`);
 		}),
 	} as unknown as QueryClient;
@@ -160,7 +176,8 @@ describe("/_public/organizers/$slug — resolvePublicOrganizerLoader", () => {
 		});
 
 		expect(result.profile).toBe(profile);
-		expect(result.events).toEqual([]);
+		expect(result.upcomingEvents).toEqual([]);
+		expect(result.pastEvents).toEqual([]);
 		expect(setResponseHeaders).toHaveBeenCalledOnce();
 		const headers = setResponseHeaders.mock.calls[0]?.[0] as Headers;
 		expect(headers.get("Cache-Control")).toBe(
@@ -226,7 +243,8 @@ describe("/_public/organizers/$slug — resolvePublicOrganizerLoader", () => {
 		});
 
 		expect(result.profile).toBe(profile);
-		expect(result.events).toEqual([]);
+		expect(result.upcomingEvents).toEqual([]);
+		expect(result.pastEvents).toEqual([]);
 	});
 
 	it("rejects malformed slugs at the createServerFn validator boundary", async () => {
@@ -244,7 +262,7 @@ describe("/_public/organizers/$slug — resolvePublicOrganizerLoader", () => {
 
 describe("/_public/organizers/$slug — OrganizerDetailView", () => {
 	it("renders the profile and the upcoming events section with one card per event", () => {
-		const events = [
+		const upcomingEvents = [
 			eventFixture(),
 			eventFixture({
 				slug: "coimbatore-half-marathon",
@@ -252,7 +270,13 @@ describe("/_public/organizers/$slug — OrganizerDetailView", () => {
 			}),
 		];
 
-		render(<OrganizerDetailView profile={profile} events={events} />);
+		render(
+			<OrganizerDetailView
+				profile={profile}
+				upcomingEvents={upcomingEvents}
+				pastEvents={[]}
+			/>,
+		);
 
 		expect(screen.getByText("Race Coimbatore Collective")).toBeTruthy();
 		expect(
@@ -265,13 +289,74 @@ describe("/_public/organizers/$slug — OrganizerDetailView", () => {
 		).toBeNull();
 	});
 
-	it("renders the empty-state copy with the organizer name when no events are present", () => {
-		render(<OrganizerDetailView profile={profile} events={[]} />);
+	it("renders the empty-state copy with the organizer name when no upcoming events are present", () => {
+		render(
+			<OrganizerDetailView
+				profile={profile}
+				upcomingEvents={[]}
+				pastEvents={[]}
+			/>,
+		);
 
 		expect(
 			screen.getByText(
 				"Race Coimbatore Collective has no upcoming events listed yet.",
 			),
 		).toBeTruthy();
+	});
+
+	it("renders both upcoming and past sections when both lists are populated", () => {
+		const upcomingEvents = [eventFixture()];
+		const pastEvents = [
+			eventFixture({
+				slug: "coimbatore-city-10k-2024",
+				title: "Coimbatore City 10K 2024",
+			}),
+		];
+
+		render(
+			<OrganizerDetailView
+				profile={profile}
+				upcomingEvents={upcomingEvents}
+				pastEvents={pastEvents}
+			/>,
+		);
+
+		expect(
+			screen.getByRole("heading", { level: 2, name: "Upcoming events" }),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { level: 2, name: "Past events" }),
+		).toBeTruthy();
+		expect(screen.getByText("Coimbatore City 10K")).toBeTruthy();
+		expect(screen.getByText("Coimbatore City 10K 2024")).toBeTruthy();
+		expect(
+			screen.queryByText(/hasn't run any past events yet\./),
+		).toBeNull();
+		expect(
+			screen.queryByText(/has no upcoming events listed yet\./),
+		).toBeNull();
+	});
+
+	it("renders the past empty state alongside an upcoming list when past is empty", () => {
+		const upcomingEvents = [eventFixture()];
+
+		render(
+			<OrganizerDetailView
+				profile={profile}
+				upcomingEvents={upcomingEvents}
+				pastEvents={[]}
+			/>,
+		);
+
+		expect(screen.getByText("Coimbatore City 10K")).toBeTruthy();
+		expect(
+			screen.getByText(
+				"Race Coimbatore Collective hasn't run any past events yet.",
+			),
+		).toBeTruthy();
+		expect(
+			screen.queryByText(/has no upcoming events listed yet\./),
+		).toBeNull();
 	});
 });

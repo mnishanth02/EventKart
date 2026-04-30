@@ -216,6 +216,7 @@ const params = {
 	limit: 20,
 	sort: "startAtAsc" as const,
 	now: new Date("2026-01-01T00:00:00.000Z"),
+	timeWindow: "upcoming" as const,
 };
 
 describe("listPublicEvents", () => {
@@ -769,5 +770,101 @@ describe("listPublicEvents — organizerSlug filter", () => {
 		const { columnNames, values } = flattenSqlChunks(whereArg);
 		expect(columnNames).toContain("end_at");
 		expect(values).toContain(params.now);
+	});
+});
+
+describe("listPublicEvents — timeWindow filter", () => {
+	const ORG_A_SLUG = "org-a" as OrganizerSlug;
+
+	it("uses endAt > now and status='published' for upcoming (default)", async () => {
+		const { deps, selectQueries } = createDeps([[{ count: 0 }], []]);
+
+		await listPublicEvents(deps, { ...params, timeWindow: "upcoming" });
+
+		for (const query of [selectQueries[0], selectQueries[1]]) {
+			const whereArg = query?.where.mock.calls[0]?.[0];
+			const { columnNames, values } = flattenSqlChunks(whereArg);
+			expect(columnNames).toContain("status");
+			expect(columnNames).toContain("end_at");
+			expect(values).toContain("published");
+			expect(values).not.toContain("completed");
+			expect(values).toContain(params.now);
+		}
+	});
+
+	it("uses endAt <= now and status IN (published, completed) for past", async () => {
+		const { deps, selectQueries } = createDeps([[{ count: 0 }], []]);
+
+		await listPublicEvents(deps, { ...params, timeWindow: "past" });
+
+		const whereArg = selectQueries[1]?.where.mock.calls[0]?.[0];
+		const { columnNames, values } = flattenSqlChunks(whereArg);
+		expect(columnNames).toContain("status");
+		expect(columnNames).toContain("end_at");
+		expect(values).toContain("published");
+		expect(values).toContain("completed");
+		expect(values).toContain(params.now);
+	});
+
+	it("composes timeWindow=past with organizerSlug filter", async () => {
+		const { deps, selectQueries } = createDeps([[{ count: 0 }], []]);
+
+		await listPublicEvents(deps, {
+			...params,
+			timeWindow: "past",
+			organizerSlug: ORG_A_SLUG,
+		});
+
+		const whereArg = selectQueries[1]?.where.mock.calls[0]?.[0];
+		const { columnNames, values } = flattenSqlChunks(whereArg);
+		expect(columnNames).toContain("status");
+		expect(columnNames).toContain("end_at");
+		expect(columnNames).toContain("organizer_id");
+		expect(columnNames).toContain("slug");
+		expect(values).toContain("published");
+		expect(values).toContain("completed");
+		expect(values).toContain(ORG_A_SLUG);
+	});
+
+	it("applies the past predicate to BOTH the count and rows queries", async () => {
+		const { deps, selectQueries } = createDeps([[{ count: 0 }], []]);
+
+		await listPublicEvents(deps, { ...params, timeWindow: "past" });
+
+		const countWhereArg = selectQueries[0]?.where.mock.calls[0]?.[0];
+		const rowsWhereArg = selectQueries[1]?.where.mock.calls[0]?.[0];
+		expect(countWhereArg).toBeDefined();
+		expect(rowsWhereArg).toBeDefined();
+
+		for (const arg of [countWhereArg, rowsWhereArg]) {
+			const { columnNames, values } = flattenSqlChunks(arg);
+			expect(columnNames).toContain("end_at");
+			expect(columnNames).toContain("status");
+			expect(values).toContain("published");
+			expect(values).toContain("completed");
+			expect(values).toContain(params.now);
+		}
+	});
+
+	it("returns empty data and zeroed meta when no past events match", async () => {
+		const { deps } = createDeps([[{ count: 0 }], []]);
+
+		const result = await listPublicEvents(deps, {
+			...params,
+			timeWindow: "past",
+			organizerSlug: ORG_A_SLUG,
+		});
+
+		expect(result).toEqual({
+			data: [],
+			meta: {
+				page: 1,
+				limit: 20,
+				total: 0,
+				totalPages: 0,
+				hasNext: false,
+				hasPrev: false,
+			},
+		});
 	});
 });

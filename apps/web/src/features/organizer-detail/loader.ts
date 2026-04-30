@@ -2,6 +2,7 @@ import type { EventPublicCard } from "@repo/shared/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 import { notFound, redirect } from "@tanstack/react-router";
 import { ORGANIZER_DETAIL_CACHE_CONTROL } from "./cache-headers";
+import { organizerPastEventsQueryOptions } from "./past-events-queries";
 import { publicOrganizerQueryOptions } from "./queries";
 import type {
 	OrganizerPublicLookupResponse,
@@ -17,10 +18,12 @@ export interface ResolvePublicOrganizerLoaderArgs {
 
 export interface PublicOrganizerLoaderData {
 	profile: OrganizerPublicProfile;
-	events: EventPublicCard[];
+	upcomingEvents: EventPublicCard[];
+	pastEvents: EventPublicCard[];
 }
 
 const UPCOMING_EVENTS_LIMIT = 12;
+const PAST_EVENTS_LIMIT = 12;
 
 /**
  * Loader for the public organizer profile route.
@@ -36,10 +39,12 @@ const UPCOMING_EVENTS_LIMIT = 12;
  *    error/notFound boundary can render the standard 404 surface.
  *
  * After the profile resolves successfully (i.e. neither redirect nor
- * notFound), prefetches the organizer's upcoming events list (I-2.3.2)
- * via `ensureQueryData`. If that fetch fails for any reason the error
- * is intentionally swallowed and an empty `events` array is returned —
- * a transient backend failure must not 500 the whole organizer page.
+ * notFound), prefetches BOTH the organizer's upcoming events list
+ * (I-2.3.2) and past events list (I-2.3.3) in parallel via
+ * `ensureQueryData`. Each fetch is independently resilient: a failure
+ * in one swallows to an empty array and logs a warning rather than
+ * 500-ing the whole organizer page or taking the other list down with
+ * it.
  *
  * Mirrors `resolvePublicEventLoader` so behavior is consistent across
  * the two SSR-cached public routes.
@@ -72,7 +77,10 @@ export async function resolvePublicOrganizerLoader({
 
 	const profile = payload.data;
 
-	const events = await fetchUpcomingEventsResilient(queryClient, profile.slug);
+	const [upcomingEvents, pastEvents] = await Promise.all([
+		fetchUpcomingEventsResilient(queryClient, profile.slug),
+		fetchPastEventsResilient(queryClient, profile.slug),
+	]);
 
 	if (setResponseHeaders) {
 		await setResponseHeaders(
@@ -80,7 +88,7 @@ export async function resolvePublicOrganizerLoader({
 		);
 	}
 
-	return { profile, events };
+	return { profile, upcomingEvents, pastEvents };
 }
 
 async function fetchUpcomingEventsResilient(
@@ -100,6 +108,29 @@ async function fetchUpcomingEventsResilient(
 	} catch (error) {
 		console.warn(
 			"[organizer-detail] upcoming events fetch failed; rendering empty list",
+			error,
+		);
+		return [];
+	}
+}
+
+async function fetchPastEventsResilient(
+	queryClient: QueryClient,
+	organizerSlug: string,
+): Promise<EventPublicCard[]> {
+	try {
+		const envelope = await queryClient.ensureQueryData(
+			organizerPastEventsQueryOptions({
+				organizerSlug,
+				page: 1,
+				limit: PAST_EVENTS_LIMIT,
+				sort: "startAtDesc",
+			}),
+		);
+		return envelope.data;
+	} catch (error) {
+		console.warn(
+			"[organizer-detail] past events fetch failed; rendering empty list",
 			error,
 		);
 		return [];
