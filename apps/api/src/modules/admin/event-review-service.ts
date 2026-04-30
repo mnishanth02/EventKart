@@ -35,6 +35,14 @@ interface AdminEventReviewDeps {
 	 */
 	cdnPurgeQueue?: Queue<CdnPurgePayload>;
 	cdnBaseUrl?: string;
+	/**
+	 * I-2.4.4: Sitemap regen queue. Spread through to
+	 * `adminApproveEvent` (and `adminRejectEvent` for symmetry — a
+	 * reject of a draft event has no sitemap impact, but the queue
+	 * is harmless if `invalidateEventCache` doesn't fire on the
+	 * non-publish path).
+	 */
+	sitemapRegenQueue?: Queue;
 }
 
 function eventDate(value: Date | null): string | null {

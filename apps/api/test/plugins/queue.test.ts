@@ -92,6 +92,8 @@ describe("Queue Plugin", () => {
 		expect(app.queues).toHaveProperty("cleanup");
 		expect(app.queues).toHaveProperty("exports");
 		expect(app.queues).toHaveProperty("failedJobs");
+		expect(app.queues).toHaveProperty("razorpayAccount");
+		expect(app.queues).toHaveProperty("sitemapRegen");
 	});
 
 	it("closes queues on app close", async () => {
@@ -101,7 +103,7 @@ describe("Queue Plugin", () => {
 		mockQueueClose.mockClear();
 		await localApp.close();
 
-		expect(mockQueueClose).toHaveBeenCalledTimes(7);
+		expect(mockQueueClose).toHaveBeenCalledTimes(8);
 	});
 
 	it("closes BullMQ connection on app close", async () => {

@@ -186,6 +186,43 @@ Cache Rules evaluate top-down. Order them:
 4. `seo-surfaces`
 5. `ssr-cache-public-pages`
 
+### 3.7 Origin Rule — `eventkart.in/sitemap.xml` → API origin (I-2.4.4)
+
+The `/sitemap.xml` URL must live on the apex hostname so crawlers
+discover it at `https://eventkart.in/sitemap.xml`, but the actual
+generator and Redis cache live in the API service at
+`api.eventkart.in/api/v1/sitemap.xml`. An **Origin Rule** rewrites the
+host + path at the edge so the public URL stays canonical while the
+implementation is owned by the API.
+
+Rule (Cloudflare → Rules → Origin Rules → Create rule):
+
+- **Name**: `sitemap-to-api`
+- **When incoming requests match**:
+  - `(http.host eq "eventkart.in" and http.request.uri.path eq "/sitemap.xml")`
+- **Then**:
+  - **Override Host header** → `api.eventkart.in`
+  - **Override URI path** → `/api/v1/sitemap.xml`
+
+The cache key for §3.3 is keyed on `eventkart.in/sitemap.xml`, so the
+edge cache continues to honour the `Cache-Control: max-age=3600,
+stale-while-revalidate=86400` headers the API emits. Crawlers see one
+canonical URL; the API gets to use its normal `/api/v1` versioning.
+
+Validation:
+
+```bash
+# Should return 200 with XML even when the API is briefly unreachable
+# (Cloudflare serves the 1h cached copy; SWR refreshes for 24h after).
+curl -I https://eventkart.in/sitemap.xml
+# Expect: content-type: application/xml; charset=utf-8
+#         cache-control: public, max-age=3600, stale-while-revalidate=86400
+```
+
+When this rule is **NOT** in place, `eventkart.in/sitemap.xml` returns
+a 404 from the SSR app. That's the symptom that the Origin Rule was
+deleted or misconfigured.
+
 ---
 
 ## 4. DDoS / security

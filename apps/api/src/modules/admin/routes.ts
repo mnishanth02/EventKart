@@ -145,6 +145,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 					...(app.config.CDN_BASE_URL
 						? { cdnBaseUrl: app.config.CDN_BASE_URL }
 						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
 				},
 				request.params.eventId,
 				session.userId,
@@ -189,6 +190,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 					...(app.config.CDN_BASE_URL
 						? { cdnBaseUrl: app.config.CDN_BASE_URL }
 						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
 				},
 				request.params.eventId,
 				session.userId,

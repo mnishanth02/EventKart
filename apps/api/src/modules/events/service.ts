@@ -48,6 +48,7 @@ import {
 	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
+import type { Queue } from "bullmq";
 import type { Redis } from "ioredis";
 import { invalidatePublicEventCache } from "../../lib/cache-stampede.js";
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
@@ -65,12 +66,12 @@ import {
 	NotFoundError,
 	ValidationError,
 } from "../../lib/errors.js";
+import { enqueueSitemapRegen } from "../../queues/sitemap-regen.js";
 import { getOrganizerByUserId } from "../organizer/service.js";
 import {
 	type CdnPurgePayload,
 	enqueueCdnPurge,
 } from "../../queues/cdn-purge.js";
-import type { Queue } from "bullmq";
 
 export const EVENT_SLUG_RESOURCE_TYPE = "event";
 export const DEFAULT_EVENT_SLUG_MAX_ATTEMPTS = 50;
@@ -146,6 +147,14 @@ export interface EventPublishDeps {
 	cdnPurgeQueue?: Queue<CdnPurgePayload>;
 	/** Absolute origin URL used to build CDN purge URLs. Required when `cdnPurgeQueue` is set. */
 	cdnBaseUrl?: string;
+	/**
+	 * I-2.4.4: Optional sitemap regen queue. When present,
+	 * `invalidateEventCache` enqueues a debounced regen so the public
+	 * `/sitemap.xml` reflects the publish/unpublish/admin-approve
+	 * within ~one cron tick. Tests omit safely — enqueue becomes a
+	 * no-op when undefined.
+	 */
+	sitemapRegenQueue?: Queue;
 }
 
 type EventRow = typeof events.$inferSelect;
@@ -392,6 +401,7 @@ function invalidateEventCache(
 		cache?: Redis;
 		cdnPurgeQueue?: Queue<CdnPurgePayload>;
 		cdnBaseUrl?: string;
+		sitemapRegenQueue?: Queue;
 		log: Pick<FastifyBaseLogger, "info"> &
 			Partial<Pick<FastifyBaseLogger, "warn" | "debug">>;
 	},
@@ -444,6 +454,23 @@ function invalidateEventCache(
 				);
 			},
 		);
+	}
+
+	// I-2.4.4: Enqueue a debounced sitemap regen. The shared `jobId`
+	// inside `enqueueSitemapRegen` coalesces a burst of publish toggles
+	// into one job. `enqueueSitemapRegen` no-ops when the queue is
+	// undefined (tests, partial wiring). Errors must never bubble —
+	// the publish/unpublish has already committed.
+	const enqueueResult = enqueueSitemapRegen(deps.sitemapRegenQueue, {
+		reason: "event_publish_state_changed",
+	});
+	if (enqueueResult) {
+		enqueueResult.catch((err: unknown) => {
+			deps.log.warn?.(
+				{ err, slug: event.slug },
+				"Failed to enqueue sitemap regen after event mutation",
+			);
+		});
 	}
 }
 
@@ -1354,19 +1381,22 @@ export async function updateEventPolicies(
 		}
 
 		return {
-			policies: toEventPoliciesResponse(updated),
-			// I-2.4.2: capture state needed for cache invalidation BEFORE
-			// the transaction returns. We must purge only when the change
-			// actually altered something AND the event was on the public
-			// CDN — so we hand back enough context to decide outside the tx.
+			response: toEventPoliciesResponse(updated),
+			// I-2.4.2 + I-2.4.4: capture state needed for cache invalidation
+			// BEFORE the transaction returns. We must purge only when the
+			// change actually altered something AND the event was on the
+			// public CDN — so we hand back enough context to decide outside
+			// the tx.
 			wasPublished: event.status === "published",
 			slug: event.slug,
 			changedAnything: changedFields.length > 0,
 		};
 	});
 
-	// I-2.4.2: invalidate caches AFTER tx commit so a CDN purge is never
-	// scheduled for a rolled-back update. Both helpers are best-effort.
+	// I-2.4.2 + I-2.4.4 + I-2.4.3: invalidate caches AFTER tx commit so a
+	// CDN purge / sitemap regen is never scheduled for a rolled-back
+	// update. `invalidateEventCache` runs Redis DEL + CDN purge enqueue +
+	// sitemap regen enqueue, all best-effort.
 	if (policies.wasPublished && policies.changedAnything) {
 		invalidateEventCache(
 			deps,
@@ -1384,7 +1414,7 @@ export async function updateEventPolicies(
 		"Event policies updated",
 	);
 
-	return policies.policies;
+	return policies.response;
 }
 
 export async function getEventRegistrationForm(
@@ -2392,6 +2422,8 @@ export interface UpdatePublishedEventDeps {
 	cdnPurgeQueue?: Queue<CdnPurgePayload>;
 	/** See `EventPublishDeps.cdnBaseUrl` (I-2.4.2). */
 	cdnBaseUrl?: string;
+	/** I-2.4.4: see `EventPublishDeps.sitemapRegenQueue`. */
+	sitemapRegenQueue?: Queue;
 }
 
 /**

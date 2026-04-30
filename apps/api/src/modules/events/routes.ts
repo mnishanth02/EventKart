@@ -200,6 +200,7 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					...(app.config.CDN_BASE_URL
 						? { cdnBaseUrl: app.config.CDN_BASE_URL }
 						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
 				},
 				session.userId,
 				request.params.eventId,
@@ -243,6 +244,7 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					...(app.config.CDN_BASE_URL
 						? { cdnBaseUrl: app.config.CDN_BASE_URL }
 						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
 				},
 				session.userId,
 				request.params.eventId,
@@ -469,6 +471,7 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					...(app.config.CDN_BASE_URL
 						? { cdnBaseUrl: app.config.CDN_BASE_URL }
 						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
 				},
 				session.userId,
 				request.params.eventId,
@@ -512,6 +515,7 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					...(app.config.CDN_BASE_URL
 						? { cdnBaseUrl: app.config.CDN_BASE_URL }
 						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
 				},
 				session.userId,
 				request.params.eventId,
