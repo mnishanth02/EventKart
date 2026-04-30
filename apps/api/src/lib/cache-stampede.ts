@@ -121,14 +121,19 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Poll the cache key until it appears or `lockTimeoutMs` elapses.
- * Returns the parsed value on hit, or `null` on timeout.
+ * Returns a discriminated result so a leader-cached `null` is treated
+ * as a HIT (not a timeout). Without this distinction, a producer that
+ * legitimately returns `null` (e.g. `EventPublicDetail | null` for a
+ * missing slug) would defeat single-flight: every follower would see
+ * `null` from `waitForLeader`, mistake it for "no leader value yet",
+ * and run the producer locally — exactly the stampede we're preventing.
  */
 async function waitForLeader<T>(
 	redis: Redis,
 	key: string,
 	lockTimeoutMs: number,
 	pollIntervalMs: number,
-): Promise<T | null> {
+): Promise<{ hit: true; value: T } | { hit: false }> {
 	const deadline = Date.now() + lockTimeoutMs;
 	// Guarantee at least one poll even when lockTimeoutMs is 0.
 	let firstPass = true;
@@ -137,9 +142,11 @@ async function waitForLeader<T>(
 		const raw = await redis.get(key);
 		if (raw !== null) {
 			try {
-				return JSON.parse(raw) as T;
+				return { hit: true, value: JSON.parse(raw) as T };
 			} catch {
-				return null;
+				// Corrupted entry — treat as no-hit so the follower fails-OPEN
+				// instead of returning garbage to the caller.
+				return { hit: false };
 			}
 		}
 		const remaining = deadline - Date.now();
@@ -148,7 +155,7 @@ async function waitForLeader<T>(
 		}
 		await sleep(Math.min(pollIntervalMs, remaining));
 	}
-	return null;
+	return { hit: false };
 }
 
 export async function singleFlight<T>(
@@ -202,9 +209,9 @@ export async function singleFlight<T>(
 	}
 
 	// 3. Follower path: poll the cache key for the leader's value.
-	let leaderValue: T | null;
+	let leaderResult: Awaited<ReturnType<typeof waitForLeader<T>>>;
 	try {
-		leaderValue = await waitForLeader<T>(
+		leaderResult = await waitForLeader<T>(
 			redis,
 			key,
 			lockTimeoutMs,
@@ -213,8 +220,12 @@ export async function singleFlight<T>(
 	} catch {
 		return producer();
 	}
-	if (leaderValue !== null) {
-		return leaderValue;
+	if (leaderResult.hit) {
+		// CRITICAL: This branch must accept `value === null` as a valid
+		// hit — producers may legitimately cache `null` (e.g. an event
+		// slug that doesn't exist). Returning `null` here is the whole
+		// point of cache-stampede protection on the negative path.
+		return leaderResult.value;
 	}
 
 	// 4. Fail-OPEN: the leader is taking too long (or crashed). Run the

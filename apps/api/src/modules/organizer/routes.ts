@@ -95,6 +95,7 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 				app.db,
 				request.params.slug,
 				request.log,
+				app.redis.cache,
 			);
 
 			// I-2.4.6: Mirror the events redirect-cache directive — short

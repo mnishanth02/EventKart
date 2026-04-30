@@ -136,7 +136,12 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 				throw new UnauthorizedError();
 			}
 			const result = await approveEventReview(
-				{ db: app.db, log: request.log, auditLogger },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger,
+					cache: app.redis.cache,
+				},
 				request.params.eventId,
 				session.userId,
 				request.ip,

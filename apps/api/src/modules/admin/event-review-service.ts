@@ -4,6 +4,7 @@ import { events, organizers } from "@repo/db/schema";
 import type { AdminEventReviewListParams, Event } from "@repo/shared/schemas";
 import { eventSchema } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
+import type { Redis } from "ioredis";
 import type { AuditLogger } from "../../lib/audit.js";
 import { NotFoundError } from "../../lib/errors.js";
 import {
@@ -16,6 +17,13 @@ interface AdminEventReviewDeps {
 	db: Database;
 	log: Pick<FastifyBaseLogger, "info">;
 	auditLogger: AuditLogger;
+	/**
+	 * Public-event Redis cache (I-2.4.3) — passed through to
+	 * `adminApproveEvent` so an admin-approved publish evicts the
+	 * cached projection. Rejection does not affect public read paths
+	 * and therefore does not need cache.
+	 */
+	cache?: Redis;
 }
 
 function eventDate(value: Date | null): string | null {

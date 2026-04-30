@@ -48,6 +48,8 @@ import {
 	updateEventInputSchema,
 	uuidSchema,
 } from "@repo/shared/schemas";
+import type { Redis } from "ioredis";
+import { invalidatePublicEventCache } from "../../lib/cache-stampede.js";
 import { appendEventSlugSuffix, normalizeEventSlug } from "@repo/shared/utils";
 import type { FastifyBaseLogger } from "fastify";
 import type { AuditLogger } from "../../lib/audit.js";
@@ -115,6 +117,14 @@ export interface EventPublishDeps {
 	log: Pick<FastifyBaseLogger, "info">;
 	auditLogger: AuditLogger;
 	requiresAdminReview?: (organizerId: string) => Promise<boolean>;
+	/**
+	 * Optional namespaced Redis cache client (`app.redis.cache`). When
+	 * present, `invalidateEventCache` evicts the public event cache
+	 * entry (I-2.4.3) after a successful publish/unpublish/admin-approve
+	 * mutation. Tests omit this safely — invalidation becomes a no-op
+	 * and behaviour is unchanged from the pre-2.4.3 stub.
+	 */
+	cache?: Redis;
 }
 
 type EventRow = typeof events.$inferSelect;
@@ -348,7 +358,31 @@ export async function requiresAdminReview(
 	return publishedPaidEventCount <= 3;
 }
 
-function invalidateEventCache(_event: Event): void {
+function invalidateEventCache(
+	deps: {
+		cache?: Redis;
+		log: Pick<FastifyBaseLogger, "info"> &
+			Partial<Pick<FastifyBaseLogger, "warn">>;
+	},
+	event: Pick<Event, "slug">,
+): void {
+	// I-2.4.3: Best-effort eviction of the origin Redis single-flight
+	// entry. Fire-and-forget — the publish/unpublish DB transaction has
+	// already committed, so a failed `DEL` must NEVER throw or block
+	// the caller. The next reader will see stale data for at most one
+	// `PUBLIC_EVENT_CACHE_TTL_SEC` (60s) window — same upper bound as
+	// the SSR `s-maxage`. The structural log type intentionally tolerates
+	// callers whose `deps.log` only declares `info` (existing publish
+	// deps + dozens of test mocks); we use `warn?.(…)` so absent warn
+	// is a no-op, not a runtime crash.
+	if (deps.cache) {
+		invalidatePublicEventCache(deps.cache, event.slug).catch((err: unknown) => {
+			deps.log.warn?.(
+				{ err, slug: event.slug },
+				"Failed to invalidate public event cache",
+			);
+		});
+	}
 	// TODO(I-2.4.2): Purge CDN/public-event cache on publish and unpublish.
 }
 
@@ -1719,7 +1753,7 @@ export async function publishEvent(
 		});
 
 		const responseEvent = toEventResponse(updated);
-		invalidateEventCache(responseEvent);
+		invalidateEventCache(deps, responseEvent);
 		return { event: responseEvent, transition, readiness, organizer };
 	});
 
@@ -1823,7 +1857,7 @@ export async function unpublishEvent(
 		});
 
 		const responseEvent = toEventResponse(updated);
-		invalidateEventCache(responseEvent);
+		invalidateEventCache(deps, responseEvent);
 		return {
 			event: responseEvent,
 			transition: "published_to_draft" as const,
@@ -1916,7 +1950,7 @@ export async function adminApproveEvent(
 			},
 		});
 		const responseEvent = toEventResponse(updated);
-		invalidateEventCache(responseEvent);
+		invalidateEventCache(deps, responseEvent);
 		return {
 			event: responseEvent,
 			transition: "under_review_to_published" as const,
@@ -2253,6 +2287,8 @@ export interface UpdatePublishedEventDeps {
 	db: EventCategoryTransactionalStore;
 	log: Pick<FastifyBaseLogger, "info">;
 	auditLogger: AuditLogger;
+	/** See `EventPublishDeps.cache` (I-2.4.3). */
+	cache?: Redis;
 }
 
 /**
@@ -2383,7 +2419,7 @@ export async function updatePublishedEvent(
 		});
 
 		const responseEvent = toEventResponse(updated);
-		invalidateEventCache(responseEvent);
+		invalidateEventCache(deps, responseEvent);
 		return responseEvent;
 	});
 

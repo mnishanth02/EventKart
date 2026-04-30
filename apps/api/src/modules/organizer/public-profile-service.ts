@@ -9,11 +9,22 @@ import {
 	organizerSlugSchema,
 } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
+import type { Redis } from "ioredis";
+import {
+	PUBLIC_ORGANIZER_CACHE_KEY_PREFIX,
+	singleFlight,
+} from "../../lib/cache-stampede.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { truncateNoSurrogateSplit } from "../../lib/text-truncate.js";
 import { ORGANIZER_SLUG_RESOURCE_TYPE } from "./slug-service.js";
 
 const PUBLIC_DESCRIPTION_MAX_CODE_UNITS = 2000;
+
+/**
+ * I-2.4.3: TTL for the origin Redis single-flight cache around the
+ * `/organizers/by-slug/:slug` projection. Mirrors the SSR `s-maxage=60`.
+ */
+const PUBLIC_ORGANIZER_CACHE_TTL_SEC = 60;
 
 interface PublicOrganizerRow {
 	id: string;
@@ -126,6 +137,22 @@ async function lookupOrganizerSlugRedirect(
 }
 
 /**
+ * Producer for the I-2.4.3 single-flight cache. Returns the projected
+ * profile, or `null` when no organizer row matches. The redirect path
+ * runs separately so caching `null` cannot mask a fresh slug rename.
+ */
+async function fetchPublicOrganizerProfile(
+	db: Pick<Database, "select">,
+	slug: string,
+): Promise<OrganizerPublicProfile | null> {
+	const organizer = await selectOrganizerBySlug(db, slug);
+	if (!organizer) {
+		return null;
+	}
+	return selectPublicOrganizerProfile(organizer);
+}
+
+/**
  * Public lookup for `/api/v1/organizers/by-slug/:slug`.
  *
  * Mirrors `lookupPublicEventBySlug` so route loaders can share the
@@ -136,11 +163,18 @@ async function lookupOrganizerSlugRedirect(
  *  3. Otherwise look up the slug-redirect table; honour only verified
  *     redirects whose target organizer still exists and matches.
  *  4. Otherwise throw `NotFoundError` (404).
+ *
+ * I-2.4.3: When `cache` (the namespaced `app.redis.cache` client) is
+ * supplied, step 2 runs through `singleFlight` so concurrent cache
+ * misses share one DB roundtrip. The redirect lookup (step 3) is
+ * intentionally NOT cached — a stale redirect could outlive a chained
+ * rename window (see `lookupOrganizerSlugRedirect` for the invariant).
  */
 export async function lookupPublicOrganizerBySlug(
 	db: Pick<Database, "select">,
 	rawSlug: string,
 	_log: Pick<FastifyBaseLogger, "info" | "warn">,
+	cache?: Redis,
 ): Promise<OrganizerPublicLookupResponse> {
 	const parsed = organizerSlugSchema.safeParse(rawSlug);
 	if (!parsed.success) {
@@ -150,12 +184,17 @@ export async function lookupPublicOrganizerBySlug(
 	}
 
 	const slug = parsed.data;
-	const organizer = await selectOrganizerBySlug(db, slug);
-	if (organizer) {
-		return {
-			kind: "organizer",
-			data: selectPublicOrganizerProfile(organizer),
-		};
+	const profile = cache
+		? await singleFlight<OrganizerPublicProfile | null>(
+				cache,
+				`${PUBLIC_ORGANIZER_CACHE_KEY_PREFIX}${slug}`,
+				PUBLIC_ORGANIZER_CACHE_TTL_SEC,
+				() => fetchPublicOrganizerProfile(db, slug),
+			)
+		: await fetchPublicOrganizerProfile(db, slug);
+
+	if (profile) {
+		return { kind: "organizer", data: profile };
 	}
 
 	const redirect = await lookupOrganizerSlugRedirect(db, slug);

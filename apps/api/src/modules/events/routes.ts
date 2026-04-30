@@ -191,7 +191,12 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 
 			const auditLogger = createAuditLogger(app.db, request.log);
 			const result = await publishEvent(
-				{ db: app.db, log: request.log, auditLogger },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger,
+					cache: app.redis.cache,
+				},
 				session.userId,
 				request.params.eventId,
 				request.ip,
@@ -225,7 +230,12 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 
 			const auditLogger = createAuditLogger(app.db, request.log);
 			const result = await unpublishEvent(
-				{ db: app.db, log: request.log, auditLogger },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger,
+					cache: app.redis.cache,
+				},
 				session.userId,
 				request.params.eventId,
 				request.ip,
@@ -257,6 +267,7 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 						spotsRemainingEnabled:
 							app.config.PUBLIC_SPOTS_REMAINING_BADGE_ENABLED ?? false,
 					},
+					cache: app.redis.cache,
 				},
 				request.params.slug,
 			);
@@ -483,6 +494,7 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					db: app.db,
 					log: request.log,
 					auditLogger: createAuditLogger(app.db, request.log),
+					cache: app.redis.cache,
 				},
 				session.userId,
 				request.params.eventId,

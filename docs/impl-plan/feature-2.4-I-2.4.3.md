@@ -119,4 +119,42 @@ No DB migrations, no schema changes, no auth surface changes. Single `git revert
 
 ## Validation evidence
 
-To be filled after implementation.
+All gates green. Recorded in `anvil_checks` ledger (task_id `I-2.4.3`).
+
+### Baseline (pre-implementation)
+
+| Check       | Command                          | Result | Detail                                       |
+| ----------- | -------------------------------- | ------ | -------------------------------------------- |
+| check-types | `pnpm --filter api check-types`  | ✅ 0   | `tsc --noEmit` clean                         |
+| tests       | `pnpm --filter api test`         | ✅ 0   | 50 files / 852 tests passed                  |
+
+### After implementation (round 2 — post-reviewer fixes)
+
+| Check                         | Command                                                              | Result | Detail                                                    |
+| ----------------------------- | -------------------------------------------------------------------- | ------ | --------------------------------------------------------- |
+| check-types                   | `pnpm --filter api check-types`                                      | ✅ 0   | `tsc --noEmit` clean                                      |
+| tests (full suite)            | `pnpm --filter api test`                                             | ✅ 0   | 51 files / **869 tests passed** (Δ + 17 vs baseline)      |
+| unit (cache-stampede focused) | `pnpm --filter api exec vitest run test/lib/cache-stampede.test.ts`  | ✅ 0   | 9/9 passed — incl. null-follower regression               |
+
+### Adversarial review
+
+Single reviewer (Medium task, no 🔴 files): `code-review` subagent on `gpt-5.3-codex`.
+
+| Issue (reviewer-identified)                                                       | Severity | Resolution                                                                                                                                                                         |
+| --------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public event by-slug route never enables Redis single-flight (deps lacked `cache`). | HIGH     | **Fixed** — added `cache: app.redis.cache` to `apps/api/src/modules/events/routes.ts:270`. Test infra (default ioredis mock from `test/setup.ts`) keeps existing tests green.     |
+| Organizer by-slug route called `lookupPublicOrganizerBySlug` with only 3 args.     | HIGH     | **Fixed** — added 4th-arg `app.redis.cache` at `apps/api/src/modules/organizer/routes.ts:98`.                                                                                       |
+| `waitForLeader` returned `T \| null`; cached `null` defeated follower dedupe.       | HIGH     | **Fixed** — `waitForLeader` now returns a discriminated `{ hit: true; value: T } \| { hit: false }`. Added regression test `treats cached "null" as a hit` (#3 above).             |
+| Read/write race: an in-flight reader could `SETEX` stale data after invalidation. | MEDIUM   | **Accepted** — bounded by `PUBLIC_EVENT_CACHE_TTL_SEC = 60`. Plan doc §"Failure modes deliberately accepted" already documents this; matches the SSR `s-maxage=60` window. Future hardening (versioned keys) deferred. |
+
+Round 2 re-ran check-types + full test suite to confirm the three fixes
+introduced no regressions. No further reviewer round was triggered (per
+Anvil rules: max 2 rounds; round 2 was clean).
+
+### Confidence
+
+**High.** All static checks clean, all 869 tests passing, the reviewer's
+three high-severity findings were valid and fixed under verification,
+and the only remaining accepted issue (post-invalidation race) is
+explicitly documented in the plan as a deliberate trade-off bounded by
+the 60s TTL.
