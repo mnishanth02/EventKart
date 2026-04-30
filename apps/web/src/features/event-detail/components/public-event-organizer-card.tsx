@@ -5,6 +5,7 @@ import {
 	CardTitle,
 } from "@repo/ui/components/ui/card";
 import { VerifiedBadge } from "@repo/ui/components/verified-badge";
+import { Link } from "@tanstack/react-router";
 import type { EventPublicOrganizerSummary } from "../types";
 
 export interface PublicEventOrganizerCardProps {
@@ -36,14 +37,14 @@ export function PublicEventOrganizerCard({
 						{organizer.description}
 					</p>
 				) : null}
-				{/* TODO(I-2.3.1): swap to <Link to="/organizers/$slug" params={{ slug: organizer.slug }}> once the route exists. */}
-				<a
+				<Link
 					aria-label={`View profile of ${organizer.businessName}`}
 					className="inline-flex items-center font-medium text-primary text-sm hover:underline"
-					href={`/organizers/${organizer.slug}`}
+					to="/organizers/$slug"
+					params={{ slug: organizer.slug }}
 				>
 					View organizer profile →
-				</a>
+				</Link>
 			</CardContent>
 		</Card>
 	);

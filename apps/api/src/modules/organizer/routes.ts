@@ -17,6 +17,7 @@ import {
 	requestDocumentUpload,
 } from "./document-service.js";
 import { acceptPolicies, getPolicyStatus } from "./policy-service.js";
+import { lookupPublicOrganizerBySlug } from "./public-profile-service.js";
 import {
 	acceptPoliciesBodySchema,
 	acceptPoliciesResponseSchema,
@@ -33,6 +34,8 @@ import {
 	organizerConflictResponseSchema,
 	organizerErrorResponseSchema,
 	organizerNotFoundResponseSchema,
+	organizerPublicLookupHttpResponseSchema,
+	organizerSlugParamsSchema,
 	registerOrganizerBodySchema,
 	registerOrganizerResponseSchema,
 	updateOrganizerBodySchema,
@@ -56,6 +59,40 @@ function getAuthenticatedSession(request: FastifyRequest) {
 
 const organizerRoutes: FastifyPluginAsync = async (app) => {
 	const typedApp = app.withTypeProvider<ZodTypeProvider>();
+
+	/**
+	 * GET /api/v1/organizers/by-slug/:slug — Public organizer profile lookup.
+	 *
+	 * Anonymous (no preHandler). Mirrors `GET /api/v1/events/by-slug/:slug`:
+	 * returns either `{ kind: "organizer", data }` or
+	 * `{ kind: "redirect", newSlug }` so loaders can share control flow.
+	 *
+	 * The Fastify response schema strips any out-of-shape fields at the
+	 * framework boundary as a defense-in-depth layer on top of the
+	 * in-service `.parse` projection.
+	 */
+	typedApp.get(
+		"/by-slug/:slug",
+		{
+			schema: {
+				params: organizerSlugParamsSchema,
+				response: {
+					200: organizerPublicLookupHttpResponseSchema,
+					400: organizerErrorResponseSchema,
+					404: organizerErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const data = await lookupPublicOrganizerBySlug(
+				app.db,
+				request.params.slug,
+				request.log,
+			);
+
+			return { success: true as const, data };
+		},
+	);
 
 	/**
 	 * POST /api/v1/organizers — Register a new organizer profile.

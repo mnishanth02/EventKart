@@ -1,7 +1,9 @@
 import {
 	documentUploadRequestSchema,
 	organizerProfileSchema,
+	organizerPublicLookupHttpResponseSchema,
 	organizerRegistrationSchema,
+	organizerSlugSchema,
 	organizerUpdateBaseSchema,
 	policyAcceptanceRequestSchema,
 	policyStatusResponseSchema,
@@ -111,3 +113,11 @@ export const getVerificationStatusResponseSchema = z.object({
 	success: z.literal(true),
 	data: verificationStatusResponseSchema,
 });
+
+// ── Public profile lookup schemas ───────────────────────────────────
+
+export const organizerSlugParamsSchema = z.object({
+	slug: organizerSlugSchema,
+});
+
+export { organizerPublicLookupHttpResponseSchema };

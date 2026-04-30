@@ -28,6 +28,7 @@ import {
 	StorageUnavailableError,
 	type StorageClient,
 } from "../../lib/storage.js";
+import { truncateNoSurrogateSplit } from "../../lib/text-truncate.js";
 import { EVENT_SLUG_RESOURCE_TYPE } from "./service.js";
 
 const PUBLIC_IMAGE_DOWNLOAD_EXPIRES_IN_SECONDS = 3600;
@@ -175,30 +176,6 @@ async function selectOrganizerSummary(
 		city: organizer.city,
 		description,
 	});
-}
-
-/**
- * Truncate `value` to at most `maxCodeUnits` UTF-16 code units while never
- * leaving an unpaired high surrogate at the tail.
- *
- * `String.prototype.slice` is code-unit-based, so slicing in the middle of a
- * surrogate pair (e.g. an emoji or any astral-plane code point) yields a
- * dangling high surrogate that renders as a replacement glyph downstream.
- * For a pessimistic public-event-detail boundary we accept losing one full
- * astral code point in that edge case.
- */
-function truncateNoSurrogateSplit(value: string, maxCodeUnits: number): string {
-	if (value.length <= maxCodeUnits) {
-		return value;
-	}
-	const sliced = value.slice(0, maxCodeUnits);
-	const lastCodeUnit = sliced.charCodeAt(sliced.length - 1);
-	// 0xD800–0xDBFF is the high-surrogate range; if the boundary lands there
-	// we drop it so the truncated string remains well-formed UTF-16.
-	if (lastCodeUnit >= 0xd800 && lastCodeUnit <= 0xdbff) {
-		return sliced.slice(0, -1);
-	}
-	return sliced;
 }
 
 async function selectPublicCategories(

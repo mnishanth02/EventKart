@@ -1,59 +1,125 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { organizerPublicProfileSchema } from "@repo/shared/schemas";
+import type { QueryClient } from "@tanstack/react-query";
+import { isNotFound, isRedirect } from "@tanstack/react-router";
+import { describe, expect, it, vi } from "vitest";
+import { resolvePublicOrganizerLoader } from "#/features/organizer-detail/loader";
+import type {
+	OrganizerPublicLookupResponse,
+	OrganizerPublicProfile,
+} from "#/features/organizer-detail/types";
 
-vi.mock("@tanstack/react-router", () => ({
-	createFileRoute: () => () => ({}),
-	Link: ({
-		children,
-		to,
-		params,
-	}: {
-		children: ReactNode;
-		to: string;
-		params?: Record<string, string>;
-	}) => {
-		let href = to;
-		if (params) {
-			for (const [key, value] of Object.entries(params)) {
-				href = href.replace(`$${key}`, value);
-			}
-		}
-		return (
-			<a href={href} data-testid="back-link">
-				{children}
-			</a>
+const profileInput = {
+	slug: "race-coimbatore",
+	businessName: "Race Coimbatore Collective",
+	isVerified: true,
+	city: "Coimbatore",
+	description: "Endurance events from Coimbatore.",
+} as const;
+
+const profile: OrganizerPublicProfile =
+	organizerPublicProfileSchema.parse(profileInput);
+
+function queryClientReturning(
+	payload: OrganizerPublicLookupResponse,
+): QueryClient {
+	return {
+		ensureQueryData: vi.fn().mockResolvedValue(payload),
+	} as unknown as QueryClient;
+}
+
+function queryClientRejecting(error: unknown): QueryClient {
+	return {
+		ensureQueryData: vi.fn().mockRejectedValue(error),
+	} as unknown as QueryClient;
+}
+
+describe("/_public/organizers/$slug — resolvePublicOrganizerLoader", () => {
+	it("returns the organizer profile and writes the public CDN cache headers", async () => {
+		const setResponseHeaders = vi.fn();
+
+		const result = await resolvePublicOrganizerLoader({
+			slug: profile.slug,
+			queryClient: queryClientReturning({ kind: "organizer", data: profile }),
+			setResponseHeaders,
+		});
+
+		expect(result).toBe(profile);
+		expect(setResponseHeaders).toHaveBeenCalledOnce();
+		const headers = setResponseHeaders.mock.calls[0]?.[0] as Headers;
+		expect(headers.get("Cache-Control")).toBe(
+			"public, s-maxage=60, stale-while-revalidate=300",
 		);
-	},
-}));
-
-vi.mock("#/features/event-detail/cache-headers", () => ({
-	setPublicEventCacheHeaders: vi.fn(async () => {}),
-}));
-
-import { OrganizerPlaceholder } from "./$slug";
-
-afterEach(() => {
-	cleanup();
-});
-
-describe("OrganizerPlaceholder (Module 2.2 organizer placeholder)", () => {
-	it("renders coming-soon copy", () => {
-		render(<OrganizerPlaceholder slug="coimbatore-runners" />);
-
-		expect(screen.getByText("Organizer profile coming soon")).toBeTruthy();
-		expect(
-			screen.getByText(
-				"Organizer pages launch with our next release — check back soon.",
-			),
-		).toBeTruthy();
+		expect(headers.has("Vary")).toBe(false);
 	});
 
-	it("renders a back-to-home link", () => {
-		render(<OrganizerPlaceholder slug="coimbatore-runners" />);
+	it("throws a 301 TanStack redirect to /organizers/$slug for slug-rename payloads", async () => {
+		try {
+			await resolvePublicOrganizerLoader({
+				slug: "old-coimbatore",
+				queryClient: queryClientReturning({
+					kind: "redirect",
+					newSlug: profile.slug,
+				}),
+			});
+			expect.unreachable("Expected redirect to be thrown");
+		} catch (error) {
+			expect(isRedirect(error)).toBe(true);
+			const redirectError = error as Response & {
+				options: {
+					to: string;
+					params: { slug: string };
+					code: number;
+					replace: boolean;
+				};
+			};
+			expect(redirectError.options.to).toBe("/organizers/$slug");
+			expect(redirectError.options.params.slug).toBe(profile.slug);
+			expect(redirectError.options.code).toBe(301);
+			expect(redirectError.options.replace).toBe(true);
+		}
+	});
 
-		const back = screen.getByTestId("back-link");
-		expect(back.textContent).toBe("Back to home");
-		expect(back.getAttribute("href")).toBe("/");
+	it("throws a TanStack notFound when the API returns a 404", async () => {
+		try {
+			await resolvePublicOrganizerLoader({
+				slug: "missing-organizer",
+				queryClient: queryClientRejecting({ status: 404 }),
+			});
+			expect.unreachable("Expected notFound to be thrown");
+		} catch (error) {
+			expect(isNotFound(error)).toBe(true);
+		}
+	});
+
+	it("re-throws non-404 errors so the route boundary surfaces a 500", async () => {
+		const boom = Object.assign(new Error("Upstream blew up"), { status: 502 });
+
+		await expect(
+			resolvePublicOrganizerLoader({
+				slug: profile.slug,
+				queryClient: queryClientRejecting(boom),
+			}),
+		).rejects.toBe(boom);
+	});
+
+	it("does not set headers when no SSR header sink is passed (CSR navigation path)", async () => {
+		await expect(
+			resolvePublicOrganizerLoader({
+				slug: profile.slug,
+				queryClient: queryClientReturning({ kind: "organizer", data: profile }),
+			}),
+		).resolves.toBe(profile);
+	});
+
+	it("rejects malformed slugs at the createServerFn validator boundary", async () => {
+		// The route loader trusts the createServerFn input validator, which
+		// runs `organizerSlugSchema.parse` before the API is touched. We
+		// import the validator schema directly to assert its rejection
+		// surface for inputs like `@bad!`.
+		const { organizerSlugSchema } = await import("@repo/shared/schemas");
+		expect(() => organizerSlugSchema.parse("@bad!")).toThrow();
+		expect(() => organizerSlugSchema.parse("UPPER")).toThrow();
+		expect(() => organizerSlugSchema.parse("")).toThrow();
+		expect(() => organizerSlugSchema.parse("race-coimbatore")).not.toThrow();
 	});
 });
