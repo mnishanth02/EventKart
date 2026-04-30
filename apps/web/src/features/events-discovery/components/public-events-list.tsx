@@ -14,7 +14,7 @@ export function PublicEventsList({ events }: PublicEventsListProps) {
 		return (
 			<section className="space-y-6">
 				<h2 className="font-display text-xl font-semibold">
-					This Weekend in Coimbatore
+					Upcoming Events in Coimbatore
 				</h2>
 				<div className="rounded-xl border border-dashed border-border bg-card/50 px-6 py-10 text-center">
 					<p className="text-sm text-muted-foreground">
@@ -28,7 +28,7 @@ export function PublicEventsList({ events }: PublicEventsListProps) {
 	return (
 		<section className="space-y-6">
 			<h2 className="font-display text-xl font-semibold">
-				This Weekend in Coimbatore
+				Upcoming Events in Coimbatore
 			</h2>
 			<div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
 				{events.map((event) => (

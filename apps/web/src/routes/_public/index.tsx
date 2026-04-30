@@ -43,10 +43,14 @@ export const Route = createFileRoute("/_public/")({
 				sort: deps.sort,
 			},
 		});
-		if (result.meta.totalPages > 0 && deps.page > result.meta.totalPages) {
+		const lastValidPage =
+			result.meta.totalPages === 0
+				? PUBLIC_EVENTS_LIST_DEFAULT_PAGE
+				: result.meta.totalPages;
+		if (deps.page > lastValidPage) {
 			throw redirect({
 				to: "/",
-				search: (prev) => ({ ...prev, page: result.meta.totalPages }),
+				search: (prev) => ({ ...prev, page: lastValidPage }),
 			});
 		}
 		return result;
@@ -129,7 +133,9 @@ function Home() {
 			<div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-						Showing page {page}
+						{meta.totalPages > 0
+							? `Showing page ${page} of ${meta.totalPages} (${meta.total} events)`
+							: "No events yet"}
 					</p>
 				</div>
 				<EventsListSortSelect

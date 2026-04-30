@@ -200,7 +200,7 @@ describe("listPublicEvents", () => {
 		});
 	});
 
-	it("projects completed events and preserves startAt/id query ordering from the page rows", async () => {
+	it("projects published events and preserves startAt/id query ordering from the page rows", async () => {
 		const first = buildEventRow({
 			id: EVENT_ID,
 			slug: "same-start-a",
@@ -209,7 +209,7 @@ describe("listPublicEvents", () => {
 		const second = buildEventRow({
 			id: EVENT_ID_2,
 			slug: "same-start-b",
-			status: "completed",
+			status: "published",
 		});
 		const { deps } = createDeps([
 			[{ count: 2 }],

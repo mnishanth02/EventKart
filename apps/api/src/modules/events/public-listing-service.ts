@@ -1,4 +1,4 @@
-import { and, type Database, desc, inArray, sql } from "@repo/db";
+import { and, type Database, desc, eq, inArray, sql } from "@repo/db";
 import {
 	eventCategories,
 	eventImages,
@@ -108,7 +108,7 @@ async function selectListingRows(
 	params: PublicEventListingParams,
 ) {
 	const condition = and(
-		inArray(events.status, ["published", "completed"]),
+		eq(events.status, "published"),
 		sql`${events.endAt} > ${params.now}`,
 	);
 	const offset = (params.page - 1) * params.limit;

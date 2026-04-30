@@ -90,6 +90,9 @@ describe("PublicEventsList", () => {
 			/>,
 		);
 
+		expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
+			"Upcoming Events in Coimbatore",
+		);
 		expect(screen.getByText("Coimbatore City 10K")).toBeTruthy();
 		expect(screen.getByText("Coimbatore Half Marathon")).toBeTruthy();
 		expect(screen.getAllByRole("link")).toHaveLength(2);
@@ -98,6 +101,9 @@ describe("PublicEventsList", () => {
 	it("renders the Coimbatore empty state when there are no upcoming events", () => {
 		render(<PublicEventsList events={[]} />);
 
+		expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
+			"Upcoming Events in Coimbatore",
+		);
 		expect(
 			screen.getByText(
 				"No upcoming events in Coimbatore yet — check back soon!",
