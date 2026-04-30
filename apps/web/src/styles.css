@@ -28,14 +28,14 @@ body {
 	overflow-x: hidden;
 }
 
-a {
+a:where(:not([class*="text-"])) {
 	color: var(--primary);
 	text-decoration-color: color-mix(in oklab, var(--primary) 40%, transparent);
 	text-decoration-thickness: 1px;
 	text-underline-offset: 2px;
 }
 
-a:hover {
+a:where(:not([class*="text-"])):hover {
 	color: color-mix(in oklab, var(--primary) 80%, var(--brand-saffron));
 }
 

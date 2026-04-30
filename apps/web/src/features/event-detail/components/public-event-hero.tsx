@@ -8,25 +8,27 @@ export interface PublicEventHeroProps {
 export function PublicEventHero({ event }: PublicEventHeroProps) {
 	return (
 		<section className="overflow-hidden rounded-3xl border bg-card shadow-sm">
-			<HeroImage image={event.heroImage} title={event.title} />
+			<HeroImage image={ event.heroImage } title={ event.title } />
 			<div className="space-y-5 p-5 sm:p-8 lg:p-10">
 				<div className="flex flex-wrap gap-2">
 					<Badge variant="secondary" className="capitalize">
-						{event.sport}
+						{ event.sport }
 					</Badge>
 					<Badge variant="outline" className="capitalize">
-						{event.eventType}
+						{ event.eventType }
 					</Badge>
 					<Badge variant="outline">
-						{event.city}, {event.state}
+						{ event.city }, { event.state }
 					</Badge>
 				</div>
 				<div className="space-y-3">
 					<h1 className="font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-						{event.title}
+						{ event.title }
 					</h1>
 					<p className="text-base text-muted-foreground sm:text-lg">
-						<time dateTime={event.startAt}>{formatDateRange(event)}</time>
+						<time dateTime={ event.startAt } suppressHydrationWarning>
+							{ formatDateRange(event) }
+						</time>
 					</p>
 				</div>
 			</div>
@@ -53,9 +55,9 @@ function HeroImage({
 
 	return (
 		<img
-			src={image.url}
+			src={ image.url }
 			// biome-ignore lint/a11y/noRedundantAlt: Product copy requires this exact alt text for I-2.1.1.
-			alt={`${title} event hero image`}
+			alt={ `${title} event hero image` }
 			className="aspect-video w-full object-cover lg:aspect-[21/9]"
 		/>
 	);

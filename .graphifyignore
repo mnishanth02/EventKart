@@ -4,6 +4,7 @@ node_modules/
 .fallow/
 .github/
 .turbo/
+.playwright-mcp/
 
 graphify-out/cache/
 

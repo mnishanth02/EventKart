@@ -323,6 +323,19 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 			});
 		},
 	);
+
+	// Dev-only: retrieve plain OTP for testing (only when OTP_DELIVERY_MODE=log)
+	if (fastify.config.OTP_DELIVERY_MODE === "log") {
+		app.get("/dev/otp/:phone", async (request, reply) => {
+			const { phone } = request.params as { phone: string };
+			const normalizedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+			const otp = await fastify.redis.otp.get(`dev:otp:${normalizedPhone}`);
+			if (!otp) {
+				return reply.code(404).send({ error: "No OTP found" });
+			}
+			return reply.send({ otp });
+		});
+	}
 };
 
 export default authRoutes;

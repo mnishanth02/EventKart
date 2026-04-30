@@ -124,6 +124,8 @@ export async function sendOtpForPhone(
 			{ phone: `${phone.slice(0, 6)}****`, otp },
 			"OTP generated (log mode)",
 		);
+		// Store plain OTP in Redis for dev testing (60s TTL)
+		await redis.set(`dev:otp:${phone}`, otp, "EX", 60);
 	}
 
 	// Store hashed OTP in Redis
