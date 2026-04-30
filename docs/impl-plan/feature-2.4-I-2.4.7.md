@@ -53,9 +53,9 @@ Both helpers emit, in addition to the existing canonical link:
 
 ### Type / shape
 
-`HeadLinkEntry` gains an optional `hreflang?: string` field. The canonical link does NOT carry `hreflang` (per spec — canonical describes the URL itself; hreflang describes the alternates). Each `<link rel="alternate">` entry sets `hreflang` and `href`.
+`HeadLinkEntry` gains an optional `hrefLang?: string` field (camelCase). The canonical link does NOT carry `hrefLang` (per spec — canonical describes the URL itself; hreflang describes the alternates). Each `<link rel="alternate">` entry sets `hrefLang` and `href`.
 
-The TanStack Start router (`@tanstack/react-router` v1.168) renders link entries by spreading `attrs` into a JSX `<link>` element (`Asset.js:19`). React 19 passes through unknown HTML attributes verbatim, so lowercase `hreflang` (HTML standard) reaches the DOM as `hreflang="en"` without any prop-name translation. Confirmed via `node_modules/.pnpm/@tanstack+react-router@1.168.15/.../dist/esm/Asset.js`.
+The TanStack Start router (`@tanstack/react-router` v1.168) renders link entries by spreading `attrs` into a JSX `<link>` element (`Asset.js:19`). React 19 has a known-attribute mapping for `hrefLang` (camelCase). **Lowercase `hreflang` triggers React's "Invalid DOM property" dev warning** (`Did you mean 'hrefLang'?`) — verified by `renderToString` repro on this repo's exact React version. HTML5 attribute names are case-insensitive per the spec, so the serialized output `hrefLang="en"` is parsed identically to `hreflang="en"` by browsers and search crawlers (Google, Bing). We therefore use the React-canonical camelCase to keep the dev console clean while still emitting spec-valid HTML. Confirmed via `node_modules/.pnpm/@tanstack+react-router@1.168.15/.../dist/esm/Asset.js`.
 
 ### Order
 
@@ -91,7 +91,7 @@ When Hindi (`hi-IN`) and Tamil (`ta-IN`) ship (post-V1), the same-href hreflang 
 4. Add a middleware that 301-redirects unprefixed legacy URLs (`/events/:slug` → `/en/events/:slug`) so existing inbound links and search index entries do not 404.
 5. Reissue sitemap (I-2.4.5) with one entry per `(slug, locale)` tuple.
 
-The V1 `HeadLinkEntry` shape with optional `hreflang` is V2-ready; no shape change needed.
+The V1 `HeadLinkEntry` shape with optional `hrefLang` is V2-ready; no shape change needed.
 
 ---
 
@@ -109,7 +109,7 @@ Documenting both as deferred is the conservative call: extending a non-existent 
 ## Decisions
 
 1. **Same-href hreflang in V1 (en + x-default → canonical).** Self-referential per Google's spec; ready to swap to per-locale URLs in V2 with no shape change.
-2. **Lowercase `hreflang` attribute.** Matches HTML standard. React 19 passes it through unchanged. Confirmed via `Asset.js` in TanStack Start.
+2. **CamelCase `hrefLang` in JS, lowercase `hreflang` in HTML/JSDoc prose.** React 19 has a known-attribute mapping for `hrefLang` and emits an "Invalid DOM property" warning for lowercase `hreflang`. HTML5 parsing is case-insensitive so the over-the-wire output (`hrefLang="en"`) is semantically identical to `hreflang="en"` for crawlers. Verified by `react-dom/server` `renderToString` repro on this repo.
 3. **No HTTPS-only enforcement at the helper layer.** Env layer accepts http(s); production config points at https. Pinning HTTPS in the helper would block staging flexibility without adding production safety.
 4. **Hreflang gates on canonicalUrl, not on siteUrl.** A malformed `siteUrl` produces no canonical AND no hreflang — the failure is uniform. Tested explicitly.
 5. **Listing-page SEO is deferred, not stubbed.** Adding SEO to `/_public/` here would expand scope; flagging it in this doc is the contract for the next issue.
@@ -135,7 +135,7 @@ All 59 tests in the two `seo.test.ts` files pass; full `apps/web` suite (552 tes
 
 | File | Change |
 | --- | --- |
-| `apps/web/src/features/event-detail/seo.ts` | `HeadLinkEntry` gains optional `hreflang`. `buildPublicEventMeta` appends two `<link rel="alternate">` entries (en + x-default → canonical) when canonical is emitted. JSDoc updated. |
+| `apps/web/src/features/event-detail/seo.ts` | `HeadLinkEntry` gains optional `hrefLang` (camelCase, to satisfy React 19's known-attribute table). `buildPublicEventMeta` appends two `<link rel="alternate">` entries (en + x-default → canonical) when canonical is emitted. JSDoc updated. |
 | `apps/web/src/features/organizer-detail/seo.ts` | Same change, organizer-shaped. |
 | `apps/web/src/features/event-detail/seo.test.ts` | Updated `links` equality assertion to include the two alternate entries; +5 new test cases. |
 | `apps/web/src/features/organizer-detail/seo.test.ts` | Same. |

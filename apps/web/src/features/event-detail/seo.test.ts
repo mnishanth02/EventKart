@@ -162,12 +162,12 @@ describe("buildPublicEventMeta", () => {
 			},
 			{
 				rel: "alternate",
-				hreflang: "en",
+				hrefLang: "en",
 				href: "https://eventkart.in/events/coimbatore-city-10k",
 			},
 			{
 				rel: "alternate",
-				hreflang: "x-default",
+				hrefLang: "x-default",
 				href: "https://eventkart.in/events/coimbatore-city-10k",
 			},
 		]);
@@ -198,7 +198,7 @@ describe("buildPublicEventMeta", () => {
 		}
 	});
 
-	it("emits hreflang=en and hreflang=x-default both pointing at the canonical URL when siteUrl is set (I-2.4.7)", () => {
+	it("emits hrefLang=en and hrefLang=x-default both pointing at the canonical URL when siteUrl is set (I-2.4.7)", () => {
 		const event = buildFixture();
 		const { links } = buildPublicEventMeta(event, {
 			siteUrl: "https://eventkart.in",
@@ -208,23 +208,23 @@ describe("buildPublicEventMeta", () => {
 		expect(canonical?.href).toBe(
 			"https://eventkart.in/events/coimbatore-city-10k",
 		);
-		expect(alternates.map((l) => l.hreflang)).toEqual(["en", "x-default"]);
-		// Per I-2.4.7 V1 contract: every hreflang href is exactly the canonical.
+		expect(alternates.map((l) => l.hrefLang)).toEqual(["en", "x-default"]);
+		// Per I-2.4.7 V1 contract: every hrefLang href is exactly the canonical.
 		for (const alt of alternates) {
 			expect(alt.href).toBe(canonical?.href);
 		}
-		// Canonical itself does NOT carry a hreflang attribute.
-		expect(canonical?.hreflang).toBeUndefined();
+		// Canonical itself does NOT carry a hrefLang attribute.
+		expect(canonical?.hrefLang).toBeUndefined();
 	});
 
-	it("omits hreflang entirely when siteUrl is unset (canonical is omitted too)", () => {
+	it("omits hrefLang entirely when siteUrl is unset (canonical is omitted too)", () => {
 		const event = buildFixture();
 		const { links } = buildPublicEventMeta(event, { siteUrl: undefined });
 		expect(links).toEqual([]);
 		expect(links.some((l) => l.rel === "alternate")).toBe(false);
 	});
 
-	it("omits hreflang when siteUrl is malformed (no canonical → no alternates)", () => {
+	it("omits hrefLang when siteUrl is malformed (no canonical → no alternates)", () => {
 		const event = buildFixture();
 		const { links } = buildPublicEventMeta(event, { siteUrl: "not a url" });
 		expect(links).toEqual([]);
@@ -249,7 +249,7 @@ describe("buildPublicEventMeta", () => {
 	it("uses the CURRENT slug from a slug-rename payload (I-2.4.7) — never bakes in a stale slug", () => {
 		// Loader returns the resolved (current) slug after a slug-rename
 		// redirect; the helper must mirror that exactly so canonical and
-		// hreflang point at the live URL, not the legacy one the user typed.
+		// hrefLang point at the live URL, not the legacy one the user typed.
 		// Construct via the schema parser (slug is a branded type, so
 		// overriding through `Partial<EventPublicDetail>` is rejected by
 		// the type checker — bypass via the raw input shape).

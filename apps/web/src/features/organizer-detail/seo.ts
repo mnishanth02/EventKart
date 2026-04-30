@@ -12,11 +12,11 @@ import type { OrganizerPublicProfile } from "./types";
  *  - Emits `<meta property="og:url">` and `<link rel="canonical">` only
  *    when `siteUrl` is provided. Both are normalized to
  *    `<origin>/organizers/<slug>` via {@link buildOrganizerCanonicalUrl}.
- *  - Emits `<link rel="alternate" hreflang="en">` and
- *    `<link rel="alternate" hreflang="x-default">` (I-2.4.7) — both
+ *  - Emits `<link rel="alternate" hrefLang="en">` and
+ *    `<link rel="alternate" hrefLang="x-default">` (I-2.4.7) — both
  *    pointing at the same canonical URL since V1 is English-only. They
  *    are emitted only when the canonical URL itself is emitted (no site
- *    URL → no hreflang either, since hreflang requires absolute URLs).
+ *    URL → no hrefLang either, since hrefLang requires absolute URLs).
  *    When V2 adds Hindi/Tamil locales these become per-locale absolute
  *    URLs (see `docs/impl-plan/feature-2.4-I-2.4.7.md`).
  *  - Emits `<meta name="robots" content="noindex,nofollow">` when (and
@@ -44,11 +44,19 @@ export interface HeadLinkEntry {
 	rel: string;
 	href: string;
 	/**
-	 * Optional `hreflang` attribute. Set on `rel="alternate"` link tags to
+	 * Optional `hrefLang` attribute. Set on `rel="alternate"` link tags to
 	 * declare the language/locale of the target URL. V1 emits `"en"` and
 	 * `"x-default"` only; V2 will add Hindi/Tamil locales.
+	 *
+	 * Field is named `hrefLang` (camelCase) — not `hreflang` — to match
+	 * React's canonical DOM prop name. The router (`@tanstack/react-router`
+	 * Asset.js) spreads link `attrs` into `<link {...attrs} />`; passing
+	 * lowercase `hreflang` triggers React 19's "Invalid DOM property" dev
+	 * warning. HTML5 attribute names are case-insensitive, so the
+	 * serialized output `hrefLang="en"` is parsed identically to
+	 * `hreflang="en"` by browsers and search crawlers (Google, Bing).
 	 */
-	hreflang?: string;
+	hrefLang?: string;
 }
 
 export interface OrganizerDetailHead {
@@ -99,14 +107,14 @@ export function buildOrganizerDetailHead(
 	const links: HeadLinkEntry[] = canonicalUrl
 		? [
 				{ rel: "canonical", href: canonicalUrl },
-				// V1 is English-only. Per Google's hreflang spec, every
-				// alternate URL must be absolute, so we gate hreflang on the
+				// V1 is English-only. Per Google's hrefLang spec, every
+				// alternate URL must be absolute, so we gate hrefLang on the
 				// same `canonicalUrl` that gates `<link rel="canonical">`.
 				// Both tags point at the same href today; when V2 adds
 				// Hindi/Tamil locales we will swap to per-locale absolute URLs
 				// (see `docs/impl-plan/feature-2.4-I-2.4.7.md`).
-				{ rel: "alternate", hreflang: "en", href: canonicalUrl },
-				{ rel: "alternate", hreflang: "x-default", href: canonicalUrl },
+				{ rel: "alternate", hrefLang: "en", href: canonicalUrl },
+				{ rel: "alternate", hrefLang: "x-default", href: canonicalUrl },
 			]
 		: [];
 

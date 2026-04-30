@@ -99,12 +99,12 @@ describe("buildOrganizerDetailHead", () => {
 			},
 			{
 				rel: "alternate",
-				hreflang: "en",
+				hrefLang: "en",
 				href: "https://eventkart.in/organizers/race-coimbatore",
 			},
 			{
 				rel: "alternate",
-				hreflang: "x-default",
+				hrefLang: "x-default",
 				href: "https://eventkart.in/organizers/race-coimbatore",
 			},
 		]);
@@ -134,7 +134,7 @@ describe("buildOrganizerDetailHead", () => {
 		}
 	});
 
-	it("emits hreflang=en and hreflang=x-default both pointing at the canonical URL when siteUrl is set (I-2.4.7)", () => {
+	it("emits hrefLang=en and hrefLang=x-default both pointing at the canonical URL when siteUrl is set (I-2.4.7)", () => {
 		const profile = buildFixture();
 		const { links } = buildOrganizerDetailHead(profile, {
 			siteUrl: "https://eventkart.in",
@@ -144,21 +144,21 @@ describe("buildOrganizerDetailHead", () => {
 		expect(canonical?.href).toBe(
 			"https://eventkart.in/organizers/race-coimbatore",
 		);
-		expect(alternates.map((l) => l.hreflang)).toEqual(["en", "x-default"]);
+		expect(alternates.map((l) => l.hrefLang)).toEqual(["en", "x-default"]);
 		for (const alt of alternates) {
 			expect(alt.href).toBe(canonical?.href);
 		}
-		expect(canonical?.hreflang).toBeUndefined();
+		expect(canonical?.hrefLang).toBeUndefined();
 	});
 
-	it("omits hreflang entirely when siteUrl is unset (canonical is omitted too)", () => {
+	it("omits hrefLang entirely when siteUrl is unset (canonical is omitted too)", () => {
 		const profile = buildFixture();
 		const { links } = buildOrganizerDetailHead(profile, { siteUrl: undefined });
 		expect(links).toEqual([]);
 		expect(links.some((l) => l.rel === "alternate")).toBe(false);
 	});
 
-	it("omits hreflang when siteUrl is malformed (no canonical → no alternates)", () => {
+	it("omits hrefLang when siteUrl is malformed (no canonical → no alternates)", () => {
 		const profile = buildFixture();
 		const { links } = buildOrganizerDetailHead(profile, {
 			siteUrl: "not a url",
@@ -169,7 +169,7 @@ describe("buildOrganizerDetailHead", () => {
 	it("uses the CURRENT slug from a slug-rename payload (I-2.4.7) — never bakes in a stale slug", () => {
 		// Loader returns the resolved (current) slug after a slug-rename
 		// redirect; the helper must mirror that exactly so canonical and
-		// hreflang point at the live URL, not the legacy one the user typed.
+		// hrefLang point at the live URL, not the legacy one the user typed.
 		// Construct via the schema parser (slug is branded, so overriding
 		// through `Partial<OrganizerPublicProfile>` is rejected by tsc).
 		const profile = organizerPublicProfileSchema.parse({
