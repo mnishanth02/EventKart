@@ -44,27 +44,27 @@ function Home() {
 
 	return (
 		<div className="mx-auto w-full max-w-7xl px-4 py-12 md:px-6 md:py-16 lg:px-8">
-			{reason === "auth-required" && safeRedirect ? (
+			{ reason === "auth-required" && safeRedirect ? (
 				<div className="mb-8 rounded-xl border border-border bg-card p-4 text-center shadow-xs">
 					<p className="text-sm text-muted-foreground">
 						Sign in to continue to your requested page.
 					</p>
 					<div className="mt-3 flex justify-center gap-2">
-						<Button type="button" onClick={handleSignInRedirect}>
+						<Button type="button" onClick={ handleSignInRedirect }>
 							Sign In & Continue
 						</Button>
 						<Button
 							type="button"
 							variant="outline"
-							onClick={() => void navigate({ to: "/", replace: true })}
+							onClick={ () => void navigate({ to: "/", replace: true }) }
 						>
 							Stay Here
 						</Button>
 					</div>
 				</div>
-			) : null}
+			) : null }
 
-			{/* Hero section */}
+			{/* Hero section */ }
 			<section className="space-y-4 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
 				<Badge variant="secondary" className="text-xs font-semibold">
 					Coimbatore&apos;s Running Community
@@ -80,15 +80,15 @@ function Home() {
 
 			<Separator className="my-12 md:my-16" />
 
-			{/* Placeholder sections — to be replaced with real event discovery */}
+			{/* Placeholder sections — to be replaced with real event discovery */ }
 			<section className="space-y-6">
 				<h2 className="font-display text-xl font-semibold">
 					This Weekend in Coimbatore
 				</h2>
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
-					<EventCardPlaceholder />
-					<EventCardPlaceholder />
-					<EventCardPlaceholder />
+				<div className="rounded-xl border border-dashed border-border bg-card/50 px-6 py-10 text-center">
+					<p className="text-sm text-muted-foreground">
+						No events scheduled this weekend — check back soon!
+					</p>
 				</div>
 			</section>
 
@@ -97,16 +97,16 @@ function Home() {
 					Browse by Category
 				</h2>
 				<div className="flex flex-wrap gap-2">
-					{["Fun Run", "5K", "10K", "Half Marathon", "Full Marathon"].map(
+					{ ["Fun Run", "5K", "10K", "Half Marathon", "Full Marathon"].map(
 						(cat) => (
-							<Badge key={cat} variant="outline" className="px-3 py-1.5">
-								{cat}
+							<Badge key={ cat } variant="outline" className="px-3 py-1.5">
+								{ cat }
 							</Badge>
 						),
-					)}
+					) }
 				</div>
 			</section>
-			{loginDialog}
+			{ loginDialog }
 		</div>
 	);
 }
@@ -116,21 +116,4 @@ function getSafeRedirect(redirect: string | undefined) {
 		return undefined;
 	}
 	return redirect;
-}
-
-function EventCardPlaceholder() {
-	return (
-		<div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-xs transition-all duration-[360ms] hover:-translate-y-0.5 hover:shadow-md">
-			<div className="aspect-video rounded-lg bg-muted" />
-			<div className="space-y-1.5">
-				<div className="h-3 w-20 rounded bg-muted" />
-				<div className="h-5 w-3/4 rounded bg-muted" />
-				<div className="h-3 w-1/2 rounded bg-muted" />
-			</div>
-			<div className="flex items-center justify-between pt-1">
-				<div className="h-4 w-24 rounded bg-muted" />
-				<div className="h-4 w-16 rounded bg-muted" />
-			</div>
-		</div>
-	);
 }

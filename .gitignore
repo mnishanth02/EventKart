@@ -33,6 +33,7 @@ dist
 .nitro/
 .vinxi/
 .wrangler/
+.playwright-mcp/
 
 
 # Debug

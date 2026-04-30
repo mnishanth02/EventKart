@@ -31,8 +31,10 @@ import {
 	eventPoliciesResponseSchema,
 	eventPricingBodySchema,
 	eventPricingResponseSchema,
+	eventPublicLookupHttpResponseSchema,
 	eventRegistrationFormBodySchema,
 	eventRegistrationFormResponseSchema,
+	eventSlugParamsSchema,
 	publishedEventPatchBodySchema,
 	publishedEventPatchResponseSchema,
 	publishEventResponseSchema,
@@ -41,6 +43,7 @@ import {
 	updateEventBodySchema,
 	updateEventResponseSchema,
 } from "./schemas.js";
+import { lookupPublicEventBySlug } from "./public-detail-service.js";
 import {
 	createDraftEvent,
 	getEvent,
@@ -226,6 +229,36 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			);
 
 			return { success: true as const, data: result };
+		},
+	);
+
+	typedApp.get(
+		"/by-slug/:slug",
+		{
+			schema: {
+				params: eventSlugParamsSchema,
+				response: {
+					200: eventPublicLookupHttpResponseSchema,
+					400: eventErrorResponseSchema,
+					404: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const data = await lookupPublicEventBySlug(
+				{
+					db: app.db,
+					storage: app.storage,
+					log: request.log,
+					featureFlags: {
+						spotsRemainingEnabled:
+							app.config.PUBLIC_SPOTS_REMAINING_BADGE_ENABLED ?? false,
+					},
+				},
+				request.params.slug,
+			);
+
+			return { success: true as const, data };
 		},
 	);
 

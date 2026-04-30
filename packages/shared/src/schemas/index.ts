@@ -135,6 +135,24 @@ export {
 	eventPricingTierWithCategorySchema,
 } from "./event-pricing.js";
 export type {
+	EventPublicCategory,
+	EventPublicDetail,
+	EventPublicImage,
+	EventPublicLookupResponse,
+	EventPublicOrganizerSummary,
+	EventPublicPricingTier,
+	EventPublicSlugRedirect,
+} from "./event-public-detail.js";
+export {
+	eventPublicCategorySchema,
+	eventPublicDetailSchema,
+	eventPublicImageSchema,
+	eventPublicLookupResponseSchema,
+	eventPublicOrganizerSummarySchema,
+	eventPublicPricingTierSchema,
+	eventPublicSlugRedirectSchema,
+} from "./event-public-detail.js";
+export type {
 	EventPublishTransition,
 	PublishEventResponse,
 	PublishReadiness,
@@ -191,6 +209,8 @@ export {
 	verificationDocumentSchema,
 	verificationStatusResponseSchema,
 } from "./organizer.js";
+export type { OrganizerSlug, OrganizerSlugInput } from "./organizer-slug.js";
+export { organizerSlugSchema } from "./organizer-slug.js";
 export type {
 	OtpSendData,
 	OtpSendRequest,

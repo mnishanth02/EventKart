@@ -1,0 +1,157 @@
+{
+  "communities": {
+    "0": [
+      "app_buildApp",
+      "lib_config",
+      "lib_otel",
+      "lib_sentry",
+      "server_startup"
+    ],
+    "1": [
+      "auth_plugin",
+      "config_plugin",
+      "database_plugin",
+      "redis_plugin"
+    ],
+    "2": [
+      "button_Button",
+      "card_Card",
+      "design_system_index",
+      "form_Form"
+    ],
+    "3": [
+      "admin_routes"
+    ],
+    "4": [
+      "auth_routes"
+    ],
+    "5": [
+      "events_routes"
+    ],
+    "6": [
+      "vitest_config"
+    ],
+    "7": [
+      "lib_redis"
+    ],
+    "8": [
+      "lib_queue"
+    ],
+    "9": [
+      "organizer_routes"
+    ],
+    "10": [
+      "router_tsx"
+    ],
+    "11": [
+      "error_index"
+    ],
+    "12": [
+      "dialog_Dialog"
+    ],
+    "13": [
+      "users_table"
+    ],
+    "14": [
+      "organizers_table"
+    ],
+    "15": [
+      "events_table"
+    ],
+    "16": [
+      "event_constants"
+    ],
+    "17": [
+      "organizer_constants"
+    ]
+  },
+  "cohesion": {
+    "0": 0.4,
+    "1": 0.5,
+    "2": 0.5,
+    "3": 1.0,
+    "4": 1.0,
+    "5": 1.0,
+    "6": 1.0,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0
+  },
+  "gods": [
+    {
+      "id": "server_startup",
+      "label": "Server Startup",
+      "degree": 3
+    },
+    {
+      "id": "config_plugin",
+      "label": "Config Plugin",
+      "degree": 3
+    },
+    {
+      "id": "design_system_index",
+      "label": "Design System Export Barrel",
+      "degree": 3
+    },
+    {
+      "id": "lib_config",
+      "label": "Config Module",
+      "degree": 2
+    },
+    {
+      "id": "admin_routes",
+      "label": "Admin Routes",
+      "degree": 2
+    }
+  ],
+  "surprises": [
+    {
+      "source": "Design System Export Barrel",
+      "target": "Button Component",
+      "source_files": [
+        "apps/web/src/components/design-system/index.ts",
+        "packages/ui/src/components/ui/button.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "connects across different repos/directories"
+    },
+    {
+      "source": "Design System Export Barrel",
+      "target": "Card Component",
+      "source_files": [
+        "apps/web/src/components/design-system/index.ts",
+        "packages/ui/src/components/ui/card.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "connects across different repos/directories"
+    },
+    {
+      "source": "Design System Export Barrel",
+      "target": "Form Component",
+      "source_files": [
+        "apps/web/src/components/design-system/index.ts",
+        "packages/ui/src/components/ui/form.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "connects across different repos/directories"
+    }
+  ],
+  "questions": [
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `Vitest Config`, `buildApp Function`, `Redis Client Factory` to the rest of the system?",
+      "why": "21 weakly-connected nodes found - possible documentation gaps or missing edges."
+    }
+  ]
+}

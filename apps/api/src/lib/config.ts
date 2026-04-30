@@ -177,6 +177,9 @@ export const appConfigSchema = Type.Object({
 	),
 	RAZORPAY_KEY_ID: Type.Optional(Type.String({ minLength: 1 })),
 	RAZORPAY_KEY_SECRET: Type.Optional(Type.String({ minLength: 1 })),
+	PUBLIC_SPOTS_REMAINING_BADGE_ENABLED: Type.Optional(
+		Type.Boolean({ default: false }),
+	),
 });
 
 export type AppConfig = Static<typeof appConfigSchema>;

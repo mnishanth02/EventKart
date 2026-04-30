@@ -12,10 +12,11 @@ import {
 	SidebarMenuItem,
 	SidebarRail,
 } from "@repo/ui/components/ui/sidebar";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
 	BuildingIcon,
+	CalendarCheckIcon,
 	CalendarPlusIcon,
 	ClipboardCheckIcon,
 	FileCheckIcon,
@@ -57,6 +58,11 @@ const NAV_ITEMS: Record<Area, NavItem[]> = {
 			href: "/admin/verifications",
 			icon: ClipboardCheckIcon,
 		},
+		{
+			label: "Event Reviews",
+			href: "/admin/event-reviews",
+			icon: CalendarCheckIcon,
+		},
 	],
 };
 
@@ -82,6 +88,7 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 	const { clearSession, invalidateSession } = useAuthActions();
 	const areaConfig = AREA_CONFIG[area];
 	const navItems = NAV_ITEMS[area];
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
 	async function handleLogout() {
 		try {
@@ -109,19 +116,19 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarGroupLabel>{areaConfig.label}</SidebarGroupLabel>
+					<SidebarGroupLabel>{ areaConfig.label }</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{navItems.map((item) => (
-								<SidebarMenuItem key={item.href}>
-									<SidebarMenuButton asChild>
-										<Link to={item.href}>
+							{ navItems.map((item) => (
+								<SidebarMenuItem key={ item.href }>
+									<SidebarMenuButton asChild isActive={ pathname === item.href }>
+										<Link to={ item.href }>
 											<item.icon className="size-4" />
-											<span>{item.label}</span>
+											<span>{ item.label }</span>
 										</Link>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
-							))}
+							)) }
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
@@ -130,11 +137,11 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 			<SidebarFooter className="border-t p-4">
 				<div className="flex items-center justify-between">
 					<Badge variant="secondary" className="text-xs">
-						{user.role}
+						{ user.role }
 					</Badge>
 					<button
 						type="button"
-						onClick={handleLogout}
+						onClick={ handleLogout }
 						className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
 					>
 						<LogOutIcon className="size-3.5" />

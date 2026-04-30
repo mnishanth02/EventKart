@@ -1,0 +1,13 @@
+node_modules/
+.agents/
+.claude/
+.fallow/
+.github/
+.turbo/
+.playwright-mcp/
+
+graphify-out/cache/
+
+graphify-out/manifest.json
+
+graphify-out/cost.json
