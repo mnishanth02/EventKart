@@ -8,16 +8,19 @@ import {
 	slugRedirects,
 } from "@repo/db/schema";
 import {
-	eventPublicDetailSchema,
+	eventPublicCardCategorySchema,
 	eventPublicCategorySchema,
+	eventPublicDetailSchema,
 	eventPublicImageSchema,
 	eventPublicOrganizerSummarySchema,
 	eventPublicPricingTierSchema,
 	eventPublicSlugRedirectSchema,
 	eventSlugSchema,
+	type EventPublicCardCategory,
 	type EventPublicDetail,
 	type EventPublicImage,
 	type EventPublicLookupResponse,
+	type EventPublicPricingTier,
 } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
@@ -30,9 +33,9 @@ import { EVENT_SLUG_RESOURCE_TYPE } from "./service.js";
 const PUBLIC_IMAGE_DOWNLOAD_EXPIRES_IN_SECONDS = 3600;
 
 type EventRow = typeof events.$inferSelect;
-type EventCategoryRow = typeof eventCategories.$inferSelect;
-type EventPricingTierRow = typeof eventPricingTiers.$inferSelect;
-type EventImageRow = typeof eventImages.$inferSelect;
+export type EventCategoryRow = typeof eventCategories.$inferSelect;
+export type EventPricingTierRow = typeof eventPricingTiers.$inferSelect;
+export type EventImageRow = typeof eventImages.$inferSelect;
 type EventStatusValue = EventRow["status"];
 
 export interface PublicEventDetailDeps {
@@ -57,6 +60,59 @@ export interface PublicEventFeatureFlags {
 const DEFAULT_FEATURE_FLAGS: PublicEventFeatureFlags = {
 	spotsRemainingEnabled: false,
 };
+
+export function projectCategoryForPublic(
+	category: EventCategoryRow,
+	log: Pick<FastifyBaseLogger, "warn">,
+	featureFlags: PublicEventFeatureFlags,
+): EventPublicCardCategory {
+	const isCapacityWellFormed =
+		category.spotsTotal > 0 &&
+		category.spotsRemaining >= 0 &&
+		category.spotsRemaining <= category.spotsTotal;
+
+	let capacity: { spotsTotal: number; spotsRemaining: number } | null;
+	if (!isCapacityWellFormed) {
+		capacity = null;
+		log.warn(
+			{
+				eventId: category.eventId,
+				categoryId: category.id,
+				spotsTotal: category.spotsTotal,
+				spotsRemaining: category.spotsRemaining,
+			},
+			"Invalid public event category capacity; projecting null capacity",
+		);
+	} else if (!featureFlags.spotsRemainingEnabled) {
+		capacity = null;
+	} else {
+		capacity = {
+			spotsTotal: category.spotsTotal,
+			spotsRemaining: category.spotsRemaining,
+		};
+	}
+
+	return eventPublicCardCategorySchema.parse({
+		name: category.name,
+		slug: category.slug,
+		distanceMeters: category.distanceMeters,
+		capacity,
+	});
+}
+
+export function projectPricingTierForPublic(
+	tier: EventPricingTierRow,
+	category: EventCategoryRow,
+	currency: EventRow["currency"],
+): EventPublicPricingTier {
+	return eventPublicPricingTierSchema.parse({
+		categorySlug: category.slug,
+		basePrice: tier.basePrice,
+		earlyBirdPrice: tier.earlyBirdPrice,
+		earlyBirdDeadline: tier.earlyBirdDeadline?.toISOString() ?? null,
+		currency,
+	});
+}
 
 function isPubliclyReadableEventStatus(status: EventStatusValue): boolean {
 	return status === "published" || status === "completed";
@@ -161,43 +217,12 @@ async function selectPublicCategories(
 		.orderBy(eventCategories.sortOrder);
 
 	return {
-		publicCategories: rows.map((category) => {
-			const isCapacityWellFormed =
-				category.spotsTotal > 0 &&
-				category.spotsRemaining >= 0 &&
-				category.spotsRemaining <= category.spotsTotal;
-
-			let capacity: { spotsTotal: number; spotsRemaining: number } | null;
-			if (!isCapacityWellFormed) {
-				capacity = null;
-				log.warn(
-					{
-						eventId,
-						categoryId: category.id,
-						spotsTotal: category.spotsTotal,
-						spotsRemaining: category.spotsRemaining,
-					},
-					"Invalid public event category capacity; projecting null capacity",
-				);
-			} else if (!featureFlags.spotsRemainingEnabled) {
-				// Feature flag OFF: never expose capacity to public surface.
-				// Mirrors VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED on the web.
-				capacity = null;
-			} else {
-				capacity = {
-					spotsTotal: category.spotsTotal,
-					spotsRemaining: category.spotsRemaining,
-				};
-			}
-
-			return eventPublicCategorySchema.parse({
-				name: category.name,
-				slug: category.slug,
-				distanceMeters: category.distanceMeters,
+		publicCategories: rows.map((category) =>
+			eventPublicCategorySchema.parse({
+				...projectCategoryForPublic(category, log, featureFlags),
 				sortOrder: category.sortOrder,
-				capacity,
-			});
-		}),
+			}),
+		),
 		categoryById: new Map(rows.map((category) => [category.id, category])),
 	};
 }
@@ -219,11 +244,7 @@ async function selectPublicPricingTiers(
 			if (!category) return null;
 
 			return {
-				categorySlug: category.slug,
-				basePrice: tier.basePrice,
-				earlyBirdPrice: tier.earlyBirdPrice,
-				earlyBirdDeadline: tier.earlyBirdDeadline?.toISOString() ?? null,
-				currency: event.currency,
+				...projectPricingTierForPublic(tier, category, event.currency),
 				sortOrder: category.sortOrder,
 			};
 		})
@@ -272,7 +293,7 @@ async function selectLatestPublicImageRows(
 	return { hero, routeMap };
 }
 
-async function toPublicImage(
+export async function toPublicImage(
 	deps: PublicEventDetailDeps,
 	eventSlug: string,
 	row: EventImageRow | null,

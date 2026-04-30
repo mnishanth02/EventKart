@@ -35,6 +35,8 @@ import {
 	eventRegistrationFormBodySchema,
 	eventRegistrationFormResponseSchema,
 	eventSlugParamsSchema,
+	publicEventListQuerySchema,
+	publicEventListResponseSchema,
 	publishedEventPatchBodySchema,
 	publishedEventPatchResponseSchema,
 	publishEventResponseSchema,
@@ -44,6 +46,7 @@ import {
 	updateEventResponseSchema,
 } from "./schemas.js";
 import { lookupPublicEventBySlug } from "./public-detail-service.js";
+import { listPublicEvents } from "./public-listing-service.js";
 import {
 	createDraftEvent,
 	getEvent,
@@ -259,6 +262,40 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 			);
 
 			return { success: true as const, data };
+		},
+	);
+
+	// Must register before "/:eventId" so Fastify does not match eventId="public".
+	typedApp.get(
+		"/public",
+		{
+			schema: {
+				querystring: publicEventListQuerySchema,
+				response: {
+					200: publicEventListResponseSchema,
+					400: eventErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const result = await listPublicEvents(
+				{
+					db: app.db,
+					storage: app.storage,
+					log: request.log,
+					featureFlags: {
+						spotsRemainingEnabled:
+							app.config.PUBLIC_SPOTS_REMAINING_BADGE_ENABLED ?? false,
+					},
+				},
+				{ ...request.query, now: new Date() },
+			);
+
+			return {
+				success: true as const,
+				data: result.data,
+				meta: result.meta,
+			};
 		},
 	);
 

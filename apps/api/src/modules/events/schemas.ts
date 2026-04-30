@@ -14,12 +14,15 @@ import {
 	eventPoliciesRecordSchema,
 	eventPricingConfigSchema,
 	eventPricingTierWithCategorySchema,
+	eventPublicCardSchema,
 	eventPublicLookupResponseSchema,
 	eventRegistrationFormSchema,
-	eventSlugSchema,
 	eventSchema,
-	publishedEventPatchSchema,
+	eventSlugSchema,
+	offsetPaginationMetaSchema,
+	offsetPaginationSchema,
 	publishEventResponseSchema,
+	publishedEventPatchSchema,
 	publishReadinessResponseSchema,
 	unpublishEventResponseSchema,
 	updateEventInputSchema,
@@ -53,6 +56,16 @@ export const updateEventResponseSchema = createEventResponseSchema;
 export const eventPublicLookupHttpResponseSchema = z.object({
 	success: z.literal(true),
 	data: eventPublicLookupResponseSchema,
+});
+
+export const publicEventListQuerySchema = offsetPaginationSchema.extend({
+	sort: z.enum(["startAtAsc", "startAtDesc"]).default("startAtAsc"),
+});
+
+export const publicEventListResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.array(eventPublicCardSchema),
+	meta: offsetPaginationMetaSchema,
 });
 
 export {

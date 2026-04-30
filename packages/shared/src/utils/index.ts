@@ -1,3 +1,12 @@
+export {
+	EVENT_DISCOVERY_STATUS_LABELS,
+	EVENT_DISCOVERY_STATUSES,
+	type EventDiscoveryStatus,
+	type EventDiscoveryStatusCategoryInput,
+	type EventDiscoveryStatusInput,
+	eventDiscoveryStatusSchema,
+	getEventDiscoveryStatus,
+} from "./event-discovery-status.js";
 export { isValidIndianPhone, normalizePhone } from "./phone.js";
 export {
 	appendEventSlugSuffix,

@@ -1,10 +1,10 @@
 import { CurrencyINR } from "#/components/design-system";
+import type { EventPublicPricingTier } from "@repo/shared/schemas";
 import { useNow } from "../hooks";
 import { getStartingPrice } from "../pricing";
-import type { EventPublicDetail } from "../types";
 
 export interface PublicEventPriceFromProps {
-	tiers: EventPublicDetail["pricingTiers"];
+	tiers: ReadonlyArray<EventPublicPricingTier>;
 	className?: string;
 }
 

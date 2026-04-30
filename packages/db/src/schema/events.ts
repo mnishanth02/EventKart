@@ -108,6 +108,12 @@ export const events = pgTable(
 		uniqueIndex("events_slug_unique").on(table.slug),
 		index("events_organizer_id_idx").on(table.organizerId),
 		index("events_status_idx").on(table.status),
+		index("events_public_listing_order_idx")
+			.on(table.startAt, table.id)
+			.where(sql`${table.status} = 'published'`),
+		index("events_public_listing_active_idx")
+			.on(table.endAt)
+			.where(sql`${table.status} = 'published'`),
 		index("events_organizer_first_published_paid_idx")
 			.on(table.organizerId, table.firstPublishedAt)
 			.where(
