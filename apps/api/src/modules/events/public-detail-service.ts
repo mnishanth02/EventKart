@@ -39,7 +39,24 @@ export interface PublicEventDetailDeps {
 	db: Database;
 	storage: StorageClient;
 	log: Pick<FastifyBaseLogger, "info" | "warn">;
+	featureFlags?: PublicEventFeatureFlags;
 }
+
+export interface PublicEventFeatureFlags {
+	/**
+	 * When `false` (default), the API projects `capacity: null` for every
+	 * category regardless of the stored `spotsTotal`/`spotsRemaining` values.
+	 * This keeps the public surface aligned with the web flag
+	 * `VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED` so the badge cannot leak
+	 * stale capacity to clients before atomic registration decrements ship
+	 * (Phase 3, I-3.2.10). Both flags must be `true` for the badge to render.
+	 */
+	spotsRemainingEnabled: boolean;
+}
+
+const DEFAULT_FEATURE_FLAGS: PublicEventFeatureFlags = {
+	spotsRemainingEnabled: false,
+};
 
 function isPubliclyReadableEventStatus(status: EventStatusValue): boolean {
 	return status === "published" || status === "completed";
@@ -132,6 +149,7 @@ async function selectPublicCategories(
 	db: Pick<Database, "select">,
 	eventId: string,
 	log: Pick<FastifyBaseLogger, "warn">,
+	featureFlags: PublicEventFeatureFlags,
 ): Promise<{
 	publicCategories: EventPublicDetail["categories"];
 	categoryById: Map<string, EventCategoryRow>;
@@ -144,17 +162,14 @@ async function selectPublicCategories(
 
 	return {
 		publicCategories: rows.map((category) => {
-			const capacity =
-				category.spotsTotal <= 0 ||
-				category.spotsRemaining < 0 ||
-				category.spotsRemaining > category.spotsTotal
-					? null
-					: {
-							spotsTotal: category.spotsTotal,
-							spotsRemaining: category.spotsRemaining,
-						};
+			const isCapacityWellFormed =
+				category.spotsTotal > 0 &&
+				category.spotsRemaining >= 0 &&
+				category.spotsRemaining <= category.spotsTotal;
 
-			if (capacity === null) {
+			let capacity: { spotsTotal: number; spotsRemaining: number } | null;
+			if (!isCapacityWellFormed) {
+				capacity = null;
 				log.warn(
 					{
 						eventId,
@@ -164,6 +179,15 @@ async function selectPublicCategories(
 					},
 					"Invalid public event category capacity; projecting null capacity",
 				);
+			} else if (!featureFlags.spotsRemainingEnabled) {
+				// Feature flag OFF: never expose capacity to public surface.
+				// Mirrors VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED on the web.
+				capacity = null;
+			} else {
+				capacity = {
+					spotsTotal: category.spotsTotal,
+					spotsRemaining: category.spotsRemaining,
+				};
 			}
 
 			return eventPublicCategorySchema.parse({
@@ -282,11 +306,13 @@ async function buildPublicEventDetail(
 	deps: PublicEventDetailDeps,
 	event: EventRow,
 ): Promise<EventPublicDetail> {
+	const featureFlags = deps.featureFlags ?? DEFAULT_FEATURE_FLAGS;
 	const organizer = await selectOrganizerSummary(deps.db, event.organizerId);
 	const { publicCategories, categoryById } = await selectPublicCategories(
 		deps.db,
 		event.id,
 		deps.log,
+		featureFlags,
 	);
 	const pricingTiers = await selectPublicPricingTiers(
 		deps.db,

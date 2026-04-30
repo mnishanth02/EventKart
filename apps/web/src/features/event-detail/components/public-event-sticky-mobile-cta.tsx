@@ -18,7 +18,7 @@ export function PublicEventStickyMobileCta({
 	const reasonId = "register-cta-mobile-reason";
 
 	return (
-		<div className="fixed inset-x-0 bottom-16 z-40 border-t bg-background/95 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-2xl backdrop-blur lg:hidden">
+		<div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t bg-background/95 p-3 pb-3 shadow-2xl backdrop-blur md:bottom-0 md:pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
 			<div className="mx-auto max-w-7xl space-y-2">
 				<div className="flex items-center justify-between gap-3">
 					<p id={reasonId} className="text-xs text-muted-foreground">

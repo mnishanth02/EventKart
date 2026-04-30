@@ -641,3 +641,96 @@ describe("GET /api/v1/events/by-slug/:slug", () => {
 		expect(response.statusCode).toBeLessThan(600);
 	});
 });
+
+describe("GET /api/v1/events/by-slug/:slug — PUBLIC_SPOTS_REMAINING_BADGE_ENABLED=false", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp({
+			PUBLIC_SPOTS_REMAINING_BADGE_ENABLED: false,
+		});
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("projects null capacity for every category when the feature flag is off", async () => {
+		const { db } = createMockDb(publicDetailRows());
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		const body = response.json();
+		const categories = body.data.data.categories as {
+			slug: string;
+			capacity: unknown;
+		}[];
+		expect(categories.map((c) => c.slug)).toEqual(["5k", "10k"]);
+		for (const category of categories) {
+			expect(category.capacity).toBeNull();
+		}
+		// Stored fields must never leak even with the flag off.
+		expect(JSON.stringify(body)).not.toContain("spotsTotal");
+		expect(JSON.stringify(body)).not.toContain("spotsRemaining");
+	});
+
+	it("does not warn for well-formed capacity rows when the feature flag is off", async () => {
+		const warnSpy = vi.spyOn(app.log, "warn");
+		const { db } = createMockDb(publicDetailRows());
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		expect(warnSpy).not.toHaveBeenCalledWith(
+			expect.any(Object),
+			"Invalid public event category capacity; projecting null capacity",
+		);
+		warnSpy.mockRestore();
+	});
+
+	it("still projects null and warns for corrupt capacity rows when the feature flag is off", async () => {
+		const warnSpy = vi.spyOn(app.log, "warn");
+		const invalidRows = buildCategoryRows().map((category) =>
+			category.id === CATEGORY_5K_ID
+				? { ...category, spotsTotal: 10, spotsRemaining: 99 }
+				: category,
+		);
+		const { db } = createMockDb([
+			[buildEventRow()],
+			[buildOrganizerSummaryRow()],
+			invalidRows,
+			buildPricingRows(),
+			[],
+		]);
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(200);
+		const categories = response.json().data.data.categories as {
+			slug: string;
+			capacity: unknown;
+		}[];
+		// All categories projected as null (corrupt by validation, others by flag).
+		for (const category of categories) {
+			expect(category.capacity).toBeNull();
+		}
+		expect(warnSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventId: EVENT_ID,
+				categoryId: CATEGORY_5K_ID,
+				spotsTotal: 10,
+				spotsRemaining: 99,
+			}),
+			"Invalid public event category capacity; projecting null capacity",
+		);
+		warnSpy.mockRestore();
+	});
+});

@@ -246,7 +246,15 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 		},
 		async (request) => {
 			const data = await lookupPublicEventBySlug(
-				{ db: app.db, storage: app.storage, log: request.log },
+				{
+					db: app.db,
+					storage: app.storage,
+					log: request.log,
+					featureFlags: {
+						spotsRemainingEnabled:
+							app.config.PUBLIC_SPOTS_REMAINING_BADGE_ENABLED ?? false,
+					},
+				},
 				request.params.slug,
 			);
 

@@ -20,6 +20,7 @@ import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
 import { Route as AuthedOrgIndexRouteImport } from './routes/_authed/org/index'
 import { Route as AuthedMyIndexRouteImport } from './routes/_authed/my/index'
 import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
+import { Route as PublicOrganizersSlugRouteImport } from './routes/_public/organizers/$slug'
 import { Route as PublicAuthVerifyEmailRouteImport } from './routes/_public/auth/verify-email'
 import { Route as AuthedOrgVerificationRouteImport } from './routes/_authed/org/verification'
 import { Route as AuthedOrgRegisterRouteImport } from './routes/_authed/org/register'
@@ -91,6 +92,11 @@ const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedAdminRoute,
+} as any)
+const PublicOrganizersSlugRoute = PublicOrganizersSlugRouteImport.update({
+  id: '/organizers/$slug',
+  path: '/organizers/$slug',
+  getParentRoute: () => PublicRoute,
 } as any)
 const PublicAuthVerifyEmailRoute = PublicAuthVerifyEmailRouteImport.update({
   id: '/auth/verify-email',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
   '/auth/verify-email': typeof PublicAuthVerifyEmailRoute
+  '/organizers/$slug': typeof PublicOrganizersSlugRoute
   '/admin/': typeof AuthedAdminIndexRoute
   '/my/': typeof AuthedMyIndexRoute
   '/org/': typeof AuthedOrgIndexRoute
@@ -232,6 +239,7 @@ export interface FileRoutesByTo {
   '/org/register': typeof AuthedOrgRegisterRoute
   '/org/verification': typeof AuthedOrgVerificationRoute
   '/auth/verify-email': typeof PublicAuthVerifyEmailRoute
+  '/organizers/$slug': typeof PublicOrganizersSlugRoute
   '/admin': typeof AuthedAdminIndexRoute
   '/my': typeof AuthedMyIndexRoute
   '/org': typeof AuthedOrgIndexRoute
@@ -264,6 +272,7 @@ export interface FileRoutesById {
   '/_authed/org/register': typeof AuthedOrgRegisterRoute
   '/_authed/org/verification': typeof AuthedOrgVerificationRoute
   '/_public/auth/verify-email': typeof PublicAuthVerifyEmailRoute
+  '/_public/organizers/$slug': typeof PublicOrganizersSlugRoute
   '/_authed/admin/': typeof AuthedAdminIndexRoute
   '/_authed/my/': typeof AuthedMyIndexRoute
   '/_authed/org/': typeof AuthedOrgIndexRoute
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
     | '/org/register'
     | '/org/verification'
     | '/auth/verify-email'
+    | '/organizers/$slug'
     | '/admin/'
     | '/my/'
     | '/org/'
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/org/register'
     | '/org/verification'
     | '/auth/verify-email'
+    | '/organizers/$slug'
     | '/admin'
     | '/my'
     | '/org'
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '/_authed/org/register'
     | '/_authed/org/verification'
     | '/_public/auth/verify-email'
+    | '/_public/organizers/$slug'
     | '/_authed/admin/'
     | '/_authed/my/'
     | '/_authed/org/'
@@ -455,6 +467,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthedAdminIndexRouteImport
       parentRoute: typeof AuthedAdminRoute
+    }
+    '/_public/organizers/$slug': {
+      id: '/_public/organizers/$slug'
+      path: '/organizers/$slug'
+      fullPath: '/organizers/$slug'
+      preLoaderRoute: typeof PublicOrganizersSlugRouteImport
+      parentRoute: typeof PublicRoute
     }
     '/_public/auth/verify-email': {
       id: '/_public/auth/verify-email'
@@ -675,6 +694,7 @@ const AuthedRouteWithChildren =
 interface PublicRouteChildren {
   PublicIndexRoute: typeof PublicIndexRoute
   PublicAuthVerifyEmailRoute: typeof PublicAuthVerifyEmailRoute
+  PublicOrganizersSlugRoute: typeof PublicOrganizersSlugRoute
   PublicEventsSlugRegisterRoute: typeof PublicEventsSlugRegisterRoute
   PublicEventsSlugIndexRoute: typeof PublicEventsSlugIndexRoute
 }
@@ -682,6 +702,7 @@ interface PublicRouteChildren {
 const PublicRouteChildren: PublicRouteChildren = {
   PublicIndexRoute: PublicIndexRoute,
   PublicAuthVerifyEmailRoute: PublicAuthVerifyEmailRoute,
+  PublicOrganizersSlugRoute: PublicOrganizersSlugRoute,
   PublicEventsSlugRegisterRoute: PublicEventsSlugRegisterRoute,
   PublicEventsSlugIndexRoute: PublicEventsSlugIndexRoute,
 }

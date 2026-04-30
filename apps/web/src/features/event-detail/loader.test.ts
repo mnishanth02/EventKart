@@ -108,6 +108,27 @@ describe("resolvePublicEventLoader", () => {
 		}
 	});
 
+	it("redirects renamed slugs to the caller-provided target route", async () => {
+		try {
+			await resolvePublicEventLoader({
+				slug: "old-coimbatore-10k",
+				queryClient: queryClientReturning({
+					kind: "redirect",
+					newSlug: eventDetail.slug,
+				}),
+				redirectTo: "/events/$slug/register",
+			});
+			expect.unreachable("Expected redirect to be thrown");
+		} catch (error) {
+			expect(isRedirect(error)).toBe(true);
+			const redirectError = error as Response & {
+				options: { to: string; params: { slug: string } };
+			};
+			expect(redirectError.options.to).toBe("/events/$slug/register");
+			expect(redirectError.options.params.slug).toBe(eventDetail.slug);
+		}
+	});
+
 	it("throws a TanStack notFound object for API 404s", async () => {
 		try {
 			await resolvePublicEventLoader({

@@ -8,6 +8,7 @@ import {
 } from "@repo/ui/components/ui/card";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { setPublicEventCacheHeaders } from "#/features/event-detail/cache-headers";
+import { resolvePublicEventLoader } from "#/features/event-detail/loader";
 
 /**
  * I-2.1.7 — Phase 3 booking-flow placeholder.
@@ -19,17 +20,20 @@ import { setPublicEventCacheHeaders } from "#/features/event-detail/cache-header
  * cache headers as the event detail page so the placeholder cannot be
  * cached longer than the live data.
  *
- * The route accepts any slug (no loader-side existence check) — Phase 3
- * will introduce the lookup. Today's CTA only links here from a real
- * event page so deep-link traffic is negligible.
+ * The loader resolves the public event via `resolvePublicEventLoader` so
+ * that unknown slugs surface as 404s and renamed slugs 301-redirect to
+ * the canonical detail page. The placeholder UI does not consume the
+ * fetched event today, but the existence check protects the placeholder
+ * from acting as a deep-link doormat for arbitrary URLs.
  */
 export const Route = createFileRoute("/_public/events/$slug/register")({
-	loader: async () => {
-		await setPublicEventCacheHeaders(
-			new Headers({
-				"Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
-			}),
-		);
+	loader: async ({ params, context }) => {
+		await resolvePublicEventLoader({
+			slug: params.slug,
+			queryClient: context.queryClient,
+			setResponseHeaders: setPublicEventCacheHeaders,
+			redirectTo: "/events/$slug/register",
+		});
 	},
 	head: () => ({
 		meta: [
