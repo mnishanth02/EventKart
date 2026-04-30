@@ -14,6 +14,7 @@ import {
 	useRegistrationState,
 } from "../registration";
 import type { EventPublicDetail } from "../types";
+import { PublicEventEarlyBirdCountdown } from "./public-event-early-bird-countdown";
 import { PublicEventPriceFrom } from "./public-event-price-from";
 
 export interface PublicEventRegisterCtaProps {
@@ -114,6 +115,7 @@ export function PublicEventRegisterCta({ event }: PublicEventRegisterCtaProps) {
 				<p id={reasonId} className="text-sm text-muted-foreground">
 					{labels.subtitle}
 				</p>
+				<PublicEventEarlyBirdCountdown event={event} state={state} />
 				{labels.showPrice ? (
 					<PublicEventPriceFrom tiers={event.pricingTiers} />
 				) : null}

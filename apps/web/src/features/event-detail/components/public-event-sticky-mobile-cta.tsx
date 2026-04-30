@@ -2,6 +2,7 @@ import { Button } from "@repo/ui/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { getBookingHref, useRegistrationState } from "../registration";
 import type { EventPublicDetail } from "../types";
+import { PublicEventEarlyBirdCountdown } from "./public-event-early-bird-countdown";
 import { getCtaLabels } from "./public-event-register-cta";
 import { PublicEventPriceFrom } from "./public-event-price-from";
 
@@ -30,6 +31,7 @@ export function PublicEventStickyMobileCta({
 						/>
 					) : null}
 				</div>
+				<PublicEventEarlyBirdCountdown event={event} state={state} />
 				{labels.isActive ? (
 					<Button asChild size="lg" className="w-full">
 						<Link

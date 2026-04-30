@@ -630,3 +630,242 @@ describe("PublicEventPage registration CTA (I-2.1.7)", () => {
 		).toBe(2);
 	});
 });
+
+describe("PublicEventPage early-bird countdown (I-2.1.10)", () => {
+	// Fixture early-bird deadline: 2026-07-15T12:30:00.000Z.
+	// 2 days 3 hours before that:
+	const twoD3h = new Date("2026-07-13T09:30:00.000Z");
+	const afterDeadline = new Date("2026-07-16T00:00:00.000Z");
+
+	function renderAtTime(now: Date, event: EventPublicDetail = fixture) {
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(now);
+		// As with the I-2.1.7 + I-2.1.4 suites we deliberately do NOT call
+		// `vi.runAllTimers()` — the chained countdown setTimeout (and the
+		// I-2.1.7 boundary timer) would otherwise chase across all future
+		// boundaries.
+		return render(<PublicEventPage event={event} />);
+	}
+
+	afterEach(() => {
+		vi.useRealTimers();
+		cleanup();
+	});
+
+	it("renders no countdown text in SSR HTML (renderToString)", async () => {
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(twoD3h);
+		const { renderToString } = await import("react-dom/server");
+		const html = renderToString(<PublicEventPage event={fixture} />);
+		expect(html).not.toContain("Early-bird closes in");
+		expect(html).not.toContain('data-testid="early-bird-countdown"');
+	});
+
+	it("renders the live countdown on both CTA surfaces when active mid-window", () => {
+		renderAtTime(twoD3h);
+		const badges = screen.getAllByTestId("early-bird-countdown");
+		// Sidebar Card + mobile sticky bar.
+		expect(badges.length).toBe(2);
+		for (const badge of badges) {
+			expect(badge.textContent).toContain("Early-bird closes in 2d 3h");
+		}
+	});
+
+	it("hides the countdown when the event has no early-bird tier", () => {
+		const tenK = fixture.pricingTiers[0];
+		if (!tenK) {
+			throw new Error("test fixture must define a 10K tier");
+		}
+		const noEarlyBird: EventPublicDetail = {
+			...fixture,
+			pricingTiers: [{ ...tenK }],
+		};
+		renderAtTime(twoD3h, noEarlyBird);
+		expect(screen.queryAllByTestId("early-bird-countdown").length).toBe(0);
+	});
+
+	it("hides the countdown after every early-bird deadline has passed", () => {
+		renderAtTime(afterDeadline);
+		expect(screen.queryAllByTestId("early-bird-countdown").length).toBe(0);
+	});
+
+	it("hides the countdown in the closed_window state", () => {
+		// fixture.registrationClosesAt = 2026-08-14T12:30 — render after close.
+		renderAtTime(new Date("2026-08-14T18:00:00.000Z"));
+		expect(screen.queryAllByTestId("early-bird-countdown").length).toBe(0);
+		// Sanity: CTA is in the closed state (so the event reached
+		// closed_window — the gate is exercised).
+		expect(
+			screen.queryAllByRole("button", { name: /^Registration closed$/ })
+				.length,
+		).toBe(2);
+	});
+
+	it("hides the countdown in the event_ended state", () => {
+		renderAtTime(new Date("2026-08-16T00:00:00.000Z"));
+		expect(screen.queryAllByTestId("early-bird-countdown").length).toBe(0);
+		expect(
+			screen.queryAllByRole("button", { name: /^Event has ended$/ }).length,
+		).toBe(2);
+	});
+
+	it("uses registrationClosesAt as the cutoff when earlier than the raw deadline", () => {
+		const fiveK = fixture.pricingTiers[1];
+		if (!fiveK) {
+			throw new Error("test fixture must define a 5K tier");
+		}
+		const event: EventPublicDetail = {
+			...fixture,
+			// Move close to a fixed 2d 3h after now; deadline far beyond.
+			registrationClosesAt: "2026-07-15T12:30:00.000Z",
+			pricingTiers: [
+				{
+					...fiveK,
+					earlyBirdDeadline: "2026-09-01T00:00:00.000Z",
+				},
+			],
+		};
+		renderAtTime(twoD3h, event);
+		const badges = screen.getAllByTestId("early-bird-countdown");
+		expect(badges.length).toBe(2);
+		for (const badge of badges) {
+			// Cutoff is registrationClosesAt (2d 3h away), NOT the raw deadline
+			// (which would be ~50d away).
+			expect(badge.textContent).toContain("Early-bird closes in 2d 3h");
+		}
+	});
+
+	it("hides the countdown when registrationOpensAt >= effectiveCutoff (offer unreachable)", () => {
+		const fiveK = fixture.pricingTiers[1];
+		if (!fiveK) {
+			throw new Error("test fixture must define a 5K tier");
+		}
+		const event: EventPublicDetail = {
+			...fixture,
+			// Registration opens AFTER the early-bird deadline → unreachable.
+			registrationOpensAt: "2026-08-01T00:00:00.000Z",
+			pricingTiers: [
+				{
+					...fiveK,
+					earlyBirdDeadline: "2026-07-15T12:30:00.000Z",
+				},
+			],
+		};
+		// Render before opens → state is "not_yet_open", but the badge must
+		// still hide because the offer is unreachable.
+		renderAtTime(new Date("2026-07-10T00:00:00.000Z"), event);
+		expect(screen.queryAllByTestId("early-bird-countdown").length).toBe(0);
+	});
+
+	it("transitions the displayed minute label exactly across the floor boundary (Critical-2)", () => {
+		// Fixture EB deadline = 2026-07-15T12:30:00.000Z. Set now exactly
+		// 2h 30m 30s before → label should read "2h 30m".
+		const startNow = new Date(
+			Date.parse("2026-07-15T12:30:00.000Z") - (2 * 3600_000 + 30 * 60_000 + 30_000),
+		);
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(startNow);
+		render(<PublicEventPage event={fixture} />);
+
+		let badges = screen.getAllByTestId("early-bird-countdown");
+		expect(badges.length).toBe(2);
+		for (const badge of badges) {
+			expect(badge.textContent).toContain("Early-bird closes in 2h 30m");
+		}
+
+		// The chained setTimeout fires at delay = 30_001 ms (not 60_001 — the
+		// per-minute global +1ms drift bug would have undercounted to 2h 29m).
+		// At the fire time, msUntilCutoff = 2h 29m 59s 999ms → floor = 149 min
+		// → label "2h 29m".
+		act(() => {
+			vi.advanceTimersByTime(30_001);
+		});
+
+		badges = screen.getAllByTestId("early-bird-countdown");
+		expect(badges.length).toBe(2);
+		for (const badge of badges) {
+			expect(badge.textContent).toContain("Early-bird closes in 2h 29m");
+		}
+	});
+
+	it("rolls over to the next eligible tier when the soonest cutoff passes", () => {
+		const tenK = fixture.pricingTiers[0];
+		const fiveK = fixture.pricingTiers[1];
+		if (!tenK || !fiveK) {
+			throw new Error("test fixture must define both tiers");
+		}
+		const event: EventPublicDetail = {
+			...fixture,
+			pricingTiers: [
+				{
+					categorySlug: tenK.categorySlug,
+					basePrice: 129_900,
+					earlyBirdPrice: 99_900,
+					// Soonest deadline.
+					earlyBirdDeadline: "2026-07-15T12:30:00.000Z",
+					currency: "INR",
+				},
+				{
+					...fiveK,
+					// Later deadline — should take over after 10K's expires.
+					earlyBirdDeadline: "2026-07-30T00:00:00.000Z",
+				},
+			],
+		};
+		// Start 30s before the 10K deadline → label is "<1m".
+		const startNow = new Date(
+			Date.parse("2026-07-15T12:30:00.000Z") - 30_000,
+		);
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(startNow);
+		render(<PublicEventPage event={event} />);
+
+		let badges = screen.getAllByTestId("early-bird-countdown");
+		expect(badges.length).toBe(2);
+		for (const badge of badges) {
+			expect(badge.textContent).toContain("Early-bird closes in <1m");
+		}
+
+		// Advance just past the 10K deadline (30s + 1ms scheduling residue).
+		act(() => {
+			vi.advanceTimersByTime(30_001);
+		});
+
+		// 5K's deadline (2026-07-30) is now the binding cutoff.
+		// 14 days 11 hours 29 minutes 59 seconds remain → "14d 11h".
+		badges = screen.getAllByTestId("early-bird-countdown");
+		expect(badges.length).toBe(2);
+		for (const badge of badges) {
+			expect(badge.textContent).toContain("Early-bird closes in 14d 11h");
+		}
+	});
+
+	it("removes the countdown after the last cutoff passes", () => {
+		// Start 30s before the only deadline.
+		const startNow = new Date(
+			Date.parse("2026-07-15T12:30:00.000Z") - 30_000,
+		);
+		vi.useFakeTimers({
+			toFake: ["Date", "setTimeout", "queueMicrotask", "setImmediate"],
+		});
+		vi.setSystemTime(startNow);
+		render(<PublicEventPage event={fixture} />);
+
+		expect(screen.getAllByTestId("early-bird-countdown").length).toBe(2);
+
+		// Advance just past the deadline.
+		act(() => {
+			vi.advanceTimersByTime(30_001);
+		});
+
+		expect(screen.queryAllByTestId("early-bird-countdown").length).toBe(0);
+	});
+});
