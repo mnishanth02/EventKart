@@ -675,18 +675,46 @@ describe("GET /api/v1/events/public", () => {
 		expect(params.now).toBeInstanceOf(Date);
 	});
 
-	it.each(["limit=999", "sort=startAtDesc"])(
-		"returns 400 for invalid query %s",
-		async (query) => {
-			const response = await app.inject({
-				method: "GET",
-				url: `${EVENTS_URL}/public?${query}`,
-			});
+	it("accepts descending sort with pagination params", async () => {
+		mockListPublicEvents.mockResolvedValue({
+			data: [],
+			meta: {
+				page: 2,
+				limit: 10,
+				total: 15,
+				totalPages: 2,
+				hasNext: false,
+				hasPrev: true,
+			},
+		});
 
-			expect(response.statusCode).toBe(400);
-			expect(mockListPublicEvents).not.toHaveBeenCalled();
-		},
-	);
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/public?sort=startAtDesc&page=2&limit=10`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			success: true,
+			meta: {
+				page: 2,
+				limit: 10,
+			},
+		});
+	});
+
+	it.each([
+		"limit=999",
+		"sort=hax",
+	])("returns 400 for invalid query %s", async (query) => {
+		const response = await app.inject({
+			method: "GET",
+			url: `${EVENTS_URL}/public?${query}`,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(mockListPublicEvents).not.toHaveBeenCalled();
+	});
 
 	it("returns deterministic empty-list pagination metadata", async () => {
 		mockListPublicEvents.mockResolvedValue({

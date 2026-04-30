@@ -1,5 +1,8 @@
+import {
+	type EventPublicCard,
+	eventPublicCardSchema,
+} from "@repo/shared/schemas";
 import { cleanup, render, screen } from "@testing-library/react";
-import { eventPublicCardSchema, type EventPublicCard } from "@repo/shared/schemas";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PublicEventsList } from "./public-events-list";
@@ -96,7 +99,9 @@ describe("PublicEventsList", () => {
 		render(<PublicEventsList events={[]} />);
 
 		expect(
-			screen.getByText("No upcoming events in Coimbatore yet — check back soon!"),
+			screen.getByText(
+				"No upcoming events in Coimbatore yet — check back soon!",
+			),
 		).toBeTruthy();
 	});
 

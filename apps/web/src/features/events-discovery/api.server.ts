@@ -1,10 +1,13 @@
+import type {
+	EventPublicCard,
+	OffsetPaginationMeta,
+} from "@repo/shared/schemas";
 import { serverApiClient } from "#/lib/api-client.server";
-import type { EventPublicCard, OffsetPaginationMeta } from "@repo/shared/schemas";
 
 export interface PublicEventsListParams {
 	page: number;
 	limit: number;
-	sort: "startAtAsc";
+	sort: "startAtAsc" | "startAtDesc";
 }
 
 export interface PublicEventsListApiEnvelope {

@@ -1,5 +1,8 @@
+import type {
+	EventPublicCard,
+	OffsetPaginationMeta,
+} from "@repo/shared/schemas";
 import { PublicEventCard } from "./public-event-card";
-import type { EventPublicCard, OffsetPaginationMeta } from "@repo/shared/schemas";
 
 export interface PublicEventsListProps {
 	events: EventPublicCard[];

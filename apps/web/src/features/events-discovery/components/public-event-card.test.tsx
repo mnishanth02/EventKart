@@ -1,12 +1,12 @@
+import {
+	EVENT_DISCOVERY_STATUS_LABELS,
+	type EventDiscoveryStatus,
+} from "@repo/shared/utils";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getStartingPrice } from "#/features/event-detail/pricing";
-import {
-	EVENT_DISCOVERY_STATUS_LABELS,
-	type EventDiscoveryStatus,
-} from "@repo/shared/utils";
 import type { EventCardData } from "../types";
 import { PublicEventCard } from "./public-event-card";
 
@@ -48,7 +48,9 @@ afterEach(() => {
 
 const fixedNow = new Date("2026-07-15T00:00:00.000Z");
 
-function categorySlug(value: string): EventCardData["categories"][number]["slug"] {
+function categorySlug(
+	value: string,
+): EventCardData["categories"][number]["slug"] {
 	return value as EventCardData["categories"][number]["slug"];
 }
 
@@ -187,17 +189,16 @@ describe("PublicEventCard", () => {
 				endAt: "2026-07-14T03:30:00.000Z",
 			}),
 		],
-	] satisfies Array<[EventDiscoveryStatus, EventCardData]>)(
-		"renders the %s badge after mount",
-		(status, event) => {
-			renderAtTime(event);
-			flushMount();
+	] satisfies Array<
+		[EventDiscoveryStatus, EventCardData]
+	>)("renders the %s badge after mount", (status, event) => {
+		renderAtTime(event);
+		flushMount();
 
-			const badge = screen.getByTestId("card-status-badge");
-			expect(badge.textContent).toContain(EVENT_DISCOVERY_STATUS_LABELS[status]);
-			expect(badge.querySelector("svg")).toBeTruthy();
-		},
-	);
+		const badge = screen.getByTestId("card-status-badge");
+		expect(badge.textContent).toContain(EVENT_DISCOVERY_STATUS_LABELS[status]);
+		expect(badge.querySelector("svg")).toBeTruthy();
+	});
 
 	it("renders From price after mount using the starting price", () => {
 		const event = fixture();

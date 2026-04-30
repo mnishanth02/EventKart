@@ -1,4 +1,4 @@
-import { and, type Database, inArray, sql } from "@repo/db";
+import { and, type Database, desc, inArray, sql } from "@repo/db";
 import {
 	eventCategories,
 	eventImages,
@@ -6,8 +6,8 @@ import {
 	events,
 } from "@repo/db/schema";
 import {
-	eventPublicCardSchema,
 	type EventPublicCard,
+	eventPublicCardSchema,
 	type OffsetPaginationMeta,
 } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
@@ -38,7 +38,7 @@ export interface PublicEventListingDeps {
 export interface PublicEventListingParams {
 	page: number;
 	limit: number;
-	sort: "startAtAsc";
+	sort: "startAtAsc" | "startAtDesc";
 	now: Date;
 }
 
@@ -57,7 +57,14 @@ export function buildOffsetPaginationMeta({
 	total: number;
 }): OffsetPaginationMeta {
 	if (total === 0) {
-		return { page, limit, total, totalPages: 0, hasNext: false, hasPrev: false };
+		return {
+			page,
+			limit,
+			total,
+			totalPages: 0,
+			hasNext: false,
+			hasPrev: false,
+		};
 	}
 
 	const totalPages = Math.ceil(total / limit);
@@ -105,6 +112,10 @@ async function selectListingRows(
 		sql`${events.endAt} > ${params.now}`,
 	);
 	const offset = (params.page - 1) * params.limit;
+	const orderBy =
+		params.sort === "startAtDesc"
+			? [desc(events.startAt), desc(events.id)]
+			: [events.startAt, events.id];
 
 	const countPromise = deps.db
 		.select({ count: sql<number>`count(*)` })
@@ -115,7 +126,7 @@ async function selectListingRows(
 		.select()
 		.from(events)
 		.where(condition)
-		.orderBy(events.startAt, events.id)
+		.orderBy(...orderBy)
 		.limit(params.limit)
 		.offset(offset);
 

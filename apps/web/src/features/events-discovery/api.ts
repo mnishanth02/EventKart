@@ -5,7 +5,7 @@ import type { PublicEventsListApiEnvelope } from "./api.server";
 const publicEventsListInputSchema = z.object({
 	page: z.number().int().min(1),
 	limit: z.number().int().min(1).max(100),
-	sort: z.enum(["startAtAsc"]),
+	sort: z.enum(["startAtAsc", "startAtDesc"]),
 });
 
 export const getPublicEventsList = createServerFn({ method: "GET" })

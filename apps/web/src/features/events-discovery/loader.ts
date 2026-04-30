@@ -1,5 +1,8 @@
+import type {
+	EventPublicCard,
+	OffsetPaginationMeta,
+} from "@repo/shared/schemas";
 import type { QueryClient } from "@tanstack/react-query";
-import type { EventPublicCard, OffsetPaginationMeta } from "@repo/shared/schemas";
 import type { PublicEventsListParams } from "./api.server";
 import { publicEventsListQueryOptions } from "./queries";
 

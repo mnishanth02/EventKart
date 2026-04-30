@@ -17,12 +17,12 @@ import {
 	eventPublicCardSchema,
 	eventPublicLookupResponseSchema,
 	eventRegistrationFormSchema,
-	eventSlugSchema,
 	eventSchema,
+	eventSlugSchema,
 	offsetPaginationMetaSchema,
 	offsetPaginationSchema,
-	publishedEventPatchSchema,
 	publishEventResponseSchema,
+	publishedEventPatchSchema,
 	publishReadinessResponseSchema,
 	unpublishEventResponseSchema,
 	updateEventInputSchema,
@@ -59,7 +59,7 @@ export const eventPublicLookupHttpResponseSchema = z.object({
 });
 
 export const publicEventListQuerySchema = offsetPaginationSchema.extend({
-	sort: z.enum(["startAtAsc"]).default("startAtAsc"),
+	sort: z.enum(["startAtAsc", "startAtDesc"]).default("startAtAsc"),
 });
 
 export const publicEventListResponseSchema = z.object({

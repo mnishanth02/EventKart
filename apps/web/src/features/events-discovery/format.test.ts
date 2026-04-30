@@ -39,7 +39,9 @@ const categories: EventCardData["categories"] = [
 	},
 ];
 
-function categorySlug(value: string): EventCardData["categories"][number]["slug"] {
+function categorySlug(
+	value: string,
+): EventCardData["categories"][number]["slug"] {
 	return value as EventCardData["categories"][number]["slug"];
 }
 

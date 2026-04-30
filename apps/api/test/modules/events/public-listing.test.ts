@@ -1,10 +1,10 @@
-import type { Database } from "@repo/db";
+import { type Database, desc } from "@repo/db";
+import { describe, expect, it, vi } from "vitest";
 import type { StorageClient } from "../../../src/lib/storage.js";
 import {
 	buildOffsetPaginationMeta,
 	listPublicEvents,
 } from "../../../src/modules/events/public-listing-service.js";
-import { describe, expect, it, vi } from "vitest";
 
 const EVENT_ID = "11111111-1111-4111-8111-111111111111";
 const EVENT_ID_2 = "22222222-2222-4222-8222-222222222222";
@@ -26,7 +26,9 @@ function createSelectQuery(rows: SelectRows, index: number) {
 
 	query.from.mockReturnValue(query);
 	query.where.mockReturnValue(query);
-	query.limit.mockImplementation(() => (index === 0 ? Promise.resolve(rows) : query));
+	query.limit.mockImplementation(() =>
+		index === 0 ? Promise.resolve(rows) : query,
+	);
 	query.offset.mockResolvedValue(rows);
 	query.orderBy.mockImplementation(() =>
 		index === 1 ? query : Promise.resolve(rows),
@@ -218,7 +220,10 @@ describe("listPublicEvents", () => {
 			],
 			[
 				buildPricingRow({ eventId: EVENT_ID, eventCategoryId: CATEGORY_ID }),
-				buildPricingRow({ eventId: EVENT_ID_2, eventCategoryId: CATEGORY_ID_2 }),
+				buildPricingRow({
+					eventId: EVENT_ID_2,
+					eventCategoryId: CATEGORY_ID_2,
+				}),
 			],
 			[],
 		]);
@@ -228,6 +233,92 @@ describe("listPublicEvents", () => {
 		expect(result.data.map((event) => event.slug)).toEqual([
 			"same-start-a",
 			"same-start-b",
+		]);
+	});
+
+	it("orders public events by startAt ASC then id ASC for startAtAsc", async () => {
+		const first = buildEventRow({
+			id: EVENT_ID,
+			slug: "same-start-a",
+			startAt: new Date("2026-08-15T00:30:00.000Z"),
+		});
+		const second = buildEventRow({
+			id: EVENT_ID_2,
+			slug: "same-start-b",
+			startAt: new Date("2026-08-15T00:30:00.000Z"),
+		});
+		const { deps, selectQueries } = createDeps([
+			[{ count: 2 }],
+			[first, second],
+			[
+				buildCategoryRow({ eventId: EVENT_ID, id: CATEGORY_ID }),
+				buildCategoryRow({ eventId: EVENT_ID_2, id: CATEGORY_ID_2 }),
+			],
+			[
+				buildPricingRow({ eventId: EVENT_ID, eventCategoryId: CATEGORY_ID }),
+				buildPricingRow({
+					eventId: EVENT_ID_2,
+					eventCategoryId: CATEGORY_ID_2,
+				}),
+			],
+			[],
+		]);
+
+		const result = await listPublicEvents(deps, {
+			...params,
+			sort: "startAtAsc",
+		});
+
+		expect(selectQueries[1]?.orderBy).toHaveBeenCalledWith(
+			expect.objectContaining({ name: "start_at" }),
+			expect.objectContaining({ name: "id" }),
+		);
+		expect(result.data.map((event) => event.slug)).toEqual([
+			"same-start-a",
+			"same-start-b",
+		]);
+	});
+
+	it("orders public events by startAt DESC then id DESC for startAtDesc", async () => {
+		const first = buildEventRow({
+			id: EVENT_ID_2,
+			slug: "same-start-b",
+			startAt: new Date("2026-08-15T00:30:00.000Z"),
+		});
+		const second = buildEventRow({
+			id: EVENT_ID,
+			slug: "same-start-a",
+			startAt: new Date("2026-08-15T00:30:00.000Z"),
+		});
+		const { deps, selectQueries } = createDeps([
+			[{ count: 2 }],
+			[first, second],
+			[
+				buildCategoryRow({ eventId: EVENT_ID, id: CATEGORY_ID }),
+				buildCategoryRow({ eventId: EVENT_ID_2, id: CATEGORY_ID_2 }),
+			],
+			[
+				buildPricingRow({ eventId: EVENT_ID, eventCategoryId: CATEGORY_ID }),
+				buildPricingRow({
+					eventId: EVENT_ID_2,
+					eventCategoryId: CATEGORY_ID_2,
+				}),
+			],
+			[],
+		]);
+
+		const result = await listPublicEvents(deps, {
+			...params,
+			sort: "startAtDesc",
+		});
+
+		expect(selectQueries[1]?.orderBy).toHaveBeenCalledWith(
+			desc(expect.objectContaining({ name: "start_at" })),
+			desc(expect.objectContaining({ name: "id" })),
+		);
+		expect(result.data.map((event) => event.slug)).toEqual([
+			"same-start-b",
+			"same-start-a",
 		]);
 	});
 
@@ -271,7 +362,11 @@ describe("listPublicEvents", () => {
 		const result = await listPublicEvents(deps, { ...params, page: 2 });
 
 		expect(result.data).toEqual([]);
-		expect(result.meta).toMatchObject({ page: 2, totalPages: 1, hasNext: false });
+		expect(result.meta).toMatchObject({
+			page: 2,
+			totalPages: 1,
+			hasNext: false,
+		});
 	});
 
 	it("hides category capacity when the public spots flag is disabled", async () => {
@@ -359,13 +454,15 @@ describe("listPublicEvents", () => {
 
 describe("buildOffsetPaginationMeta", () => {
 	it("uses deterministic empty-list semantics", () => {
-		expect(buildOffsetPaginationMeta({ page: 3, limit: 20, total: 0 })).toEqual({
-			page: 3,
-			limit: 20,
-			total: 0,
-			totalPages: 0,
-			hasNext: false,
-			hasPrev: false,
-		});
+		expect(buildOffsetPaginationMeta({ page: 3, limit: 20, total: 0 })).toEqual(
+			{
+				page: 3,
+				limit: 20,
+				total: 0,
+				totalPages: 0,
+				hasNext: false,
+				hasPrev: false,
+			},
+		);
 	});
 });

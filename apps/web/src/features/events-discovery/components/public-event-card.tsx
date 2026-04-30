@@ -1,16 +1,16 @@
-import { PublicEventPriceFrom } from "#/features/event-detail/components/public-event-price-from";
-import { useNow } from "#/lib/hooks/use-now";
-import { Badge } from "@repo/ui/components/ui/badge";
-import { Card, CardContent, CardFooter } from "@repo/ui/components/ui/card";
-import { cn } from "@repo/ui/lib/utils";
 import {
 	EVENT_DISCOVERY_STATUS_LABELS,
 	type EventDiscoveryStatus,
 	getEventDiscoveryStatus,
 } from "@repo/shared/utils";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Card, CardContent, CardFooter } from "@repo/ui/components/ui/card";
+import { cn } from "@repo/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { Ban, CalendarClock, Flag, Lock, Sparkles } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
+import { PublicEventPriceFrom } from "#/features/event-detail/components/public-event-price-from";
+import { useNow } from "#/lib/hooks/use-now";
 import {
 	formatCardDateRange,
 	formatCategoryList,
@@ -76,7 +76,8 @@ export function PublicEventCard({ event, className }: PublicEventCardProps) {
 						<span
 							className={cn(
 								"min-h-5 text-sm font-medium text-foreground",
-								priceShouldBeDeemphasized && "text-muted-foreground line-through",
+								priceShouldBeDeemphasized &&
+									"text-muted-foreground line-through",
 							)}
 						>
 							<Price event={event} hidden={priceIsUnavailable} />
@@ -88,7 +89,9 @@ export function PublicEventCard({ event, className }: PublicEventCardProps) {
 	);
 }
 
-function useClientEventStatus(event: EventCardData): EventDiscoveryStatus | null {
+function useClientEventStatus(
+	event: EventCardData,
+): EventDiscoveryStatus | null {
 	const now = useNow();
 	if (now === null) {
 		return null;
@@ -177,13 +180,7 @@ function EventMetaList({
 	);
 }
 
-function Price({
-	event,
-	hidden,
-}: {
-	event: EventCardData;
-	hidden: boolean;
-}) {
+function Price({ event, hidden }: { event: EventCardData; hidden: boolean }) {
 	if (!event.isPaid) {
 		return <>Free</>;
 	}
@@ -191,7 +188,10 @@ function Price({
 		return <>Pricing TBA</>;
 	}
 	return (
-		<span className={cn(hidden && "invisible")} aria-hidden={hidden || undefined}>
+		<span
+			className={cn(hidden && "invisible")}
+			aria-hidden={hidden || undefined}
+		>
 			<PublicEventPriceFrom tiers={event.pricingTiers} />
 		</span>
 	);
