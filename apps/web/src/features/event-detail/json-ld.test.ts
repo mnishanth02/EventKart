@@ -1,6 +1,8 @@
 import { eventPublicDetailSchema } from "@repo/shared/schemas";
 import { describe, expect, it } from "vitest";
 import {
+	type BreadcrumbListJsonLd,
+	buildPublicEventBreadcrumbJsonLd,
 	buildPublicEventJsonLd,
 	type EventJsonLd,
 	type OfferJsonLd,
@@ -553,5 +555,208 @@ describe("serializeJsonLdForInlineScript", () => {
 			.replace(/\\u2028/g, "\u2028")
 			.replace(/\\u2029/g, "\u2029");
 		expect(() => JSON.parse(decoded)).not.toThrow();
+	});
+});
+
+describe("buildPublicEventBreadcrumbJsonLd", () => {
+	it("returns null when siteUrl is undefined (fail-soft, parity with I-2.4.7 canonical)", () => {
+		const event = buildFixture();
+		expect(
+			buildPublicEventBreadcrumbJsonLd(event, { siteUrl: undefined }),
+		).toBeNull();
+	});
+
+	it("returns null for every malformed or non-http(s) siteUrl", () => {
+		const event = buildFixture();
+		for (const siteUrl of [
+			"",
+			"not a url",
+			"ftp://example.com",
+			"file:///etc/hosts",
+			"about:blank",
+			"data:text/plain,hi",
+		]) {
+			expect(buildPublicEventBreadcrumbJsonLd(event, { siteUrl })).toBeNull();
+		}
+	});
+
+	it("emits three ListItems with positions 1/2/3 and names Home/Events/{title}", () => {
+		const event = buildFixture();
+		const breadcrumbs = buildPublicEventBreadcrumbJsonLd(event, {
+			siteUrl: SITE_URL,
+		}) as BreadcrumbListJsonLd;
+
+		expect(breadcrumbs["@context"]).toBe("https://schema.org");
+		expect(breadcrumbs["@type"]).toBe("BreadcrumbList");
+		expect(breadcrumbs.itemListElement).toHaveLength(3);
+
+		const [home, events, detail] = breadcrumbs.itemListElement;
+		expect(home).toEqual({
+			"@type": "ListItem",
+			position: 1,
+			name: "Home",
+			item: "https://eventkart.in/",
+		});
+		expect(events).toEqual({
+			"@type": "ListItem",
+			position: 2,
+			name: "Events",
+			item: "https://eventkart.in/events",
+		});
+		expect(detail).toEqual({
+			"@type": "ListItem",
+			position: 3,
+			name: "Coimbatore City 10K",
+			item: "https://eventkart.in/events/coimbatore-city-10k",
+		});
+	});
+
+	it("normalizes trailing slashes and accidental path/query/fragment on siteUrl", () => {
+		const event = buildFixture({ slug: "foo" });
+		const expectedDetail = "https://example.com/events/foo";
+		for (const siteUrl of [
+			"https://example.com",
+			"https://example.com/",
+			"https://example.com///",
+			"https://example.com/some/path",
+			"https://example.com/?utm=x",
+			"https://example.com/#frag",
+		]) {
+			const result = buildPublicEventBreadcrumbJsonLd(event, {
+				siteUrl,
+			}) as BreadcrumbListJsonLd;
+			expect(result.itemListElement[0]?.item).toBe("https://example.com/");
+			expect(result.itemListElement[1]?.item).toBe(
+				"https://example.com/events",
+			);
+			expect(result.itemListElement[2]?.item).toBe(expectedDetail);
+		}
+	});
+
+	it("uses the absolute event.title verbatim for ListItem 3 — no truncation, no escaping", () => {
+		const event = buildFixture({
+			title: "देवनागरी रन 🏃‍♂️ — coimbatore",
+		});
+		const breadcrumbs = buildPublicEventBreadcrumbJsonLd(event, {
+			siteUrl: SITE_URL,
+		}) as BreadcrumbListJsonLd;
+		// In-memory, the title carries the original codepoints (Devanagari,
+		// emoji, ZWJ sequence). The serializer is the trust boundary that
+		// HTML-escapes JSON output for inline embedding — see the
+		// serializeJsonLdForInlineScript test below.
+		expect(breadcrumbs.itemListElement[2]?.name).toBe(
+			"देवनागरी रन 🏃‍♂️ — coimbatore",
+		);
+	});
+
+	it("neutralizes hostile titles containing </script> through serializeJsonLdForInlineScript", () => {
+		const event = buildFixture({
+			title: "Race </script><script>alert(1)</script> finish!",
+		});
+		const breadcrumbs = buildPublicEventBreadcrumbJsonLd(event, {
+			siteUrl: SITE_URL,
+		}) as BreadcrumbListJsonLd;
+		const embedded = serializeJsonLdForInlineScript(breadcrumbs);
+
+		// The serializer mirrors the framework's escapeHtml lookup
+		// (`& > < U+2028 U+2029` → `\u00xx`) so a `</script>` payload in
+		// the event title can never break out of the inline JSON-LD
+		// `<script>`. Verify both that the literal sequence is gone and
+		// that the escaped sequence is present.
+		expect(embedded).not.toContain("</script>");
+		expect(embedded).not.toContain("<script");
+		expect(embedded).toContain("\\u003c/script\\u003e");
+		expect(embedded).toContain("\\u003cscript\\u003ealert(1)");
+
+		// Round-trip: reverse the HTML escaping and JSON.parse must yield
+		// the original payload verbatim — proves the escape map is
+		// lossless and the breadcrumb data is recoverable by the browser.
+		const decoded = embedded
+			.replace(/\\u003c/g, "<")
+			.replace(/\\u003e/g, ">")
+			.replace(/\\u0026/g, "&");
+		expect(JSON.parse(decoded)).toEqual(breadcrumbs);
+	});
+
+	it("survives U+2028 / U+2029 in the title through the serializer", () => {
+		const event = buildFixture({
+			title: "Line one\u2028line two\u2029line three",
+		});
+		const breadcrumbs = buildPublicEventBreadcrumbJsonLd(event, {
+			siteUrl: SITE_URL,
+		}) as BreadcrumbListJsonLd;
+		const embedded = serializeJsonLdForInlineScript(breadcrumbs);
+		// JSON.stringify already encodes U+2028/U+2029 as the six-char
+		// escape `\u2028`/`\u2029` in the JSON string literal, so the raw
+		// codepoint never appears in the output. This protects against
+		// the historical Safari/JSONP bug where U+2028 inside a JS string
+		// literal terminated the line and broke parsing.
+		expect(embedded).not.toContain("\u2028");
+		expect(embedded).not.toContain("\u2029");
+		expect(embedded).toContain("\\u2028");
+		expect(embedded).toContain("\\u2029");
+	});
+
+	it("preserves Devanagari, emoji, and ZWJ sequences in the title field through round-trip", () => {
+		const family = "👨\u200D👩\u200D👧\u200D👦";
+		const title = `देवनागरी ${family} run`;
+		const event = buildFixture({ title });
+		const breadcrumbs = buildPublicEventBreadcrumbJsonLd(event, {
+			siteUrl: SITE_URL,
+		}) as BreadcrumbListJsonLd;
+		const embedded = serializeJsonLdForInlineScript(breadcrumbs);
+		const decoded = embedded
+			.replace(/\\u003c/g, "<")
+			.replace(/\\u003e/g, ">")
+			.replace(/\\u0026/g, "&");
+		const parsed = JSON.parse(decoded) as BreadcrumbListJsonLd;
+		// Round-trip must not corrupt non-BMP codepoints, ZWJ, or
+		// combining sequences — the helper performs no normalization
+		// (unlike `description` in the Event JSON-LD).
+		expect(parsed.itemListElement[2]?.name).toBe(title);
+	});
+
+	it("snapshot of the full BreadcrumbList for a representative event", () => {
+		const event = buildFixture();
+		const breadcrumbs = buildPublicEventBreadcrumbJsonLd(event, {
+			siteUrl: SITE_URL,
+		});
+		expect(breadcrumbs).toMatchInlineSnapshot(`
+			{
+			  "@context": "https://schema.org",
+			  "@type": "BreadcrumbList",
+			  "itemListElement": [
+			    {
+			      "@type": "ListItem",
+			      "item": "https://eventkart.in/",
+			      "name": "Home",
+			      "position": 1,
+			    },
+			    {
+			      "@type": "ListItem",
+			      "item": "https://eventkart.in/events",
+			      "name": "Events",
+			      "position": 2,
+			    },
+			    {
+			      "@type": "ListItem",
+			      "item": "https://eventkart.in/events/coimbatore-city-10k",
+			      "name": "Coimbatore City 10K",
+			      "position": 3,
+			    },
+			  ],
+			}
+		`);
+	});
+
+	it("is JSON-serializable round-trip with no `undefined` properties", () => {
+		const event = buildFixture();
+		const breadcrumbs = buildPublicEventBreadcrumbJsonLd(event, {
+			siteUrl: SITE_URL,
+		}) as BreadcrumbListJsonLd;
+		const roundTripped = JSON.parse(
+			JSON.stringify(breadcrumbs),
+		) as BreadcrumbListJsonLd;
+		expect(roundTripped).toEqual(breadcrumbs);
 	});
 });

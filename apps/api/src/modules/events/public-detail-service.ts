@@ -355,6 +355,25 @@ async function buildPublicEventDetail(
 	});
 }
 
+/**
+ * Resolve a slug-redirect row for the event namespace. Throws
+ * `NotFoundError` (which the caller surfaces as 404) when:
+ *  - no redirect row exists,
+ *  - the redirect target points back at the requested slug (loop guard),
+ *  - the target event row is missing,
+ *  - the target event is not publicly readable (e.g. draft / unpublished),
+ *    OR
+ *  - the target event's current slug no longer matches `redirect.newSlug`
+ *    (the redirect is stale relative to the events table — typically a
+ *    chained rename A → B → C, where the redirect row says B but the
+ *    canonical slug has already moved to C). Issuing a 301 to B in that
+ *    case would send the client to a slug that no longer exists,
+ *    forcing an extra 404 round-trip and (at the CDN) potentially
+ *    poisoning the redirect cache.
+ *
+ * Mirrors `lookupOrganizerSlugRedirect` so both public lookup paths
+ * enforce the same chained-rename invariant. See I-2.4.6.
+ */
 async function lookupSlugRedirect(
 	deps: PublicEventDetailDeps,
 	slug: string,
@@ -378,7 +397,11 @@ async function lookupSlugRedirect(
 	}
 
 	const targetEvent = await selectEventById(deps.db, redirect.resourceId);
-	if (!targetEvent || !isPubliclyReadableEventStatus(targetEvent.status)) {
+	if (
+		!targetEvent ||
+		!isPubliclyReadableEventStatus(targetEvent.status) ||
+		targetEvent.slug !== redirect.newSlug
+	) {
 		throw new NotFoundError("Event not found");
 	}
 

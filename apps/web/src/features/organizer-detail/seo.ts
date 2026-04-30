@@ -12,6 +12,13 @@ import type { OrganizerPublicProfile } from "./types";
  *  - Emits `<meta property="og:url">` and `<link rel="canonical">` only
  *    when `siteUrl` is provided. Both are normalized to
  *    `<origin>/organizers/<slug>` via {@link buildOrganizerCanonicalUrl}.
+ *  - Emits `<link rel="alternate" hreflang="en">` and
+ *    `<link rel="alternate" hreflang="x-default">` (I-2.4.7) — both
+ *    pointing at the same canonical URL since V1 is English-only. They
+ *    are emitted only when the canonical URL itself is emitted (no site
+ *    URL → no hreflang either, since hreflang requires absolute URLs).
+ *    When V2 adds Hindi/Tamil locales these become per-locale absolute
+ *    URLs (see `docs/impl-plan/feature-2.4-I-2.4.7.md`).
  *  - Emits `<meta name="robots" content="noindex,nofollow">` when (and
  *    only when) `profile.isVerified === false`. Unverified organizers
  *    are still publicly addressable so verified-event detail pages
@@ -36,6 +43,12 @@ export type HeadMetaEntry =
 export interface HeadLinkEntry {
 	rel: string;
 	href: string;
+	/**
+	 * Optional `hreflang` attribute. Set on `rel="alternate"` link tags to
+	 * declare the language/locale of the target URL. V1 emits `"en"` and
+	 * `"x-default"` only; V2 will add Hindi/Tamil locales.
+	 */
+	hreflang?: string;
 }
 
 export interface OrganizerDetailHead {
@@ -84,7 +97,17 @@ export function buildOrganizerDetailHead(
 	}
 
 	const links: HeadLinkEntry[] = canonicalUrl
-		? [{ rel: "canonical", href: canonicalUrl }]
+		? [
+				{ rel: "canonical", href: canonicalUrl },
+				// V1 is English-only. Per Google's hreflang spec, every
+				// alternate URL must be absolute, so we gate hreflang on the
+				// same `canonicalUrl` that gates `<link rel="canonical">`.
+				// Both tags point at the same href today; when V2 adds
+				// Hindi/Tamil locales we will swap to per-locale absolute URLs
+				// (see `docs/impl-plan/feature-2.4-I-2.4.7.md`).
+				{ rel: "alternate", hreflang: "en", href: canonicalUrl },
+				{ rel: "alternate", hreflang: "x-default", href: canonicalUrl },
+			]
 		: [];
 
 	return { meta, links };

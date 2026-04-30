@@ -1,3 +1,22 @@
-# https://www.robotstxt.org/robotstxt.html
+# EventKart robots.txt — see docs/impl-plan/feature-2.4-I-2.4.5.md
 User-agent: *
-Disallow:
+Allow: /
+Allow: /events/
+Allow: /organizers/
+Allow: /privacy
+Allow: /terms
+Allow: /contact
+Allow: /about
+Allow: /faq
+Disallow: /org$
+Disallow: /org/
+Disallow: /admin$
+Disallow: /admin/
+Disallow: /my$
+Disallow: /my/
+Disallow: /book$
+Disallow: /book/
+Disallow: /api$
+Disallow: /api/
+
+Sitemap: https://eventkart.in/sitemap.xml

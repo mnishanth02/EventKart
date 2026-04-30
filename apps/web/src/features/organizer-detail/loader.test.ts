@@ -311,6 +311,25 @@ describe("resolvePublicOrganizerLoader (I-2.3.2 + I-2.3.3 — events prefetch)",
 			expect.unreachable("Expected redirect to be thrown");
 		} catch (error) {
 			expect(isRedirect(error)).toBe(true);
+			const redirectError = error as Response & {
+				options: {
+					to: string;
+					params: { slug: string };
+					code: number;
+					replace: boolean;
+					headers?: Record<string, string>;
+				};
+			};
+			expect(redirectError.options.to).toBe("/organizers/$slug");
+			expect(redirectError.options.params.slug).toBe(profile.slug);
+			expect(redirectError.options.code).toBe(301);
+			expect(redirectError.options.replace).toBe(true);
+			// I-2.4.6: redirect Response carries a short, plain `max-age`
+			// directive — never `s-maxage`/SWR — so the CDN cannot pin a
+			// stale slug rename across a follow-up rename.
+			expect(redirectError.options.headers?.["Cache-Control"]).toBe(
+				"public, max-age=300",
+			);
 		}
 
 		expect(upcomingHandler).not.toHaveBeenCalled();

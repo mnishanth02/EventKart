@@ -10,6 +10,15 @@ import type {
 } from "./types";
 import { organizerUpcomingEventsQueryOptions } from "./upcoming-events-queries";
 
+/**
+ * Cache directive applied to the 301 slug-rename Response. Short, plain
+ * `max-age` (no `s-maxage`/`stale-while-revalidate`) so a freshly-renamed
+ * organizer slug doesn't get pinned at the CDN edge: a follow-up rename
+ * (A → B → C) needs the redirect to invalidate quickly. Mirrors the
+ * event-detail constant from `event-detail/loader.ts`. See I-2.4.6.
+ */
+export const PUBLIC_ORGANIZER_REDIRECT_CACHE_CONTROL = "public, max-age=300";
+
 export interface ResolvePublicOrganizerLoaderArgs {
 	slug: string;
 	queryClient: QueryClient;
@@ -72,6 +81,9 @@ export async function resolvePublicOrganizerLoader({
 			params: { slug: payload.newSlug },
 			replace: true,
 			code: 301,
+			headers: {
+				"Cache-Control": PUBLIC_ORGANIZER_REDIRECT_CACHE_CONTROL,
+			},
 		});
 	}
 

@@ -1,11 +1,20 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { notFound, redirect } from "@tanstack/react-router";
+import { PUBLIC_EVENT_CACHE_CONTROL } from "./cache-headers";
 import { publicEventQueryOptions } from "./queries";
 import type { EventPublicDetail, EventPublicLookupResponse } from "./types";
 
 export type PublicEventRedirectTarget =
 	| "/events/$slug"
 	| "/events/$slug/register";
+
+/**
+ * Cache directive applied to the 301 slug-rename Response. Short, plain
+ * `max-age` (no `s-maxage`/`stale-while-revalidate`) so a freshly-renamed
+ * slug doesn't get pinned at the CDN edge: a follow-up rename (A → B → C)
+ * needs the redirect to invalidate quickly. See I-2.4.6 design notes.
+ */
+export const PUBLIC_EVENT_REDIRECT_CACHE_CONTROL = "public, max-age=300";
 
 export interface ResolvePublicEventLoaderArgs {
 	slug: string;
@@ -43,13 +52,14 @@ export async function resolvePublicEventLoader({
 			params: { slug: payload.newSlug },
 			replace: true,
 			code: 301,
+			headers: { "Cache-Control": PUBLIC_EVENT_REDIRECT_CACHE_CONTROL },
 		});
 	}
 
 	if (setResponseHeaders) {
 		await setResponseHeaders(
 			new Headers({
-				"Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+				"Cache-Control": PUBLIC_EVENT_CACHE_CONTROL,
 			}),
 		);
 	}

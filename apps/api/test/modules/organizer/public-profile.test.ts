@@ -313,11 +313,14 @@ describe("GET /api/v1/organizers/by-slug/:slug", () => {
 				success: true,
 				data: { kind: "redirect", newSlug: "coimbatorerunners" },
 			});
-			// Belt-and-suspenders: the redirect signal must not leak the
+			// I-2.4.6: Belt-and-suspenders: the redirect signal must not leak the
 			// organizer UUID or any other internal identifier.
 			expect(response.body).not.toContain(ORGANIZER_ID);
 			expect(response.body).not.toContain("organizerId");
 			expect(response.body).not.toContain("resourceId");
+			// I-2.4.6: Mirror the events redirect-cache directive — short,
+			// plain `max-age` so the CDN cannot pin a stale slug rename.
+			expect(response.headers["cache-control"]).toBe("public, max-age=300");
 		});
 
 		it("returns 404 when the redirect's target organizer row is missing", async () => {

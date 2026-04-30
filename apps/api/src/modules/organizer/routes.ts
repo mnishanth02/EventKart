@@ -90,12 +90,19 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 				},
 			},
 		},
-		async (request) => {
+		async (request, reply) => {
 			const data = await lookupPublicOrganizerBySlug(
 				app.db,
 				request.params.slug,
 				request.log,
 			);
+
+			// I-2.4.6: Mirror the events redirect-cache directive — short
+			// `max-age=300` (no `s-maxage`/SWR) so the CDN can't pin a
+			// stale slug rename through a follow-up rename.
+			if (data.kind === "redirect") {
+				reply.header("cache-control", "public, max-age=300");
+			}
 
 			return { success: true as const, data };
 		},

@@ -247,7 +247,7 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 				},
 			},
 		},
-		async (request) => {
+		async (request, reply) => {
 			const data = await lookupPublicEventBySlug(
 				{
 					db: app.db,
@@ -260,6 +260,15 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 				},
 				request.params.slug,
 			);
+
+			// I-2.4.6: When the lookup resolves to a slug-rename redirect,
+			// short-cache the JSON response so a subsequent rename
+			// (A → B → C) invalidates quickly. Plain `max-age=300` —
+			// deliberately NOT `s-maxage`/`stale-while-revalidate` so
+			// stale redirects can't outlive the rename window.
+			if (data.kind === "redirect") {
+				reply.header("cache-control", "public, max-age=300");
+			}
 
 			return { success: true as const, data };
 		},

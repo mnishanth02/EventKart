@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { setPublicEventCacheHeaders } from "#/features/event-detail/cache-headers";
 import { PublicEventPage } from "#/features/event-detail/components/public-event-page";
 import {
+	buildPublicEventBreadcrumbJsonLd,
 	buildPublicEventJsonLd,
 	serializeJsonLdForInlineScript,
 } from "#/features/event-detail/json-ld";
@@ -26,14 +27,31 @@ export const Route = createFileRoute("/_public/events/$slug/")({
 		const jsonLd = buildPublicEventJsonLd(event, {
 			siteUrl: publicEnv.VITE_SITE_URL,
 		});
+		const breadcrumbJsonLd = buildPublicEventBreadcrumbJsonLd(event, {
+			siteUrl: publicEnv.VITE_SITE_URL,
+		});
+		const scripts: Array<{
+			type: "application/ld+json";
+			children: string;
+		}> = [
+			{
+				type: "application/ld+json",
+				children: serializeJsonLdForInlineScript(jsonLd),
+			},
+		];
+		// Fail-soft (mirrors I-2.4.7 canonical contract): when
+		// `VITE_SITE_URL` is unset/invalid, the breadcrumb helper returns
+		// `null` and we skip the second JSON-LD entry rather than emit
+		// relative URLs (which Schema.org `BreadcrumbList.item` rejects).
+		if (breadcrumbJsonLd) {
+			scripts.push({
+				type: "application/ld+json",
+				children: serializeJsonLdForInlineScript(breadcrumbJsonLd),
+			});
+		}
 		return {
 			...seo,
-			scripts: [
-				{
-					type: "application/ld+json",
-					children: serializeJsonLdForInlineScript(jsonLd),
-				},
-			],
+			scripts,
 		};
 	},
 	component: EventDetailRouteComponent,

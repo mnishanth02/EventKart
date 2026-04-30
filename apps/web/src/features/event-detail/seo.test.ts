@@ -160,6 +160,16 @@ describe("buildPublicEventMeta", () => {
 				rel: "canonical",
 				href: "https://eventkart.in/events/coimbatore-city-10k",
 			},
+			{
+				rel: "alternate",
+				hreflang: "en",
+				href: "https://eventkart.in/events/coimbatore-city-10k",
+			},
+			{
+				rel: "alternate",
+				hreflang: "x-default",
+				href: "https://eventkart.in/events/coimbatore-city-10k",
+			},
 		]);
 	});
 
@@ -179,6 +189,86 @@ describe("buildPublicEventMeta", () => {
 			expect(links[0]?.href).toBe(
 				"https://eventkart.in/events/coimbatore-city-10k",
 			);
+			// Hreflang hrefs must match the canonical exactly, not the raw siteUrl.
+			for (const link of links.filter((l) => l.rel === "alternate")) {
+				expect(link.href).toBe(
+					"https://eventkart.in/events/coimbatore-city-10k",
+				);
+			}
+		}
+	});
+
+	it("emits hreflang=en and hreflang=x-default both pointing at the canonical URL when siteUrl is set (I-2.4.7)", () => {
+		const event = buildFixture();
+		const { links } = buildPublicEventMeta(event, {
+			siteUrl: "https://eventkart.in",
+		});
+		const canonical = links.find((l) => l.rel === "canonical");
+		const alternates = links.filter((l) => l.rel === "alternate");
+		expect(canonical?.href).toBe(
+			"https://eventkart.in/events/coimbatore-city-10k",
+		);
+		expect(alternates.map((l) => l.hreflang)).toEqual(["en", "x-default"]);
+		// Per I-2.4.7 V1 contract: every hreflang href is exactly the canonical.
+		for (const alt of alternates) {
+			expect(alt.href).toBe(canonical?.href);
+		}
+		// Canonical itself does NOT carry a hreflang attribute.
+		expect(canonical?.hreflang).toBeUndefined();
+	});
+
+	it("omits hreflang entirely when siteUrl is unset (canonical is omitted too)", () => {
+		const event = buildFixture();
+		const { links } = buildPublicEventMeta(event, { siteUrl: undefined });
+		expect(links).toEqual([]);
+		expect(links.some((l) => l.rel === "alternate")).toBe(false);
+	});
+
+	it("omits hreflang when siteUrl is malformed (no canonical → no alternates)", () => {
+		const event = buildFixture();
+		const { links } = buildPublicEventMeta(event, { siteUrl: "not a url" });
+		expect(links).toEqual([]);
+	});
+
+	it("honours the configured scheme on siteUrl (http for staging) — does not silently rewrite to https or vice versa", () => {
+		// The env layer (`apps/web/src/lib/env/public.ts`) accepts both
+		// http: and https:. The HTTPS-only guarantee in production is
+		// delivered by config (PROD env points at https://eventkart.in);
+		// the helper deliberately does NOT rewrite the scheme, so a
+		// misconfigured staging URL fails loudly in QA rather than
+		// quietly emitting a fabricated https URL that doesn't resolve.
+		const event = buildFixture();
+		const { links } = buildPublicEventMeta(event, {
+			siteUrl: "http://staging.eventkart.in",
+		});
+		expect(links[0]?.href).toBe(
+			"http://staging.eventkart.in/events/coimbatore-city-10k",
+		);
+	});
+
+	it("uses the CURRENT slug from a slug-rename payload (I-2.4.7) — never bakes in a stale slug", () => {
+		// Loader returns the resolved (current) slug after a slug-rename
+		// redirect; the helper must mirror that exactly so canonical and
+		// hreflang point at the live URL, not the legacy one the user typed.
+		// Construct via the schema parser (slug is a branded type, so
+		// overriding through `Partial<EventPublicDetail>` is rejected by
+		// the type checker — bypass via the raw input shape).
+		const event = eventPublicDetailSchema.parse({
+			...baseFixtureInput,
+			slug: "coimbatore-city-10k-2026",
+		});
+		const { meta, links } = buildPublicEventMeta(event, {
+			siteUrl: "https://eventkart.in",
+		});
+		expect(ogProperty(meta, "og:url")).toBe(
+			"https://eventkart.in/events/coimbatore-city-10k-2026",
+		);
+		const canonical = links.find((l) => l.rel === "canonical");
+		expect(canonical?.href).toBe(
+			"https://eventkart.in/events/coimbatore-city-10k-2026",
+		);
+		for (const alt of links.filter((l) => l.rel === "alternate")) {
+			expect(alt.href).toBe(canonical?.href);
 		}
 	});
 
