@@ -41,7 +41,7 @@ function createSelectQuery(rows: SelectRows, index: number) {
 function createMockDb(selectRows: SelectRows[]) {
 	const pendingSelectRows = [...selectRows];
 	const selectQueries: ReturnType<typeof createSelectQuery>[] = [];
-	const select = vi.fn(() => {
+	const select = vi.fn((_projection?: unknown) => {
 		const query = createSelectQuery(
 			pendingSelectRows.shift() ?? [],
 			selectQueries.length,
@@ -154,13 +154,14 @@ function buildImageRow(overrides: Record<string, unknown> = {}) {
 }
 
 function createDeps(selectRows: SelectRows[], storage = createStorage()) {
-	const { db, selectQueries } = createMockDb(selectRows);
+	const { db, select, selectQueries } = createMockDb(selectRows);
 	return {
 		deps: {
 			db,
 			storage,
 			log: { info: vi.fn(), warn: vi.fn() },
 		},
+		select,
 		selectQueries,
 	};
 }
@@ -371,7 +372,7 @@ describe("listPublicEvents", () => {
 	});
 
 	it("uses five batched selects for a non-empty page", async () => {
-		const { deps, selectQueries } = createDeps([
+		const { deps, select, selectQueries } = createDeps([
 			[{ count: 1 }],
 			[buildEventRow()],
 			[buildCategoryRow()],
@@ -382,6 +383,21 @@ describe("listPublicEvents", () => {
 		await listPublicEvents(deps, params);
 
 		expect(selectQueries).toHaveLength(5);
+		expect(Object.keys(select.mock.calls[1]?.[0] ?? {})).toEqual([
+			"id",
+			"slug",
+			"title",
+			"startAt",
+			"endAt",
+			"timezone",
+			"city",
+			"venueName",
+			"registrationOpensAt",
+			"registrationClosesAt",
+			"isPaid",
+			"currency",
+			"status",
+		]);
 		expect(selectQueries[1]?.offset).toHaveBeenCalledWith(0);
 	});
 

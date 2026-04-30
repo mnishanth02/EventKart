@@ -25,6 +25,22 @@ import {
 } from "./public-detail-service.js";
 
 type EventRow = typeof events.$inferSelect;
+type EventListingRow = Pick<
+	EventRow,
+	| "id"
+	| "slug"
+	| "title"
+	| "startAt"
+	| "endAt"
+	| "timezone"
+	| "city"
+	| "venueName"
+	| "registrationOpensAt"
+	| "registrationClosesAt"
+	| "isPaid"
+	| "currency"
+	| "status"
+>;
 
 const DEFAULT_FEATURE_FLAGS: PublicEventFeatureFlags = {
 	spotsRemainingEnabled: false,
@@ -141,7 +157,21 @@ async function selectListingRows(
 		.where(condition)
 		.limit(1);
 	const rowsPromise = deps.db
-		.select()
+		.select({
+			id: events.id,
+			slug: events.slug,
+			title: events.title,
+			startAt: events.startAt,
+			endAt: events.endAt,
+			timezone: events.timezone,
+			city: events.city,
+			venueName: events.venueName,
+			registrationOpensAt: events.registrationOpensAt,
+			registrationClosesAt: events.registrationClosesAt,
+			isPaid: events.isPaid,
+			currency: events.currency,
+			status: events.status,
+		})
 		.from(events)
 		.where(condition)
 		.orderBy(...orderBy)
@@ -194,7 +224,7 @@ async function selectBatchRows(db: Database, eventIds: readonly string[]) {
 
 async function buildCards(
 	deps: PublicEventListingDeps,
-	rows: readonly EventRow[],
+	rows: readonly EventListingRow[],
 ): Promise<EventPublicCard[]> {
 	const eventIds = rows.map((row) => row.id);
 	const { categories, pricingTiers, images } = await selectBatchRows(
