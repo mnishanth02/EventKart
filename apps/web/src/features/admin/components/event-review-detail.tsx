@@ -34,6 +34,20 @@ function formatDate(dateStr: string | null): string {
 	}).format(new Date(dateStr));
 }
 
+function formatDistance(distanceMeters: number): string {
+	return `${(distanceMeters / 1000).toLocaleString("en-IN", {
+		maximumFractionDigits: 2,
+	})} km`;
+}
+
+function formatPrice(paise: number): string {
+	return new Intl.NumberFormat("en-IN", {
+		style: "currency",
+		currency: "INR",
+		maximumFractionDigits: 0,
+	}).format(paise / 100);
+}
+
 export function EventReviewDetail({ eventId }: { eventId: string }) {
 	const navigate = useNavigate();
 	const [dialogState, setDialogState] = useState<{
@@ -85,7 +99,7 @@ export function EventReviewDetail({ eventId }: { eventId: string }) {
 		);
 	}
 
-	const { event, organizer } = data;
+	const { event, organizer, configuration } = data;
 	const isReviewable = event.status === "under_review";
 
 	function handleActionSuccess() {
@@ -199,6 +213,118 @@ export function EventReviewDetail({ eventId }: { eventId: string }) {
 							</dd>
 						</div>
 					</dl>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Category & pricing context</CardTitle>
+					<CardDescription>
+						Distance options, capacity, and paid tiers configured by the
+						organizer.
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					{configuration.categories.length === 0 ? (
+						<p className="text-muted-foreground text-sm">
+							No categories configured yet.
+						</p>
+					) : (
+						<div className="grid gap-3 md:grid-cols-2">
+							{configuration.categories.map((category) => (
+								<div key={category.id} className="rounded-md border p-3">
+									<p className="font-medium">{category.name}</p>
+									<p className="text-muted-foreground text-sm">
+										{formatDistance(category.distanceMeters)} · {category.slug}
+									</p>
+									<p className="text-muted-foreground text-sm">
+										Capacity {category.spotsRemaining}/{category.spotsTotal}{" "}
+										remaining
+									</p>
+								</div>
+							))}
+						</div>
+					)}
+
+					{configuration.pricingTiers.length === 0 ? (
+						<p className="text-muted-foreground text-sm">
+							No pricing tiers configured yet.
+						</p>
+					) : (
+						<div className="grid gap-3 md:grid-cols-2">
+							{configuration.pricingTiers.map((tier) => (
+								<div key={tier.id} className="rounded-md border p-3">
+									<p className="font-medium">{tier.category.name}</p>
+									<p className="text-muted-foreground text-sm">
+										Base {formatPrice(tier.basePrice)}
+									</p>
+									{tier.earlyBirdPrice ? (
+										<p className="text-muted-foreground text-sm">
+											Early bird {formatPrice(tier.earlyBirdPrice)} until{" "}
+											{formatDate(tier.earlyBirdDeadline)}
+										</p>
+									) : null}
+								</div>
+							))}
+						</div>
+					)}
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Policies</CardTitle>
+					<CardDescription>
+						Participant-facing refund and cancellation terms.
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-4 md:grid-cols-2">
+					<div className="rounded-md border p-3">
+						<p className="font-medium">Refund policy</p>
+						<p className="mt-1 whitespace-pre-wrap text-muted-foreground text-sm">
+							{configuration.policies.refundPolicy || "Not configured"}
+						</p>
+					</div>
+					<div className="rounded-md border p-3">
+						<p className="font-medium">Cancellation policy</p>
+						<p className="mt-1 whitespace-pre-wrap text-muted-foreground text-sm">
+							{configuration.policies.cancellationPolicy || "Not configured"}
+						</p>
+					</div>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Publish readiness context</CardTitle>
+					<CardDescription>
+						{configuration.readiness.ready
+							? "All publish gates currently pass."
+							: "One or more publish gates still need attention."}
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<div className="flex flex-wrap gap-2">
+						<Badge
+							variant={configuration.readiness.ready ? "default" : "secondary"}
+						>
+							{configuration.readiness.ready ? "Ready" : "Not ready"}
+						</Badge>
+						{configuration.readiness.requiresRazorpay ? (
+							<Badge variant="outline">Razorpay required</Badge>
+						) : null}
+						{configuration.readiness.wouldRequireAdminReview ? (
+							<Badge variant="outline">Admin review required</Badge>
+						) : null}
+					</div>
+					<ul className="space-y-2" aria-label="Admin publish readiness checks">
+						{configuration.readiness.items.map((item) => (
+							<li key={item.check} className="flex items-start gap-2 text-sm">
+								<span aria-hidden="true">{item.passed ? "✅" : "⚠️"}</span>
+								<span>{item.message}</span>
+							</li>
+						))}
+					</ul>
 				</CardContent>
 			</Card>
 

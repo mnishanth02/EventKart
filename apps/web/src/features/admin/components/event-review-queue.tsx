@@ -1,4 +1,8 @@
-import { EVENT_STATUS_LABELS } from "@repo/shared/constants";
+import {
+	EVENT_STATUS_LABELS,
+	EVENT_STATUSES,
+	type EventStatus,
+} from "@repo/shared/constants";
 import { Badge } from "@repo/ui/components/ui/badge";
 import { Button } from "@repo/ui/components/ui/button";
 import {
@@ -8,6 +12,13 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@repo/ui/components/ui/card";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@repo/ui/components/ui/select";
 import {
 	Table,
 	TableBody,
@@ -22,6 +33,11 @@ import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { useState } from "react";
 import { adminEventReviewsQueryOptions } from "../queries";
 
+const STATUS_FILTER_OPTIONS = EVENT_STATUSES.map((status) => ({
+	value: status,
+	label: EVENT_STATUS_LABELS[status],
+}));
+
 function formatDate(dateStr: string | null): string {
 	if (!dateStr) return "—";
 	return new Intl.DateTimeFormat("en-IN", {
@@ -32,24 +48,50 @@ function formatDate(dateStr: string | null): string {
 
 export function EventReviewQueue() {
 	const [page, setPage] = useState(1);
+	const [statusFilter, setStatusFilter] = useState<EventStatus>("under_review");
 	const { data, isLoading, isError, refetch } = useQuery(
 		adminEventReviewsQueryOptions({
 			page,
 			limit: 20,
-			status: "under_review",
+			status: statusFilter,
 		}),
 	);
 
 	const items = data?.items ?? [];
 	const meta = data?.meta;
+	const selectedStatusLabel = EVENT_STATUS_LABELS[statusFilter];
+
+	function handleStatusFilterChange(value: string) {
+		setStatusFilter(value as EventStatus);
+		setPage(1);
+	}
 
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Event Review Queue</CardTitle>
-				<CardDescription>
-					Review first paid events from new organizers before public publish
-				</CardDescription>
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<CardTitle>Event Review Queue</CardTitle>
+						<CardDescription>
+							Review first paid events from new organizers before public publish
+						</CardDescription>
+					</div>
+					<Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+						<SelectTrigger
+							className="w-full sm:w-48"
+							aria-label="Filter event reviews by status"
+						>
+							<SelectValue placeholder="Filter by status" />
+						</SelectTrigger>
+						<SelectContent>
+							{STATUS_FILTER_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 			</CardHeader>
 			<CardContent>
 				{isLoading ? (
@@ -71,7 +113,7 @@ export function EventReviewQueue() {
 					</div>
 				) : items.length === 0 ? (
 					<p className="py-8 text-center text-muted-foreground">
-						No events are waiting for review.
+						No {selectedStatusLabel.toLowerCase()} events found.
 					</p>
 				) : (
 					<>

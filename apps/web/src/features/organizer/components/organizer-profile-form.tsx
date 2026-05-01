@@ -1,4 +1,7 @@
-import type { OrganizerUpdateInput } from "@repo/shared/schemas";
+import {
+	organizerUpdateBaseSchema,
+	type OrganizerUpdateInput,
+} from "@repo/shared/schemas";
 import { Button } from "@repo/ui/components/ui/button";
 import {
 	Card,
@@ -109,6 +112,10 @@ export function OrganizerProfileForm({ profile }: OrganizerProfileFormProps) {
 			description: profile.description ?? undefined,
 			website: profile.website ?? undefined,
 		} as OrganizerUpdateInput,
+		validators: {
+			onChange: organizerUpdateBaseSchema,
+			onSubmit: organizerUpdateBaseSchema,
+		},
 		onSubmit: ({ value }) => {
 			const changes = getChangedFields(profile, value);
 			if (!changes) return;

@@ -112,18 +112,18 @@ function VerifyEmailPage() {
 					title="Sign in to verify your email"
 					description="For your security, sign in with the phone number you used for EventKart before we apply this organizer email verification."
 				>
-					<Button type="button" onClick={handleSignInAndVerify}>
+					<Button type="button" onClick={ handleSignInAndVerify }>
 						Sign In & Verify Email
 					</Button>
 				</CenteredCard>
-				{loginDialog}
+				{ loginDialog }
 			</>
 		);
 	}
 
 	if (mutation.isError) {
 		return (
-			<CenteredCard title="Verification failed" description={getErrorMessage()}>
+			<CenteredCard title="Verification failed" description={ getErrorMessage() }>
 				<Button asChild>
 					<Link to="/org/register">Request a New Link</Link>
 				</Button>
@@ -156,10 +156,12 @@ function CenteredCard({
 		<div className="mx-auto flex min-h-[50vh] w-full max-w-md items-center justify-center px-4 py-12">
 			<Card className="w-full text-center">
 				<CardHeader>
-					<CardTitle>{title}</CardTitle>
-					<CardDescription>{description}</CardDescription>
+					<CardTitle role="heading" aria-level={ 1 }>
+						{ title }
+					</CardTitle>
+					<CardDescription>{ description }</CardDescription>
 				</CardHeader>
-				<CardContent>{children}</CardContent>
+				<CardContent>{ children }</CardContent>
 			</Card>
 		</div>
 	);

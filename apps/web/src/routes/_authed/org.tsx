@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authed/org")({
 			if (location.pathname === "/org/register") {
 				return;
 			}
-			throw redirect({ to: "/org/register" });
+			throw redirect({ to: "/", search: { reason: "forbidden" } });
 		}
 	},
 	component: OrganizerLayout,

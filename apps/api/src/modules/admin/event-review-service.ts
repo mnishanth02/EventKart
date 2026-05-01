@@ -1,8 +1,18 @@
 import type { Database } from "@repo/db";
 import { and, eq, inArray, sql } from "@repo/db";
-import { events, organizers } from "@repo/db/schema";
+import {
+	eventCategories,
+	eventPricingTiers,
+	events,
+	organizers,
+} from "@repo/db/schema";
 import type { AdminEventReviewListParams, Event } from "@repo/shared/schemas";
-import { eventSchema } from "@repo/shared/schemas";
+import {
+	eventCategoryRecordSchema,
+	eventPoliciesRecordSchema,
+	eventPricingTierWithCategorySchema,
+	eventSchema,
+} from "@repo/shared/schemas";
 import type { Queue } from "bullmq";
 import type { FastifyBaseLogger } from "fastify";
 import type { Redis } from "ioredis";
@@ -13,6 +23,7 @@ import {
 	adminApproveEvent,
 	adminRejectEvent,
 	getPublishedPaidEventCount,
+	getPublishReadinessForEvent,
 } from "../events/service.js";
 
 interface AdminEventReviewDeps {
@@ -47,6 +58,30 @@ interface AdminEventReviewDeps {
 
 function eventDate(value: Date | null): string | null {
 	return value?.toISOString() ?? null;
+}
+
+type EventCategoryRow = typeof eventCategories.$inferSelect;
+type EventPricingTierRow = typeof eventPricingTiers.$inferSelect;
+
+function serializeEventCategory(row: EventCategoryRow) {
+	return eventCategoryRecordSchema.parse({
+		...row,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+	});
+}
+
+function serializeEventPricingTier(row: {
+	tier: EventPricingTierRow;
+	category: EventCategoryRow;
+}) {
+	return eventPricingTierWithCategorySchema.parse({
+		...row.tier,
+		earlyBirdDeadline: eventDate(row.tier.earlyBirdDeadline),
+		createdAt: row.tier.createdAt.toISOString(),
+		updatedAt: row.tier.updatedAt.toISOString(),
+		category: serializeEventCategory(row.category),
+	});
 }
 
 async function getPublishedPaidCounts(
@@ -182,11 +217,43 @@ export async function getEventReviewDetail(db: Database, eventId: string) {
 		updatedAt: row.event.updatedAt.toISOString(),
 	}) satisfies Event;
 
+	const [categoryRows, pricingRows, readiness] = await Promise.all([
+		db
+			.select()
+			.from(eventCategories)
+			.where(eq(eventCategories.eventId, eventId))
+			.orderBy(eventCategories.sortOrder, eventCategories.id),
+		db
+			.select({
+				tier: eventPricingTiers,
+				category: eventCategories,
+			})
+			.from(eventPricingTiers)
+			.innerJoin(
+				eventCategories,
+				eq(eventPricingTiers.eventCategoryId, eventCategories.id),
+			)
+			.where(eq(eventPricingTiers.eventId, eventId))
+			.orderBy(eventCategories.sortOrder, eventPricingTiers.id),
+		getPublishReadinessForEvent(db, eventId),
+	]);
+
 	return {
 		event,
 		organizer: {
 			...row.organizer,
 			previouslyPublishedPaidEventCount,
+		},
+		configuration: {
+			categories: categoryRows.map(serializeEventCategory),
+			pricingTiers: pricingRows.map(serializeEventPricingTier),
+			policies: eventPoliciesRecordSchema.parse({
+				eventId: row.event.id,
+				refundPolicy: row.event.refundPolicy,
+				cancellationPolicy: row.event.cancellationPolicy,
+				updatedAt: row.event.updatedAt.toISOString(),
+			}),
+			readiness,
 		},
 	};
 }

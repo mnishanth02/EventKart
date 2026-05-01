@@ -41,6 +41,32 @@ vi.mock("@repo/ui/components/ui/card", () => ({
 	CardTitle: ({ children }: React.PropsWithChildren) => <h2>{children}</h2>,
 }));
 
+vi.mock("@repo/ui/components/ui/select", () => ({
+	Select: ({
+		children,
+	}: React.PropsWithChildren<{
+		value?: string;
+		onValueChange?: (value: string) => void;
+	}>) => <div>{children}</div>,
+	SelectContent: ({ children }: React.PropsWithChildren) => (
+		<div>{children}</div>
+	),
+	SelectItem: ({
+		children,
+		value,
+	}: React.PropsWithChildren<{ value: string }>) => (
+		<div data-value={value}>{children}</div>
+	),
+	SelectTrigger: ({
+		children,
+	}: React.PropsWithChildren<{ "aria-label"?: string }>) => (
+		<button type="button">{children}</button>
+	),
+	SelectValue: ({ placeholder }: { placeholder?: string }) => (
+		<span>{placeholder}</span>
+	),
+}));
+
 vi.mock("@repo/ui/components/ui/table", () => ({
 	Table: ({ children }: React.PropsWithChildren) => <table>{children}</table>,
 	TableBody: ({ children }: React.PropsWithChildren) => (
@@ -68,7 +94,7 @@ describe("EventReviewQueue", () => {
 
 		render(<EventReviewQueue />);
 
-		expect(screen.getByText("No events are waiting for review.")).toBeTruthy();
+		expect(screen.getByText("No under review events found.")).toBeTruthy();
 	});
 
 	it("renders submitted event review rows", () => {

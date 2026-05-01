@@ -101,6 +101,18 @@ function getErrorMessage(error: unknown): string {
 	return "Failed to create event. Please try again.";
 }
 
+function hasRequiredCreateEventValues(values: CreateEventInput) {
+	return (
+		values.title.trim().length > 0 &&
+		values.description.trim().length > 0 &&
+		values.venueName.trim().length > 0 &&
+		values.addressLine1.trim().length > 0 &&
+		values.startAt.trim().length > 0 &&
+		values.endAt.trim().length > 0 &&
+		values.routeDetails.trim().length > 0
+	);
+}
+
 export function EventCreateForm() {
 	const navigate = useNavigate();
 
@@ -125,6 +137,7 @@ export function EventCreateForm() {
 		defaultValues: getDefaultCreateEventValues(),
 		validators: {
 			onChange: createEventInputSchema,
+			onSubmit: createEventInputSchema,
 		},
 		onSubmit: ({ value }) => {
 			const parsed = createEventInputSchema.safeParse(value);
@@ -543,13 +556,21 @@ export function EventCreateForm() {
 						</div>
 
 						<form.Subscribe
-							selector={(state) => [state.canSubmit, state.isSubmitting]}
+							selector={(state) => ({
+								canSubmit: state.canSubmit,
+								isSubmitting: state.isSubmitting,
+								values: state.values,
+							})}
 						>
-							{([canSubmit, isSubmitting]) => (
+							{({ canSubmit, isSubmitting, values }) => (
 								<Button
 									type="submit"
 									className="w-full"
-									disabled={!canSubmit || mutation.isPending}
+									disabled={
+										!canSubmit ||
+										!hasRequiredCreateEventValues(values) ||
+										mutation.isPending
+									}
 								>
 									{mutation.isPending || isSubmitting
 										? "Creating Event..."

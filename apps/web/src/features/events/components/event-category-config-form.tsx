@@ -27,11 +27,11 @@ import { Label } from "@repo/ui/components/ui/label";
 import { Separator } from "@repo/ui/components/ui/separator";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ApiClientError } from "#/lib/api-client.shared";
 import { toastRetry } from "@/components/design-system";
-import { updateEventCategories } from "../api";
+import { updateEventCategories, updateEventCategoryCapacity } from "../api";
 import {
 	createBlankEventCategory,
 	eventCategoryRecordsToConfigValues,
@@ -136,6 +136,145 @@ function getNextCategory(
 	};
 }
 
+function getCapacityValidationError(
+	spotsTotal: number,
+	spotsRemaining: number,
+): string | null {
+	if (!Number.isInteger(spotsTotal) || spotsTotal < 1) {
+		return "Spots total must be at least 1.";
+	}
+	if (!Number.isInteger(spotsRemaining) || spotsRemaining < 0) {
+		return "Spots remaining must be zero or greater.";
+	}
+	if (spotsRemaining > spotsTotal) {
+		return "Spots remaining cannot exceed spots total.";
+	}
+	return null;
+}
+
+function CategoryCapacityCard({
+	eventId,
+	category,
+}: {
+	eventId: string;
+	category: EventCategoryRecord;
+}) {
+	const queryClient = useQueryClient();
+	const [spotsTotal, setSpotsTotal] = useState(category.spotsTotal);
+	const [spotsRemaining, setSpotsRemaining] = useState(category.spotsRemaining);
+
+	useEffect(() => {
+		setSpotsTotal(category.spotsTotal);
+		setSpotsRemaining(category.spotsRemaining);
+	}, [category.spotsTotal, category.spotsRemaining]);
+
+	const validationError = getCapacityValidationError(
+		spotsTotal,
+		spotsRemaining,
+	);
+
+	const mutation = useMutation({
+		mutationFn: () =>
+			updateEventCategoryCapacity({
+				data: {
+					eventId,
+					categoryId: category.id,
+					capacity: { spotsTotal, spotsRemaining },
+				},
+			}),
+		onSuccess: (updatedCategory) => {
+			setSpotsTotal(updatedCategory.spotsTotal);
+			setSpotsRemaining(updatedCategory.spotsRemaining);
+			queryClient.setQueryData<EventCategoryRecord[]>(
+				eventCategoriesQueryKey(eventId),
+				(current) =>
+					current?.map((item) =>
+						item.id === updatedCategory.id ? updatedCategory : item,
+					) ?? [updatedCategory],
+			);
+			void queryClient.invalidateQueries({
+				queryKey: eventCategoriesQueryKey(eventId),
+			});
+			toast.success(`${updatedCategory.name} capacity updated`);
+		},
+		onError: (error: unknown) => {
+			toastRetry(getErrorMessage(error), {
+				onRetry: () => {
+					if (!validationError) mutation.mutate();
+				},
+			});
+		},
+	});
+
+	return (
+		<Card>
+			<CardHeader className="pb-3">
+				<CardTitle className="text-base">{category.name}</CardTitle>
+				<CardDescription>
+					{formatDistanceKm(category.distanceMeters)} · {category.slug}
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<div className="grid gap-4 md:grid-cols-2">
+					<div className="space-y-2">
+						<Label htmlFor={`${category.id}-spots-total`}>Spots total</Label>
+						<Input
+							id={`${category.id}-spots-total`}
+							type="number"
+							min={1}
+							step={1}
+							value={Number.isFinite(spotsTotal) ? String(spotsTotal) : ""}
+							onChange={(event) =>
+								setSpotsTotal(
+									event.target.value === ""
+										? Number.NaN
+										: event.target.valueAsNumber,
+								)
+							}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor={`${category.id}-spots-remaining`}>
+							Spots remaining
+						</Label>
+						<Input
+							id={`${category.id}-spots-remaining`}
+							type="number"
+							min={0}
+							step={1}
+							value={
+								Number.isFinite(spotsRemaining) ? String(spotsRemaining) : ""
+							}
+							onChange={(event) =>
+								setSpotsRemaining(
+									event.target.value === ""
+										? Number.NaN
+										: event.target.valueAsNumber,
+								)
+							}
+						/>
+					</div>
+				</div>
+
+				{validationError ? (
+					<p className="text-sm text-destructive" role="alert">
+						{validationError}
+					</p>
+				) : null}
+
+				<Button
+					type="button"
+					variant="outline"
+					disabled={Boolean(validationError) || mutation.isPending}
+					onClick={() => mutation.mutate()}
+				>
+					{mutation.isPending ? "Saving capacity..." : "Save capacity"}
+				</Button>
+			</CardContent>
+		</Card>
+	);
+}
+
 interface EventCategoryConfigFormProps {
 	eventId: string;
 	initialCategories?: readonly EventCategoryRecord[] | null;
@@ -155,6 +294,7 @@ export function EventCategoryConfigForm({
 		mutationFn: (config: EventCategoriesConfigInput) =>
 			updateEventCategories({ data: { eventId, config } }),
 		onSuccess: (categories) => {
+			queryClient.setQueryData(eventCategoriesQueryKey(eventId), categories);
 			void queryClient.invalidateQueries({
 				queryKey: eventCategoriesQueryKey(eventId),
 			});
@@ -448,6 +588,27 @@ export function EventCategoryConfigForm({
 					</form>
 				</CardContent>
 			</Card>
+
+			{initialCategories && initialCategories.length > 0 ? (
+				<Card>
+					<CardHeader>
+						<CardTitle>Configure category capacity</CardTitle>
+						<CardDescription>
+							Review total and remaining spots for each saved category. Capacity
+							changes are saved separately so booking limits stay explicit.
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="grid gap-4 lg:grid-cols-2">
+						{initialCategories.map((category) => (
+							<CategoryCapacityCard
+								key={category.id}
+								eventId={eventId}
+								category={category}
+							/>
+						))}
+					</CardContent>
+				</Card>
+			) : null}
 		</div>
 	);
 }

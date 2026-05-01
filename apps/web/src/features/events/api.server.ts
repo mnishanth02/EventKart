@@ -9,6 +9,7 @@
 import type {
 	CreateEvent,
 	EventCategoriesConfig,
+	EventCategoryCapacityUpdate,
 	EventImageListQuery,
 	EventImageUploadUrlRequest,
 	EventPoliciesConfig,
@@ -23,6 +24,7 @@ import {
 import type { EventUpdatePayload } from "./form-values";
 import type {
 	EventCategoriesResponse,
+	EventCategoryCapacityResponse,
 	EventImageConfirmResponse,
 	EventImageDeleteResponse,
 	EventImagesResponse,
@@ -124,6 +126,23 @@ export async function replaceEventCategoriesOnServer(
 		{
 			method: "PUT",
 			body: config,
+			headers,
+		},
+	);
+}
+
+export async function updateEventCategoryCapacityOnServer(
+	eventId: string,
+	categoryId: string,
+	capacity: EventCategoryCapacityUpdate,
+): Promise<EventCategoryCapacityResponse> {
+	assertSameOriginMutationRequest();
+	const headers = getForwardedAuthHeaders();
+	return serverApiClient<EventCategoryCapacityResponse>(
+		`/events/${eventId}/categories/${categoryId}/capacity`,
+		{
+			method: "PATCH",
+			body: capacity,
 			headers,
 		},
 	);

@@ -1,7 +1,13 @@
 import { z } from "zod/v4";
 import { eventStatusSchema } from "../constants/event.js";
 import { eventSchema } from "./event.js";
-import { eventPublishTransitionSchema } from "./event-publish.js";
+import { eventCategoryRecordSchema } from "./event-category.js";
+import { eventPoliciesRecordSchema } from "./event-policy.js";
+import {
+	eventPublishTransitionSchema,
+	publishReadinessSchema,
+} from "./event-publish.js";
+import { eventPricingTierWithCategorySchema } from "./event-pricing.js";
 import { offsetPaginationSchema } from "./pagination.js";
 
 export const adminEventReviewListParamsSchema = offsetPaginationSchema.extend({
@@ -45,9 +51,21 @@ export type AdminEventReviewListItem = z.infer<
 	typeof adminEventReviewListItemSchema
 >;
 
+export const adminEventReviewConfigurationSchema = z.object({
+	categories: z.array(eventCategoryRecordSchema),
+	pricingTiers: z.array(eventPricingTierWithCategorySchema),
+	policies: eventPoliciesRecordSchema,
+	readiness: publishReadinessSchema,
+});
+
+export type AdminEventReviewConfiguration = z.infer<
+	typeof adminEventReviewConfigurationSchema
+>;
+
 export const adminEventReviewDetailSchema = z.object({
 	event: eventSchema,
 	organizer: adminEventReviewOrganizerSchema,
+	configuration: adminEventReviewConfigurationSchema,
 });
 
 export type AdminEventReviewDetail = z.infer<
