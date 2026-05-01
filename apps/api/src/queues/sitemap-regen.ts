@@ -40,11 +40,11 @@ export const SITEMAP_REGEN_JOB_NAME = "regenerate";
  * Shared `jobId` used by every ad-hoc enqueue. BullMQ rejects (returns
  * the existing job) any second add with the same `jobId` while the
  * job is still in waiting/active state — that's our debounce. Once the
- * job completes and its history entry is removed (per
- * `removeOnComplete: { count: 50 }`), the next enqueue creates a
- * fresh job with the same id. The cron job uses a *different* id
- * (managed by BullMQ's repeatable-jobs subsystem) so the two never
- * collide.
+ * job completes and is removed (required queue config:
+ * `removeOnComplete: true` for this fixed-`jobId` debounce pattern),
+ * the next enqueue creates a fresh job with the same id. The cron job
+ * uses a *different* id (managed by BullMQ's repeatable-jobs
+ * subsystem) so the two never collide.
  */
 export const SITEMAP_REGEN_DEBOUNCE_JOB_ID = "sitemap-regen-debounce";
 

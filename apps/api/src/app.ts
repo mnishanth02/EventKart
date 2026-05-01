@@ -73,11 +73,11 @@ export function buildApp(options: BuildAppOptions = {}) {
 	app.register(organizerRoutes, { prefix: "/api/v1/organizers" });
 	app.register(eventRoutes, { prefix: "/api/v1/events" });
 	app.register(adminRoutes, { prefix: "/api/v1/admin" });
-// I-2.4.4: public sitemap.xml served at /api/v1/sitemap.xml. The
-// production hostname `eventkart.in/sitemap.xml` is mapped here by a
-// Cloudflare Origin Rule (see docs/operations/cloudflare-cdn-setup.md
-// §3.7).
-app.register(sitemapRoutes, { prefix: "/api/v1" });
+	// I-2.4.4: public sitemap.xml served at /api/v1/sitemap.xml. The
+	// production hostname `eventkart.in/sitemap.xml` is mapped here by a
+	// Cloudflare Origin Rule (see docs/operations/cloudflare-cdn-setup.md
+	// §3.7).
+	app.register(sitemapRoutes, { prefix: "/api/v1" });
 
 	app.setNotFoundHandler((request, reply) => {
 		reply.code(404);
