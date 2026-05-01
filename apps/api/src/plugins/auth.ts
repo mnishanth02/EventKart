@@ -69,7 +69,26 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 			sessionId,
 		};
 	});
+
+	fastify.addHook("onSend", async (_request, reply, payload) => {
+		if (isPublicCacheControl(reply.getHeader("cache-control"))) {
+			reply.removeHeader("set-cookie");
+		}
+
+		return payload;
+	});
 };
+
+function isPublicCacheControl(header: string | number | string[] | undefined) {
+	const values = Array.isArray(header) ? header : [header];
+	return values.some(
+		(value) =>
+			typeof value === "string" &&
+			value
+				.split(",")
+				.some((directive) => directive.trim().toLowerCase() === "public"),
+	);
+}
 
 function clearStaleCookie(
 	reply: {

@@ -119,7 +119,7 @@ function normalizeConfigData(data: Record<string, unknown>) {
 	return normalizedData;
 }
 
-function parseAbsoluteOrigin(value: string) {
+export function parseAbsoluteOrigin(value: string) {
 	try {
 		const url = new URL(value);
 
@@ -250,14 +250,14 @@ export function loadConfig(
 	}
 
 	// Fail-closed cross-field check for the Cloudflare purge client added in
-	// I-2.4.2: enabling purges without credentials would silently no-op in
-	// prod and let stale event pages persist indefinitely.
+	// I-2.4.2: enabling purges without credentials or the public CDN origin
+	// would silently no-op in prod and let stale event pages persist indefinitely.
 	if (
 		config.CLOUDFLARE_PURGE_ENABLED &&
-		(!config.CLOUDFLARE_ZONE_ID || !config.CLOUDFLARE_API_TOKEN)
+		(!config.CLOUDFLARE_ZONE_ID || !config.CLOUDFLARE_API_TOKEN || !cdnBaseUrl)
 	) {
 		throw new Error(
-			"Invalid configuration: CLOUDFLARE_PURGE_ENABLED is true but CLOUDFLARE_ZONE_ID and/or CLOUDFLARE_API_TOKEN are not set.",
+			"Invalid configuration: CLOUDFLARE_PURGE_ENABLED is true but CLOUDFLARE_ZONE_ID, CLOUDFLARE_API_TOKEN, and CDN_BASE_URL must be set.",
 		);
 	}
 

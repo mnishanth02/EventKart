@@ -1,8 +1,9 @@
-import { Queue } from "bullmq";
-import { Redis } from "ioredis";
 import { createDatabase } from "@repo/db";
+import { Queue } from "bullmq";
 import type { FastifyBaseLogger } from "fastify";
+import { Redis } from "ioredis";
 import { createCdnPurgeClient } from "../lib/cdn-invalidation.js";
+import { parseAbsoluteOrigin } from "../lib/config.js";
 import { createDLQHandler, QUEUE_NAMES } from "../lib/queue.js";
 import { createRedisClient, REDIS_NAMESPACES } from "../lib/redis.js";
 import { createCdnPurgeWorker } from "../queues/cdn-purge.js";
@@ -48,6 +49,47 @@ const workerLogger = {
 	error: (obj: unknown, msg?: string) => console.error(msg ?? "", obj),
 };
 
+type CdnPurgeEnv = Partial<
+	Record<
+		| "CLOUDFLARE_API_TOKEN"
+		| "CLOUDFLARE_PURGE_ENABLED"
+		| "CLOUDFLARE_ZONE_ID"
+		| "CDN_BASE_URL",
+		string
+	>
+>;
+
+export function createWorkerCdnPurgeConfig(env: CdnPurgeEnv = process.env) {
+	const purgeEnabledRaw = env.CLOUDFLARE_PURGE_ENABLED?.toLowerCase();
+	const purgeEnabled = purgeEnabledRaw === "true" || purgeEnabledRaw === "1";
+	const parsedCdnBaseUrl =
+		env.CDN_BASE_URL === undefined
+			? undefined
+			: parseAbsoluteOrigin(env.CDN_BASE_URL);
+
+	if (purgeEnabled && env.CDN_BASE_URL !== undefined && !parsedCdnBaseUrl) {
+		throw new Error(
+			"Invalid configuration: CDN_BASE_URL must be an absolute origin without a path, query, or hash.",
+		);
+	}
+
+	if (
+		purgeEnabled &&
+		(!env.CLOUDFLARE_ZONE_ID || !env.CLOUDFLARE_API_TOKEN || !parsedCdnBaseUrl)
+	) {
+		throw new Error(
+			"Invalid configuration: CLOUDFLARE_PURGE_ENABLED is true but CLOUDFLARE_ZONE_ID, CLOUDFLARE_API_TOKEN, and CDN_BASE_URL must be set.",
+		);
+	}
+
+	return {
+		enabled: purgeEnabled,
+		zoneId: env.CLOUDFLARE_ZONE_ID,
+		apiToken: env.CLOUDFLARE_API_TOKEN,
+		baseUrl: parsedCdnBaseUrl?.origin,
+	};
+}
+
 export async function startWorkers(
 	redisUrl?: string,
 	razorpayDeps?: RazorpayAccountWorkerDeps,
@@ -68,24 +110,16 @@ export async function startWorkers(
 	// CLOUDFLARE_PURGE_ENABLED is unset/false the client returns a
 	// no-op stub — the worker still runs and consumes jobs (so the
 	// queue topology is identical across deployments) but every job
-	// becomes a debug log line. The cross-field config check in
-	// `loadConfig` already prevents enabled=true with missing creds in
-	// the API process; here in the worker process we re-derive the
-	// boolean defensively from the env vars directly so the worker can
-	// start even if `loadConfig` hasn't been called.
+	// becomes a debug log line. The worker process does not call
+	// `loadConfig`, so it repeats the fail-closed check here rather than
+	// consuming purge jobs with a disabled client.
 	//
 	// Acceptance must match `loadConfig`'s `Type.Boolean()` coercion
 	// (env-schema/ajv accepts "true"/"false"/"1"/"0") so an API enqueuing
 	// jobs and a worker draining them never disagree about whether
 	// purging is on.
-	const purgeEnabledRaw = process.env.CLOUDFLARE_PURGE_ENABLED?.toLowerCase();
 	const cdnPurgeClient = createCdnPurgeClient(
-		{
-			enabled: purgeEnabledRaw === "true" || purgeEnabledRaw === "1",
-			zoneId: process.env.CLOUDFLARE_ZONE_ID,
-			apiToken: process.env.CLOUDFLARE_API_TOKEN,
-			baseUrl: process.env.CDN_BASE_URL,
-		},
+		createWorkerCdnPurgeConfig(),
 		workerLogger,
 	);
 

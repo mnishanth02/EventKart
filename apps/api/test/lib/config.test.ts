@@ -27,10 +27,7 @@ describe("loadConfig", () => {
 		restoreEnvValue("DATABASE_URL", originalDatabaseUrl);
 		restoreEnvValue("CLOUDFLARE_ZONE_ID", originalCloudflareZoneId);
 		restoreEnvValue("CLOUDFLARE_API_TOKEN", originalCloudflareApiToken);
-		restoreEnvValue(
-			"CLOUDFLARE_PURGE_ENABLED",
-			originalCloudflarePurgeEnabled,
-		);
+		restoreEnvValue("CLOUDFLARE_PURGE_ENABLED", originalCloudflarePurgeEnabled);
 		restoreEnvValue("CDN_BASE_URL", originalCdnBaseUrl);
 	});
 
@@ -94,45 +91,65 @@ describe("loadConfig", () => {
 			).toThrow(/CDN_BASE_URL must be an absolute origin/);
 		});
 
-		it("accepts CLOUDFLARE_PURGE_ENABLED=true when token + zone are also set", () => {
+		it("accepts CLOUDFLARE_PURGE_ENABLED=true when token, zone, and CDN_BASE_URL are also set", () => {
 			process.env.DATABASE_URL = VALID_DATABASE_URL;
 
 			const config = loadConfig({
 				CLOUDFLARE_ZONE_ID: "zone-123",
 				CLOUDFLARE_API_TOKEN: "token-abc",
 				CLOUDFLARE_PURGE_ENABLED: true,
+				CDN_BASE_URL: "https://eventkart.in/",
 			});
 
 			expect(config.CLOUDFLARE_PURGE_ENABLED).toBe(true);
 			expect(config.CLOUDFLARE_ZONE_ID).toBe("zone-123");
 			expect(config.CLOUDFLARE_API_TOKEN).toBe("token-abc");
+			expect(config.CDN_BASE_URL).toBe("https://eventkart.in");
 		});
 
 		it("rejects CLOUDFLARE_PURGE_ENABLED=true when CLOUDFLARE_API_TOKEN is missing (fail-closed)", () => {
 			process.env.DATABASE_URL = VALID_DATABASE_URL;
+			delete process.env.CLOUDFLARE_API_TOKEN;
 
 			expect(() =>
 				loadConfig({
 					CLOUDFLARE_ZONE_ID: "zone-123",
 					CLOUDFLARE_PURGE_ENABLED: true,
+					CDN_BASE_URL: "https://eventkart.in",
 				}),
 			).toThrow(
-				/CLOUDFLARE_PURGE_ENABLED is true but CLOUDFLARE_ZONE_ID and\/or CLOUDFLARE_API_TOKEN are not set/,
+				/CLOUDFLARE_PURGE_ENABLED is true but CLOUDFLARE_ZONE_ID, CLOUDFLARE_API_TOKEN, and CDN_BASE_URL must be set/,
 			);
 		});
 
 		it("rejects CLOUDFLARE_PURGE_ENABLED=true when CLOUDFLARE_ZONE_ID is missing (fail-closed)", () => {
 			process.env.DATABASE_URL = VALID_DATABASE_URL;
+			delete process.env.CLOUDFLARE_ZONE_ID;
 
 			expect(() =>
 				loadConfig({
 					CLOUDFLARE_API_TOKEN: "token-abc",
 					CLOUDFLARE_PURGE_ENABLED: true,
+					CDN_BASE_URL: "https://eventkart.in",
 				}),
 			).toThrow(
-				/CLOUDFLARE_PURGE_ENABLED is true but CLOUDFLARE_ZONE_ID and\/or CLOUDFLARE_API_TOKEN are not set/,
+				/CLOUDFLARE_PURGE_ENABLED is true but CLOUDFLARE_ZONE_ID, CLOUDFLARE_API_TOKEN, and CDN_BASE_URL must be set/,
+			);
+		});
+
+		it("rejects CLOUDFLARE_PURGE_ENABLED=true when CDN_BASE_URL is missing (fail-closed)", () => {
+			process.env.DATABASE_URL = VALID_DATABASE_URL;
+			delete process.env.CDN_BASE_URL;
+
+			expect(() =>
+				loadConfig({
+					CLOUDFLARE_ZONE_ID: "zone-123",
+					CLOUDFLARE_API_TOKEN: "token-abc",
+					CLOUDFLARE_PURGE_ENABLED: true,
+				}),
+			).toThrow(
+				/CLOUDFLARE_PURGE_ENABLED is true but CLOUDFLARE_ZONE_ID, CLOUDFLARE_API_TOKEN, and CDN_BASE_URL must be set/,
 			);
 		});
 	});
 });
-
