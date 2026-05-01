@@ -258,12 +258,12 @@ describe("buildOrganizerDetailHead", () => {
 		expect(desc).not.toContain("\u202E");
 	});
 
-	it("truncates a long description to 160 graphemes plus a single ellipsis", () => {
+	it("truncates a long description to 160 graphemes including a single ellipsis", () => {
 		const longText = `${"x".repeat(500)} tail`;
 		const profile = buildFixture({ description: longText });
 		const { meta } = buildOrganizerDetailHead(profile, { siteUrl: undefined });
 		const desc = namedMeta(meta, "description");
-		expect(Array.from(desc)).toHaveLength(160 + 1);
+		expect(Array.from(desc)).toHaveLength(160);
 		expect(desc.endsWith("…")).toBe(true);
 		expect(desc.indexOf("…")).toBe(desc.length - 1);
 	});
@@ -334,6 +334,12 @@ describe("buildOrganizerCanonicalUrl", () => {
 			buildOrganizerCanonicalUrl("https://example.com/foo?bar=1", "abc"),
 		).toBe("https://example.com/organizers/abc");
 	});
+
+	it("URL-encodes reserved characters in the slug path segment", () => {
+		expect(buildOrganizerCanonicalUrl("https://example.com", "a/b?c#d e")).toBe(
+			"https://example.com/organizers/a%2Fb%3Fc%23d%20e",
+		);
+	});
 });
 
 describe("normalizeDescription", () => {
@@ -369,7 +375,7 @@ describe("truncateGraphemes", () => {
 	});
 
 	it("appends exactly one ellipsis on truncation", () => {
-		expect(truncateGraphemes("abcdef", 3)).toBe("abc…");
+		expect(truncateGraphemes("abcdef", 3)).toBe("ab…");
 	});
 
 	it("treats max=0 as the empty string", () => {
@@ -379,6 +385,6 @@ describe("truncateGraphemes", () => {
 	it("does not split a ZWJ family emoji cluster", () => {
 		const family = "👨\u200D👩\u200D👧\u200D👦";
 		const out = truncateGraphemes(`${family}${family}`, 1);
-		expect(out).toBe(`${family}…`);
+		expect(out).toBe("…");
 	});
 });

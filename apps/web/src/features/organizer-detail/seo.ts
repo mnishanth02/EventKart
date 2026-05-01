@@ -32,7 +32,7 @@ import type { OrganizerPublicProfile } from "./types";
  */
 export interface BuildOrganizerDetailHeadOptions {
 	/** Optional canonical site origin (e.g. `https://eventkart.in`). */
-	siteUrl: string | undefined;
+	siteUrl?: string | undefined;
 }
 
 export type HeadMetaEntry =
@@ -77,7 +77,7 @@ const DEFAULT_DESCRIPTION_SUFFIX = "on EventKart.";
  */
 export function buildOrganizerDetailHead(
 	profile: OrganizerPublicProfile,
-	options: BuildOrganizerDetailHeadOptions,
+	options: BuildOrganizerDetailHeadOptions = {},
 ): OrganizerDetailHead {
 	const canonicalUrl = buildOrganizerCanonicalUrl(
 		options.siteUrl,
@@ -142,7 +142,7 @@ export function buildOrganizerCanonicalUrl(
 	}
 	const origin = parsed.origin;
 	if (!origin || origin === "null") return undefined;
-	return new URL(`/organizers/${slug}`, origin).href;
+	return new URL(`/organizers/${encodeURIComponent(slug)}`, origin).href;
 }
 
 function resolveDescription(profile: OrganizerPublicProfile): string {
@@ -205,7 +205,7 @@ export function truncateGraphemes(input: string, max: number): string {
 	if (max <= 0) return "";
 	const graphemes = splitGraphemes(input);
 	if (graphemes.length <= max) return input;
-	return `${graphemes.slice(0, max).join("")}…`;
+	return `${graphemes.slice(0, max - 1).join("")}…`;
 }
 
 function splitGraphemes(input: string): string[] {

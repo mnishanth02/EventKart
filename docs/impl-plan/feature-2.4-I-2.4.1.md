@@ -150,7 +150,7 @@ Cloudflare API call anywhere in this PR.
 
 (Filled in by the implementation step.)
 
-```
+```sh
 pnpm --filter api check-types         → exit 0 (tsc clean)
 pnpm --filter api test                → 50 files / 859 tests passed (was 852)
 pnpm --filter web check-types         → exit 0 (tsc clean)

@@ -2,7 +2,20 @@ import { VerificationExplainer } from "@repo/ui/components/verification-explaine
 import { VERIFICATION_EXPLANATION } from "@repo/ui/lib/verification-copy";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
+
+const originalHasPointerCapture = Element.prototype.hasPointerCapture;
+const originalSetPointerCapture = Element.prototype.setPointerCapture;
+const originalReleasePointerCapture = Element.prototype.releasePointerCapture;
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
 
 beforeAll(() => {
 	// Radix Popover relies on these pointer-capture APIs that jsdom omits.
@@ -12,9 +25,44 @@ beforeAll(() => {
 	HTMLElement.prototype.scrollIntoView ??= vi.fn();
 });
 
+afterAll(() => {
+	restorePrototypeValue(
+		Element.prototype,
+		"hasPointerCapture",
+		originalHasPointerCapture,
+	);
+	restorePrototypeValue(
+		Element.prototype,
+		"setPointerCapture",
+		originalSetPointerCapture,
+	);
+	restorePrototypeValue(
+		Element.prototype,
+		"releasePointerCapture",
+		originalReleasePointerCapture,
+	);
+	restorePrototypeValue(
+		HTMLElement.prototype,
+		"scrollIntoView",
+		originalScrollIntoView,
+	);
+});
+
 afterEach(() => {
 	cleanup();
 });
+
+function restorePrototypeValue<T extends object, K extends keyof T>(
+	target: T,
+	key: K,
+	value: T[K] | undefined,
+) {
+	if (value === undefined) {
+		Reflect.deleteProperty(target, key);
+		return;
+	}
+	target[key] = value;
+}
 
 describe("VerificationExplainer (inline-note)", () => {
 	it("renders the heading and body verbatim from the copy constant", () => {
@@ -31,10 +79,7 @@ describe("VerificationExplainer (inline-note)", () => {
 
 	it("uses the provided id on the rendered container", () => {
 		const { container } = render(
-			<VerificationExplainer
-				variant="inline-note"
-				id="about-verification"
-			/>,
+			<VerificationExplainer variant="inline-note" id="about-verification" />,
 		);
 
 		const node = container.querySelector("#about-verification");

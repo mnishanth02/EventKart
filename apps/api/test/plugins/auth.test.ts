@@ -157,7 +157,7 @@ describe("auth plugin", () => {
 			expect(setCookie).toMatch(/kiran_session=;|Expires=Thu, 01 Jan 1970/);
 		});
 
-		it("does not emit Set-Cookie on public cacheable responses", async () => {
+		it("keeps stale-cookie deletion on public cacheable responses", async () => {
 			getSessionRedisMock(app).mockResolvedValue(null);
 
 			const res = await app.inject({
@@ -168,7 +168,12 @@ describe("auth plugin", () => {
 
 			expect(res.statusCode).toBe(200);
 			expect(res.headers["cache-control"]).toBe("public, max-age=3600");
-			expect(res.headers["set-cookie"]).toBeUndefined();
+			const setCookie = res.headers["set-cookie"];
+			expect(setCookie).toBeDefined();
+			const setCookieText = Array.isArray(setCookie)
+				? setCookie.join("\n")
+				: String(setCookie);
+			expect(setCookieText).toMatch(/kiran_session=;|Expires=Thu, 01 Jan 1970/);
 		});
 	});
 

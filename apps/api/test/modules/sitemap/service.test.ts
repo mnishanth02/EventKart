@@ -31,7 +31,9 @@ function createSelectQuery(rows: SelectRows, terminal: Terminal) {
 	};
 	query.from.mockReturnValue(query);
 	query.where.mockReturnValue(query);
-	query.orderBy.mockReturnValue(query);
+	query.orderBy.mockImplementation(() =>
+		terminal === "orderBy" ? Promise.resolve(rows) : query,
+	);
 	query.limit.mockImplementation(() =>
 		terminal === "limit" ? Promise.resolve(rows) : query,
 	);
@@ -175,7 +177,9 @@ describe("buildSitemapXml (I-2.4.4)", () => {
 		);
 
 		// `&` MUST be escaped as `&amp;` so the XML is well-formed.
-		expect(xml).toContain("<loc>https://eventkart.in/events/weird&amp;slug</loc>");
+		expect(xml).toContain(
+			"<loc>https://eventkart.in/events/weird&amp;slug</loc>",
+		);
 		expect(xml).not.toContain("weird&slug");
 	});
 

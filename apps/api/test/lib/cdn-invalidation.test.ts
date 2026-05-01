@@ -109,10 +109,17 @@ describe("URL helpers (I-2.4.2)", () => {
 });
 
 describe("createCdnPurgeClient — disabled paths", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
 	it("returns no-op stub when enabled=false; never calls fetch", async () => {
 		const fetchSpy = vi.spyOn(globalThis, "fetch");
 		const log = makeLogger();
-		const client = createCdnPurgeClient({ ...ENABLED_CONFIG, enabled: false }, log);
+		const client = createCdnPurgeClient(
+			{ ...ENABLED_CONFIG, enabled: false },
+			log,
+		);
 
 		expect(client.enabled).toBe(false);
 		await client.purgeUrls(["https://eventkart.example/events/x"]);
@@ -197,9 +204,7 @@ describe("createCdnPurgeClient — enabled paths", () => {
 		expect(init?.method).toBe("POST");
 
 		const headers = init?.headers as Record<string, string>;
-		expect(headers.Authorization).toBe(
-			`Bearer ${ENABLED_CONFIG.apiToken}`,
-		);
+		expect(headers.Authorization).toBe(`Bearer ${ENABLED_CONFIG.apiToken}`);
 		expect(headers["Content-Type"]).toBe("application/json");
 
 		expect(JSON.parse(init?.body as string)).toEqual({

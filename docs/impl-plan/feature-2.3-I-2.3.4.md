@@ -118,7 +118,7 @@ Both variants compose existing primitives. JSDoc on the component documents the 
 
 ## Validation evidence
 
-```
+```text
 pnpm --filter @repo/ui check-types  → exit 0
 pnpm --filter web check-types       → exit 0
 pnpm --filter web test              → 495/495 (+12 from baseline 483)

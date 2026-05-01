@@ -56,7 +56,7 @@ This feature provides unique, URL-safe organizer slugs (`organizers.slug`, NOT N
 
 The orchestrator (the user-facing primary agent) will execute these commands and fill in the pass counts below:
 
-```
+```shell
 pnpm --filter api check-types
 pnpm --filter api exec vitest run test/modules/organizer/slug-service.test.ts
 pnpm --filter @repo/shared check-types

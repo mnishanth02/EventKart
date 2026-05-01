@@ -57,12 +57,11 @@ describe("apps/web/public/robots.txt (I-2.4.5)", () => {
 		expect(lines).toContain(line);
 	});
 
-	it.each(REQUIRED_DISALLOWS)(
-		"contains required disallow directive: %s",
-		(line) => {
-			expect(lines).toContain(line);
-		},
-	);
+	it.each(
+		REQUIRED_DISALLOWS,
+	)("contains required disallow directive: %s", (line) => {
+		expect(lines).toContain(line);
+	});
 
 	it("references the canonical sitemap URL", () => {
 		expect(lines).toContain(SITEMAP_LINE);
@@ -70,16 +69,17 @@ describe("apps/web/public/robots.txt (I-2.4.5)", () => {
 
 	it("does not accidentally allow auth-only namespaces", () => {
 		// Guard against someone replacing a Disallow with an Allow.
-		expect(contents).not.toMatch(/^Allow:\s+\/(org|admin|my|book|api)[/$]/m);
+		expect(contents).not.toMatch(
+			/^Allow:\s+\/(org|admin|my|book|api)(?:$|\/)/m,
+		);
 	});
 
-	it.each(AUTH_NAMESPACES)(
-		"blocks both bare and nested URLs for /%s",
-		(seg) => {
-			// Bare URL form (e.g. `/org`) must be blocked via $-anchor.
-			expect(lines).toContain(`Disallow: /${seg}$`);
-			// Nested URL form (e.g. `/org/dashboard`) must be blocked via prefix.
-			expect(lines).toContain(`Disallow: /${seg}/`);
-		},
-	);
+	it.each(
+		AUTH_NAMESPACES,
+	)("blocks both bare and nested URLs for /%s", (seg) => {
+		// Bare URL form (e.g. `/org`) must be blocked via $-anchor.
+		expect(lines).toContain(`Disallow: /${seg}$`);
+		// Nested URL form (e.g. `/org/dashboard`) must be blocked via prefix.
+		expect(lines).toContain(`Disallow: /${seg}/`);
+	});
 });

@@ -16,6 +16,10 @@ import type {
 } from "#/features/organizer-detail/types";
 import type { UpcomingEventsApiEnvelope } from "#/features/organizer-detail/upcoming-events-api.server";
 
+vi.hoisted(() => {
+	process.env.VITE_API_URL ??= "https://api.eventkart.app";
+});
+
 vi.mock("@number-flow/react", () => ({
 	default: ({ value }: { value: number }) => (
 		<span data-testid="number-flow">₹{value.toLocaleString("en-IN")}</span>
@@ -23,10 +27,9 @@ vi.mock("@number-flow/react", () => ({
 }));
 
 vi.mock("@tanstack/react-router", async () => {
-	const actual =
-		await vi.importActual<typeof import("@tanstack/react-router")>(
-			"@tanstack/react-router",
-		);
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+		"@tanstack/react-router",
+	);
 	return {
 		...actual,
 		Link: ({
@@ -330,9 +333,7 @@ describe("/_public/organizers/$slug — OrganizerDetailView", () => {
 		).toBeTruthy();
 		expect(screen.getByText("Coimbatore City 10K")).toBeTruthy();
 		expect(screen.getByText("Coimbatore City 10K 2024")).toBeTruthy();
-		expect(
-			screen.queryByText(/hasn't run any past events yet\./),
-		).toBeNull();
+		expect(screen.queryByText(/hasn't run any past events yet\./)).toBeNull();
 		expect(
 			screen.queryByText(/has no upcoming events listed yet\./),
 		).toBeNull();

@@ -1,5 +1,6 @@
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import type { FastifyPluginAsync } from "fastify";
+import { z } from "zod/v4";
 import { singleFlight } from "../../lib/cache-stampede.js";
 import { buildSitemapXml } from "./service.js";
 
@@ -34,34 +35,47 @@ const SITEMAP_CACHE_TTL_SEC = 25 * 60 * 60; // 25h
 const SITEMAP_CACHE_CONTROL =
 	"public, max-age=3600, stale-while-revalidate=86400";
 const SITEMAP_CONTENT_TYPE = "application/xml; charset=utf-8";
+const sitemapXmlResponseSchema = z
+	.string()
+	.meta({ contentMediaType: SITEMAP_CONTENT_TYPE });
 
 const sitemapRoutes: FastifyPluginAsync = async (fastify) => {
 	const app = fastify.withTypeProvider<ZodTypeProvider>();
 
-	app.get("/sitemap.xml", async (request, reply) => {
-		const cdnBaseUrl = app.config.CDN_BASE_URL;
+	app.get(
+		"/sitemap.xml",
+		{
+			schema: {
+				response: {
+					200: sitemapXmlResponseSchema,
+				},
+			},
+		},
+		async (request, reply) => {
+			const cdnBaseUrl = app.config.CDN_BASE_URL;
 
-		const xml = await singleFlight<string>(
-			app.redis.cache,
-			SITEMAP_CACHE_KEY,
-			SITEMAP_CACHE_TTL_SEC,
-			() =>
-				buildSitemapXml({
-					db: app.db,
-					log: request.log,
-					...(cdnBaseUrl !== undefined ? { cdnBaseUrl } : {}),
-				}),
-			// Sitemap regen on miss can do non-trivial DB work (events
-			// scan + organizers scan). Hold the lock long enough for a
-			// large dataset; followers fail-OPEN after 5s rather than
-			// stall a crawler request.
-			{ lockTtlMs: 30_000, lockTimeoutMs: 5_000 },
-		);
+			const xml = await singleFlight<string>(
+				app.redis.cache,
+				SITEMAP_CACHE_KEY,
+				SITEMAP_CACHE_TTL_SEC,
+				() =>
+					buildSitemapXml({
+						db: app.db,
+						log: request.log,
+						...(cdnBaseUrl !== undefined ? { cdnBaseUrl } : {}),
+					}),
+				// Sitemap regen on miss can do non-trivial DB work (events
+				// scan + organizers scan). Hold the lock long enough for a
+				// large dataset; followers fail-OPEN after 5s rather than
+				// stall a crawler request.
+				{ lockTtlMs: 30_000, lockTimeoutMs: 5_000 },
+			);
 
-		reply.header("content-type", SITEMAP_CONTENT_TYPE);
-		reply.header("cache-control", SITEMAP_CACHE_CONTROL);
-		return reply.send(xml);
-	});
+			reply.header("content-type", SITEMAP_CONTENT_TYPE);
+			reply.header("cache-control", SITEMAP_CACHE_CONTROL);
+			return reply.send(xml);
+		},
+	);
 };
 
 export default sitemapRoutes;
@@ -70,8 +84,8 @@ export default sitemapRoutes;
 // SETEX the same key with the same TTL — keeping the contract in one
 // place avoids drift between writer and reader.
 export {
+	SITEMAP_CACHE_CONTROL,
 	SITEMAP_CACHE_KEY,
 	SITEMAP_CACHE_TTL_SEC,
-	SITEMAP_CACHE_CONTROL,
 	SITEMAP_CONTENT_TYPE,
 };

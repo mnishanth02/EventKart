@@ -134,7 +134,7 @@ Each fetch is wrapped in its own resilience helper (try/catch → `console.warn`
 
 ## Validation evidence
 
-```
+```shell
 pnpm --filter @repo/shared check-types  → exit 0
 pnpm --filter api check-types           → exit 0
 pnpm --filter api test                  → 838/838 (+7 from 831)

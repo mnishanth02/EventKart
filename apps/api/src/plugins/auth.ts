@@ -72,12 +72,48 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
 	fastify.addHook("onSend", async (_request, reply, payload) => {
 		if (isPublicCacheControl(reply.getHeader("cache-control"))) {
-			reply.removeHeader("set-cookie");
+			const deletionCookies = getSessionDeletionCookies(
+				reply.getHeader("set-cookie"),
+			);
+			if (deletionCookies.length > 0) {
+				reply.header("set-cookie", deletionCookies);
+			} else {
+				reply.removeHeader("set-cookie");
+			}
 		}
 
 		return payload;
 	});
 };
+
+function getSessionDeletionCookies(
+	header: string | number | string[] | undefined,
+): string[] {
+	const values = Array.isArray(header) ? header : [header];
+	return values.filter(
+		(value): value is string =>
+			typeof value === "string" && isSessionDeletionCookie(value),
+	);
+}
+
+function isSessionDeletionCookie(cookie: string): boolean {
+	const [nameAndValue = "", ...attrs] = cookie.split(";");
+	const [name = "", value = ""] = nameAndValue.split("=");
+	if (name.trim() !== SESSION_COOKIE_NAME) return false;
+
+	const normalizedAttrs = attrs.map((attr) => attr.trim().toLowerCase());
+	return (
+		value === "" ||
+		normalizedAttrs.includes("max-age=0") ||
+		normalizedAttrs.some(isExpiredCookieAttribute)
+	);
+}
+
+function isExpiredCookieAttribute(attr: string): boolean {
+	if (!attr.startsWith("expires=")) return false;
+	const expiresAt = Date.parse(attr.slice("expires=".length));
+	return !Number.isNaN(expiresAt) && expiresAt <= Date.now();
+}
 
 function isPublicCacheControl(header: string | number | string[] | undefined) {
 	const values = Array.isArray(header) ? header : [header];

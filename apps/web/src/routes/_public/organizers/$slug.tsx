@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { setOrganizerDetailCacheHeaders } from "#/features/organizer-detail/cache-headers";
-import { PastEventsSection } from "#/features/organizer-detail/components/past-events-section";
 import { PublicOrganizerProfile } from "#/features/organizer-detail/components/PublicOrganizerProfile";
+import { PastEventsSection } from "#/features/organizer-detail/components/past-events-section";
 import { UpcomingEventsSection } from "#/features/organizer-detail/components/upcoming-events-section";
 import {
 	type PublicOrganizerLoaderData,
 	resolvePublicOrganizerLoader,
 } from "#/features/organizer-detail/loader";
 import { buildOrganizerDetailHead } from "#/features/organizer-detail/seo";
-import { publicEnv } from "#/lib/env/public";
 
 /**
  * Public organizer profile route (I-2.3.1).
@@ -26,19 +25,28 @@ import { publicEnv } from "#/lib/env/public";
  * from `/events/:slug` keeps working) but are tagged
  * `noindex,nofollow` via `buildOrganizerDetailHead`.
  */
+type OrganizerDetailRouteData = PublicOrganizerLoaderData & {
+	siteUrl?: string | undefined;
+};
+
 export const Route = createFileRoute("/_public/organizers/$slug")({
-	loader: async ({ params, context }) =>
-		resolvePublicOrganizerLoader({
+	ssr: true,
+	loader: async ({ params, context }) => {
+		const data = await resolvePublicOrganizerLoader({
 			slug: params.slug,
 			queryClient: context.queryClient,
 			setResponseHeaders: setOrganizerDetailCacheHeaders,
-		}),
-	head: ({ loaderData }) => {
-		const data = loaderData as PublicOrganizerLoaderData | undefined;
-		if (!data) return {};
-		return buildOrganizerDetailHead(data.profile, {
-			siteUrl: publicEnv.VITE_SITE_URL,
 		});
+		const { publicEnv } = await import("#/lib/env/public");
+		return {
+			...data,
+			siteUrl: publicEnv.VITE_SITE_URL,
+		} satisfies OrganizerDetailRouteData;
+	},
+	head: ({ loaderData }) => {
+		const data = loaderData as OrganizerDetailRouteData | undefined;
+		if (!data) return {};
+		return buildOrganizerDetailHead(data.profile, { siteUrl: data.siteUrl });
 	},
 	component: OrganizerDetailRouteComponent,
 });
