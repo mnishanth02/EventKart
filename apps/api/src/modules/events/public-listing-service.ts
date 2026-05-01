@@ -1,14 +1,16 @@
-import { and, type Database, desc, eq, inArray, sql } from "@repo/db";
+import { and, type Database, desc, eq, inArray, type SQL, sql } from "@repo/db";
 import {
 	eventCategories,
 	eventImages,
 	eventPricingTiers,
 	events,
+	organizers,
 } from "@repo/db/schema";
 import {
 	type EventPublicCard,
 	eventPublicCardSchema,
 	type OffsetPaginationMeta,
+	type OrganizerSlug,
 } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
 import type { StorageClient } from "../../lib/storage.js";
@@ -56,6 +58,9 @@ export interface PublicEventListingParams {
 	limit: number;
 	sort: "startAtAsc" | "startAtDesc";
 	now: Date;
+	timeWindow: "upcoming" | "past";
+	organizerSlug?: OrganizerSlug;
+	organizerId?: string;
 }
 
 export interface PublicEventListingResult {
@@ -123,10 +128,23 @@ async function selectListingRows(
 	deps: PublicEventListingDeps,
 	params: PublicEventListingParams,
 ) {
-	const condition = and(
-		eq(events.status, "published"),
-		sql`${events.endAt} > ${params.now}`,
-	);
+	const baseConditions: SQL[] = [];
+	if (params.timeWindow === "past") {
+		baseConditions.push(inArray(events.status, ["published", "completed"]));
+		baseConditions.push(sql`${events.endAt} <= ${params.now}`);
+	} else {
+		baseConditions.push(eq(events.status, "published"));
+		baseConditions.push(sql`${events.endAt} > ${params.now}`);
+	}
+	if (params.organizerSlug !== undefined) {
+		baseConditions.push(
+			sql`${events.organizerId} IN (SELECT ${organizers.id} FROM ${organizers} WHERE ${organizers.slug} = ${params.organizerSlug})`,
+		);
+	}
+	if (params.organizerId !== undefined) {
+		baseConditions.push(eq(events.organizerId, params.organizerId));
+	}
+	const condition = and(...baseConditions);
 	const offset = (params.page - 1) * params.limit;
 	const orderBy =
 		params.sort === "startAtDesc"

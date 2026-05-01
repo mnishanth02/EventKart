@@ -464,6 +464,33 @@ describe("GET /api/v1/events/by-slug/:slug", () => {
 			data: { kind: "redirect", newSlug: "coimbatore-city-10k" },
 		});
 		expect(JSON.stringify(response.json())).not.toContain("eventId");
+		// I-2.4.6: Redirect payloads carry a short, plain `max-age`
+		// directive — never `s-maxage`/`stale-while-revalidate` — so the
+		// CDN cannot pin a stale slug rename across a follow-up rename.
+		expect(response.headers["cache-control"]).toBe("public, max-age=300");
+	});
+
+	it("returns 404 (not a stale redirect) when the target event's current slug no longer matches redirect.newSlug (chained rename A → B → C)", async () => {
+		// I-2.4.6: chained-rename safety. The slug_redirects row says the
+		// canonical slug is "coimbatore-city-10k", but the event row has
+		// since been renamed again to "coimbatore-city-10k-2026". Issuing
+		// a 301 to the stale `newSlug` would only force the client into
+		// an extra 404 (and could poison the CDN redirect cache) — return
+		// 404 directly instead.
+		const { db } = createMockDb([
+			[],
+			[{ resourceId: EVENT_ID, newSlug: "coimbatore-city-10k" }],
+			[buildEventRow({ slug: "coimbatore-city-10k-2026" })],
+		]);
+		setAppDeps(app, db);
+
+		const response = await injectBySlug(app, "old-coimbatore-city-10k");
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "NOT_FOUND" },
+		});
 	});
 
 	it("returns 404 for an old slug targeting a draft event", async () => {

@@ -104,10 +104,22 @@ function normalizeConfigData(data: Record<string, unknown>) {
 		delete normalizedData.RAZORPAY_KEY_SECRET;
 	}
 
+	if (normalizedData.CLOUDFLARE_ZONE_ID === "") {
+		delete normalizedData.CLOUDFLARE_ZONE_ID;
+	}
+
+	if (normalizedData.CLOUDFLARE_API_TOKEN === "") {
+		delete normalizedData.CLOUDFLARE_API_TOKEN;
+	}
+
+	if (normalizedData.CDN_BASE_URL === "") {
+		delete normalizedData.CDN_BASE_URL;
+	}
+
 	return normalizedData;
 }
 
-function parseWebOrigin(value: string) {
+export function parseAbsoluteOrigin(value: string) {
 	try {
 		const url = new URL(value);
 
@@ -125,6 +137,10 @@ function parseWebOrigin(value: string) {
 	} catch {
 		return null;
 	}
+}
+
+function parseWebOrigin(value: string) {
+	return parseAbsoluteOrigin(value);
 }
 
 export const appConfigSchema = Type.Object({
@@ -180,6 +196,13 @@ export const appConfigSchema = Type.Object({
 	PUBLIC_SPOTS_REMAINING_BADGE_ENABLED: Type.Optional(
 		Type.Boolean({ default: false }),
 	),
+	// Cloudflare CDN integration (I-2.4.1). All optional and disabled by
+	// default so dev/test never depend on a live Cloudflare zone. The
+	// purge client added by I-2.4.2 reads these via `fastify.config.*`.
+	CLOUDFLARE_ZONE_ID: Type.Optional(Type.String({ minLength: 1 })),
+	CLOUDFLARE_API_TOKEN: Type.Optional(Type.String({ minLength: 1 })),
+	CLOUDFLARE_PURGE_ENABLED: Type.Optional(Type.Boolean({ default: false })),
+	CDN_BASE_URL: Type.Optional(Type.String({ minLength: 1 })),
 });
 
 export type AppConfig = Static<typeof appConfigSchema>;
@@ -206,9 +229,35 @@ export function loadConfig(
 		);
 	}
 
+	let cdnBaseUrl: string | undefined;
+
+	if (config.CDN_BASE_URL !== undefined) {
+		const parsed = parseAbsoluteOrigin(config.CDN_BASE_URL);
+
+		if (!parsed) {
+			throw new Error(
+				"Invalid configuration: CDN_BASE_URL must be an absolute origin without a path, query, or hash.",
+			);
+		}
+
+		cdnBaseUrl = parsed.origin;
+	}
+
 	if (config.OTP_DELIVERY_MODE === "msg91" && !config.MSG91_AUTH_KEY) {
 		throw new Error(
 			"Invalid configuration: OTP_DELIVERY_MODE is 'msg91' but MSG91_AUTH_KEY is not set.",
+		);
+	}
+
+	// Fail-closed cross-field check for the Cloudflare purge client added in
+	// I-2.4.2: enabling purges without credentials or the public CDN origin
+	// would silently no-op in prod and let stale event pages persist indefinitely.
+	if (
+		config.CLOUDFLARE_PURGE_ENABLED &&
+		(!config.CLOUDFLARE_ZONE_ID || !config.CLOUDFLARE_API_TOKEN || !cdnBaseUrl)
+	) {
+		throw new Error(
+			"Invalid configuration: CLOUDFLARE_PURGE_ENABLED is true but CLOUDFLARE_ZONE_ID, CLOUDFLARE_API_TOKEN, and CDN_BASE_URL must be set.",
 		);
 	}
 
@@ -230,5 +279,6 @@ export function loadConfig(
 	return {
 		...config,
 		WEB_ORIGIN: webOrigin.origin,
+		...(cdnBaseUrl !== undefined ? { CDN_BASE_URL: cdnBaseUrl } : {}),
 	};
 }

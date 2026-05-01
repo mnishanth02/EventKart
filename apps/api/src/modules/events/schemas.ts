@@ -21,6 +21,7 @@ import {
 	eventSlugSchema,
 	offsetPaginationMetaSchema,
 	offsetPaginationSchema,
+	organizerSlugSchema,
 	publishEventResponseSchema,
 	publishedEventPatchSchema,
 	publishReadinessResponseSchema,
@@ -60,6 +61,8 @@ export const eventPublicLookupHttpResponseSchema = z.object({
 
 export const publicEventListQuerySchema = offsetPaginationSchema.extend({
 	sort: z.enum(["startAtAsc", "startAtDesc"]).default("startAtAsc"),
+	organizerSlug: organizerSlugSchema.optional(),
+	timeWindow: z.enum(["upcoming", "past"]).default("upcoming"),
 });
 
 export const publicEventListResponseSchema = z.object({

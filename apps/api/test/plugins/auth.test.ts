@@ -13,6 +13,7 @@ import { buildApp } from "../../src/app.js";
 const SESSION_COOKIE_NAME = "kiran_session";
 const TEST_SESSION_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 const TEST_URL = "/test/session";
+const PUBLIC_CACHE_TEST_URL = "/test/public-cache";
 
 const validSession = {
 	userId: "user-001",
@@ -37,6 +38,10 @@ function buildTestAppWithRoute(): FastifyInstance {
 
 	// Diagnostic route that exposes request.session for assertions
 	app.get(TEST_URL, async (request) => ({ session: request.session }));
+	app.get(PUBLIC_CACHE_TEST_URL, async (_request, reply) => {
+		reply.header("Cache-Control", "public, max-age=3600");
+		return { ok: true };
+	});
 
 	return app;
 }
@@ -150,6 +155,25 @@ describe("auth plugin", () => {
 			expect(setCookie).toContain(`${SESSION_COOKIE_NAME}=`);
 			// Cleared cookie has an Expires in the past or empty value
 			expect(setCookie).toMatch(/kiran_session=;|Expires=Thu, 01 Jan 1970/);
+		});
+
+		it("keeps stale-cookie deletion on public cacheable responses", async () => {
+			getSessionRedisMock(app).mockResolvedValue(null);
+
+			const res = await app.inject({
+				method: "GET",
+				url: PUBLIC_CACHE_TEST_URL,
+				cookies: { [SESSION_COOKIE_NAME]: TEST_SESSION_ID },
+			});
+
+			expect(res.statusCode).toBe(200);
+			expect(res.headers["cache-control"]).toBe("public, max-age=3600");
+			const setCookie = res.headers["set-cookie"];
+			expect(setCookie).toBeDefined();
+			const setCookieText = Array.isArray(setCookie)
+				? setCookie.join("\n")
+				: String(setCookie);
+			expect(setCookieText).toMatch(/kiran_session=;|Expires=Thu, 01 Jan 1970/);
 		});
 	});
 

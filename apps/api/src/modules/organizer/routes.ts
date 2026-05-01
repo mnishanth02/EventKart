@@ -8,6 +8,7 @@ import {
 	ValidationError,
 } from "../../lib/errors.js";
 import { requireAuth } from "../../middleware/require-auth.js";
+import { requireInternal } from "../../middleware/require-internal.js";
 import { requireRole } from "../../middleware/require-role.js";
 import {
 	confirmDocumentUpload,
@@ -17,6 +18,11 @@ import {
 	requestDocumentUpload,
 } from "./document-service.js";
 import { acceptPolicies, getPolicyStatus } from "./policy-service.js";
+import {
+	organizerExistsById,
+	selectOrganizerNextEvent,
+} from "./next-event-service.js";
+import { lookupPublicOrganizerBySlug } from "./public-profile-service.js";
 import {
 	acceptPoliciesBodySchema,
 	acceptPoliciesResponseSchema,
@@ -32,7 +38,11 @@ import {
 	getVerificationStatusResponseSchema,
 	organizerConflictResponseSchema,
 	organizerErrorResponseSchema,
+	organizerIdParamsSchema,
+	organizerNextEventResponseSchema,
 	organizerNotFoundResponseSchema,
+	organizerPublicLookupHttpResponseSchema,
+	organizerSlugParamsSchema,
 	registerOrganizerBodySchema,
 	registerOrganizerResponseSchema,
 	updateOrganizerBodySchema,
@@ -56,6 +66,100 @@ function getAuthenticatedSession(request: FastifyRequest) {
 
 const organizerRoutes: FastifyPluginAsync = async (app) => {
 	const typedApp = app.withTypeProvider<ZodTypeProvider>();
+
+	/**
+	 * GET /api/v1/organizers/by-slug/:slug — Public organizer profile lookup.
+	 *
+	 * Anonymous (no preHandler). Mirrors `GET /api/v1/events/by-slug/:slug`:
+	 * returns either `{ kind: "organizer", data }` or
+	 * `{ kind: "redirect", newSlug }` so loaders can share control flow.
+	 *
+	 * The Fastify response schema strips any out-of-shape fields at the
+	 * framework boundary as a defense-in-depth layer on top of the
+	 * in-service `.parse` projection.
+	 */
+	typedApp.get(
+		"/by-slug/:slug",
+		{
+			schema: {
+				params: organizerSlugParamsSchema,
+				response: {
+					200: organizerPublicLookupHttpResponseSchema,
+					400: organizerErrorResponseSchema,
+					404: organizerErrorResponseSchema,
+				},
+			},
+		},
+		async (request, reply) => {
+			const data = await lookupPublicOrganizerBySlug(
+				app.db,
+				request.params.slug,
+				request.log,
+				app.redis.cache,
+			);
+
+			// I-2.4.6: Mirror the events redirect-cache directive — short
+			// `max-age=300` (no `s-maxage`/SWR) so the CDN can't pin a
+			// stale slug rename through a follow-up rename.
+			if (data.kind === "redirect") {
+				reply.header("cache-control", "public, max-age=300");
+			}
+
+			return { success: true as const, data };
+		},
+	);
+
+	/**
+	 * GET /api/v1/organizers/:organizerId/next-event — Same-organizer
+	 * next-event lookup (I-2.3.6).
+	 *
+	 * Internal-only (requires `x-internal-key`). Used by the I-6.2.3
+	 * post-event follow-up email worker to populate the "your next
+	 * event from this organizer" prompt. Returns the organizer's
+	 * immediate next published event (`endAt > now`, ordered by
+	 * `startAt ASC`) as an `EventPublicCard`, or `data: null` when the
+	 * organizer has no upcoming event.
+	 *
+	 * The route checks organizer existence first so a missing
+	 * organizer surfaces as **404** rather than `data: null` — that
+	 * distinction matters for the email worker (typo vs. legitimate
+	 * empty state).
+	 *
+	 * URL uses the organizer UUID (not slug) per I-2.3.1 D1: organizer
+	 * IDs are not exposed publicly, so this surface is reachable only
+	 * by internal callers that already hold the UUID.
+	 */
+	typedApp.get(
+		"/:organizerId/next-event",
+		{
+			preHandler: [requireInternal],
+			schema: {
+				params: organizerIdParamsSchema,
+				response: {
+					200: organizerNextEventResponseSchema,
+					400: organizerErrorResponseSchema,
+					401: organizerErrorResponseSchema,
+					404: organizerErrorResponseSchema,
+				},
+			},
+		},
+		async (request) => {
+			const exists = await organizerExistsById(
+				app.db,
+				request.params.organizerId,
+			);
+			if (!exists) {
+				throw new NotFoundError("Organizer not found");
+			}
+
+			const data = await selectOrganizerNextEvent(
+				{ db: app.db, storage: app.storage, log: request.log },
+				{ organizerId: request.params.organizerId, now: new Date() },
+			);
+
+			return { success: true as const, data };
+		},
+	);
 
 	/**
 	 * POST /api/v1/organizers — Register a new organizer profile.

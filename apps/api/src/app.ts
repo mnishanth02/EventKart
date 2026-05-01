@@ -12,6 +12,7 @@ import adminRoutes from "./modules/admin/routes.js";
 import authRoutes from "./modules/auth/routes.js";
 import eventRoutes from "./modules/events/routes.js";
 import organizerRoutes from "./modules/organizer/routes.js";
+import sitemapRoutes from "./modules/sitemap/routes.js";
 import authPlugin from "./plugins/auth.js";
 import configPlugin from "./plugins/config.js";
 import corsPlugin from "./plugins/cors.js";
@@ -72,6 +73,11 @@ export function buildApp(options: BuildAppOptions = {}) {
 	app.register(organizerRoutes, { prefix: "/api/v1/organizers" });
 	app.register(eventRoutes, { prefix: "/api/v1/events" });
 	app.register(adminRoutes, { prefix: "/api/v1/admin" });
+	// I-2.4.4: public sitemap.xml served at /api/v1/sitemap.xml. The
+	// production hostname `eventkart.in/sitemap.xml` is mapped here by a
+	// Cloudflare Origin Rule (see docs/operations/cloudflare-cdn-setup.md
+	// §3.7).
+	app.register(sitemapRoutes, { prefix: "/api/v1" });
 
 	app.setNotFoundHandler((request, reply) => {
 		reply.code(404);

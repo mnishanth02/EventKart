@@ -35,8 +35,8 @@ describe("Queue Library", () => {
 	});
 
 	describe("QUEUE_NAMES", () => {
-		it("has exactly 6 queue names", () => {
-			expect(Object.keys(QUEUE_NAMES)).toHaveLength(6);
+		it("has exactly 8 queue names", () => {
+			expect(Object.keys(QUEUE_NAMES)).toHaveLength(8);
 		});
 
 		it("has correct string values", () => {
@@ -46,12 +46,14 @@ describe("Queue Library", () => {
 			expect(QUEUE_NAMES.exports).toBe("exports");
 			expect(QUEUE_NAMES.failedJobs).toBe("failed-jobs");
 			expect(QUEUE_NAMES.razorpayAccount).toBe("razorpay-account");
+			expect(QUEUE_NAMES.cdnPurge).toBe("cdn-purge");
+			expect(QUEUE_NAMES.sitemapRegen).toBe("sitemap-regen");
 		});
 	});
 
 	describe("QUEUE_CONFIGS", () => {
-		it("has config for all 6 queues", () => {
-			expect(Object.keys(QUEUE_CONFIGS)).toHaveLength(6);
+		it("has config for all 8 queues", () => {
+			expect(Object.keys(QUEUE_CONFIGS)).toHaveLength(8);
 		});
 
 		it("payment-webhook: concurrency 10, attempts 3, exponential backoff", () => {
@@ -97,12 +99,36 @@ describe("Queue Library", () => {
 			expect(config.defaultJobOptions.attempts).toBe(1);
 			expect(config.defaultJobOptions.removeOnFail).toBe(false);
 		});
+
+		it("cdn-purge: concurrency 5, attempts 3, exponential 5s backoff (I-2.4.2)", () => {
+			const config = QUEUE_CONFIGS["cdn-purge"];
+			expect(config.concurrency).toBe(5);
+			expect(config.defaultJobOptions.attempts).toBe(3);
+			expect(config.defaultJobOptions.backoff).toEqual({
+				type: "exponential",
+				delay: 5000,
+			});
+		});
+
+		it("sitemap-regen: concurrency 1, attempts 2, exponential 5s backoff, removeOnComplete: true", () => {
+			const config = QUEUE_CONFIGS["sitemap-regen"];
+			expect(config.concurrency).toBe(1);
+			expect(config.defaultJobOptions.attempts).toBe(2);
+			expect(config.defaultJobOptions.backoff).toEqual({
+				type: "exponential",
+				delay: 5000,
+			});
+			// Critical: completed jobs MUST be removed immediately
+			// (not retained as `{ count: N }`) so the fixed debounce
+			// jobId can be re-used by the next ad-hoc enqueue.
+			expect(config.defaultJobOptions.removeOnComplete).toBe(true);
+		});
 	});
 
 	describe("createQueues", () => {
 		const fakeConnection = {} as never;
 
-		it("returns all 6 queue properties", () => {
+		it("returns all 8 queue properties", () => {
 			const queues = createQueues(fakeConnection);
 
 			expect(queues).toHaveProperty("paymentWebhook");
@@ -111,11 +137,13 @@ describe("Queue Library", () => {
 			expect(queues).toHaveProperty("exports");
 			expect(queues).toHaveProperty("failedJobs");
 			expect(queues).toHaveProperty("razorpayAccount");
+			expect(queues).toHaveProperty("cdnPurge");
+			expect(queues).toHaveProperty("sitemapRegen");
 		});
 
-		it("creates 6 Queue instances", () => {
+		it("creates 8 Queue instances", () => {
 			createQueues(fakeConnection);
-			expect(constructorCalls).toHaveLength(6);
+			expect(constructorCalls).toHaveLength(8);
 		});
 
 		it("passes correct queue names to Queue constructor", () => {
@@ -128,6 +156,8 @@ describe("Queue Library", () => {
 			expect(names).toContain("exports");
 			expect(names).toContain("failed-jobs");
 			expect(names).toContain("razorpay-account");
+			expect(names).toContain("cdn-purge");
+			expect(names).toContain("sitemap-regen");
 		});
 
 		it("passes connection to all queues", () => {
@@ -149,12 +179,12 @@ describe("Queue Library", () => {
 	});
 
 	describe("closeQueues", () => {
-		it("calls close() on all 6 queues", async () => {
+		it("calls close() on all 8 queues", async () => {
 			const queues = createQueues({} as never);
 			mockClose.mockClear();
 
 			await closeQueues(queues);
-			expect(mockClose).toHaveBeenCalledTimes(6);
+			expect(mockClose).toHaveBeenCalledTimes(8);
 		});
 
 		it("tolerates close() rejections (uses allSettled)", async () => {
@@ -166,10 +196,11 @@ describe("Queue Library", () => {
 				.mockRejectedValueOnce(new Error("timeout"))
 				.mockResolvedValueOnce(undefined)
 				.mockResolvedValueOnce(undefined)
+				.mockResolvedValueOnce(undefined)
 				.mockResolvedValueOnce(undefined);
 
 			await expect(closeQueues(queues)).resolves.toBeUndefined();
-			expect(mockClose).toHaveBeenCalledTimes(6);
+			expect(mockClose).toHaveBeenCalledTimes(8);
 		});
 	});
 

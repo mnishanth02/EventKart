@@ -11,7 +11,10 @@ import { datetimeSchema } from "./date.js";
 import { eventCategorySlugSchema } from "./event-category.js";
 import { eventPriceSchema } from "./event-pricing.js";
 import { eventSlugSchema } from "./event-slug.js";
-import { organizerSlugSchema } from "./organizer-slug.js";
+import {
+	type OrganizerPublicProfile,
+	organizerPublicProfileSchema,
+} from "./organizer-public-profile.js";
 
 /**
  * Public-facing image entry rendered on `/events/:slug`.
@@ -32,26 +35,16 @@ export const eventPublicImageSchema = z.object({
 export type EventPublicImage = z.infer<typeof eventPublicImageSchema>;
 
 /**
- * Public organizer summary embedded in the event detail. Carries only
- * fields that are safe to expose anonymously.
+ * Public organizer summary embedded in the event detail.
  *
- * `description` is the organizer's self-authored "about" copy. It is
- * nullable; the API normalizes empty/whitespace-only stored values to
- * `null` and defensively truncates to 2000 characters before parsing
- * (the underlying DB column is unbounded `text`, so untrusted lengths
- * must not be allowed to break the public event response).
+ * This is an alias of {@link organizerPublicProfileSchema} — the same shape
+ * that the standalone `/organizers/:slug` profile page (I-2.3.1) consumes. A
+ * single canonical projection prevents drift between the embedded summary on
+ * the event page and the dedicated organizer profile.
  */
-export const eventPublicOrganizerSummarySchema = z.object({
-	slug: organizerSlugSchema,
-	businessName: z.string().min(1),
-	isVerified: z.boolean(),
-	city: z.string().min(1),
-	description: z.string().max(2000).nullable(),
-});
+export const eventPublicOrganizerSummarySchema = organizerPublicProfileSchema;
 
-export type EventPublicOrganizerSummary = z.infer<
-	typeof eventPublicOrganizerSummarySchema
->;
+export type EventPublicOrganizerSummary = OrganizerPublicProfile;
 
 /**
  * Public capacity projection for a category.

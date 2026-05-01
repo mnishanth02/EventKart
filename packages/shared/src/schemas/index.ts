@@ -220,6 +220,18 @@ export {
 export type { OrganizerSlug, OrganizerSlugInput } from "./organizer-slug.js";
 export { organizerSlugSchema } from "./organizer-slug.js";
 export type {
+	OrganizerPublicLookupHttpResponse,
+	OrganizerPublicLookupResponse,
+	OrganizerPublicProfile,
+	OrganizerPublicSlugRedirect,
+} from "./organizer-public-profile.js";
+export {
+	organizerPublicLookupHttpResponseSchema,
+	organizerPublicLookupResponseSchema,
+	organizerPublicProfileSchema,
+	organizerPublicSlugRedirectSchema,
+} from "./organizer-public-profile.js";
+export type {
 	OtpSendData,
 	OtpSendRequest,
 	OtpSendRequestParsed,

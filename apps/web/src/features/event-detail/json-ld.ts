@@ -67,6 +67,24 @@ export interface OfferJsonLd {
 	validThrough?: string;
 }
 
+export interface BreadcrumbItemJsonLd {
+	"@type": "ListItem";
+	position: number;
+	name: string;
+	item: string;
+}
+
+export interface BreadcrumbListJsonLd {
+	"@context": "https://schema.org";
+	"@type": "BreadcrumbList";
+	itemListElement: BreadcrumbItemJsonLd[];
+}
+
+export interface BuildPublicEventBreadcrumbJsonLdOptions {
+	/** Optional canonical site origin (e.g. `https://eventkart.in`). */
+	siteUrl?: string | undefined;
+}
+
 export interface EventJsonLd {
 	"@context": "https://schema.org";
 	"@type": "Event";
@@ -104,7 +122,16 @@ const HTML_ESCAPE_PATTERN = /[&><\u2028\u2029]/g;
 // well above SERP truncation while keeping cached HTML payloads bounded.
 const DESCRIPTION_MAX_GRAPHEMES = 5000;
 
-export function serializeJsonLdForInlineScript(jsonLd: EventJsonLd): string {
+/**
+ * Generic over the JSON-LD payload shape so it can serialize both
+ * {@link EventJsonLd} (I-2.1.6) and {@link BreadcrumbListJsonLd} (I-2.4.8)
+ * — and any future JSON-LD payload — through the same trust boundary.
+ * The runtime behavior is identical for every shape: `JSON.stringify` then
+ * replace the framework `escapeHtml` set (`& > < U+2028 U+2029`) so a
+ * `</script>` payload in user content can never break out of the inline
+ * `<script type="application/ld+json">`.
+ */
+export function serializeJsonLdForInlineScript<T>(jsonLd: T): string {
 	return JSON.stringify(jsonLd).replace(
 		HTML_ESCAPE_PATTERN,
 		(match) => HTML_ESCAPE_LOOKUP[match] ?? match,
@@ -228,6 +255,59 @@ function buildOffers(
 		}
 		return offer;
 	});
+}
+
+/**
+ * Builds the Schema.org `BreadcrumbList` JSON-LD payload for `/events/:slug`
+ * (I-2.4.8). Three items: Home → Events → `{event.title}`, with positions
+ * 1, 2, 3 and absolute URLs derived from the canonical site origin.
+ *
+ * Returns `null` (fail-soft) when `siteUrl` is missing or not a parseable
+ * `http(s)` URL — Schema.org `BreadcrumbList.itemListElement[].item` MUST
+ * be an absolute URL, and emitting relative paths or invalid links would
+ * trigger validator warnings without delivering the rich-snippet benefit.
+ * Mirrors the canonical-link contract from I-2.4.7 / I-2.1.5.
+ *
+ * Pure function of `(event, options)` — output is fully deterministic so
+ * it stays compatible with the I-2.1.1 CDN cache contract
+ * (`Cache-Control: public, s-maxage=60, stale-while-revalidate=300`,
+ * no `Vary: Cookie`). No clock reads, no random IDs, no env reads.
+ *
+ * The returned object is consumed by the route's `head().scripts` after
+ * passing through {@link serializeJsonLdForInlineScript} — that helper is
+ * the trust boundary that prevents `</script>` injection from a hostile
+ * `event.title` breaking out of the inline JSON-LD script.
+ */
+export function buildPublicEventBreadcrumbJsonLd(
+	event: EventPublicDetail,
+	options: BuildPublicEventBreadcrumbJsonLdOptions,
+): BreadcrumbListJsonLd | null {
+	const siteOrigin = resolveSiteOrigin(options.siteUrl);
+	if (!siteOrigin) return null;
+
+	// Use the WHATWG URL parser for every item so trailing slashes,
+	// repeated slashes, or accidental path/query/fragment on `siteUrl`
+	// (already stripped by `resolveSiteOrigin`) cannot produce
+	// `//events/` or other malformed hrefs. `new URL(path, origin).href`
+	// always yields the canonicalized absolute URL.
+	const homeUrl = new URL("/", siteOrigin).href;
+	const eventsUrl = new URL("/events", siteOrigin).href;
+	const eventUrl = new URL(`/events/${event.slug}`, siteOrigin).href;
+
+	return {
+		"@context": SCHEMA_ORG_CONTEXT,
+		"@type": "BreadcrumbList",
+		itemListElement: [
+			{ "@type": "ListItem", position: 1, name: "Home", item: homeUrl },
+			{ "@type": "ListItem", position: 2, name: "Events", item: eventsUrl },
+			{
+				"@type": "ListItem",
+				position: 3,
+				name: event.title,
+				item: eventUrl,
+			},
+		],
+	};
 }
 
 /**

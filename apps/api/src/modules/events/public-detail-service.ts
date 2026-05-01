@@ -23,12 +23,25 @@ import {
 	type EventPublicPricingTier,
 } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
+import type { Redis } from "ioredis";
+import {
+	PUBLIC_EVENT_CACHE_KEY_PREFIX,
+	singleFlight,
+} from "../../lib/cache-stampede.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import {
 	StorageUnavailableError,
 	type StorageClient,
 } from "../../lib/storage.js";
+import { truncateNoSurrogateSplit } from "../../lib/text-truncate.js";
 import { EVENT_SLUG_RESOURCE_TYPE } from "./service.js";
+
+/**
+ * I-2.4.3: Public event detail TTL in the origin Redis single-flight
+ * cache. Matches the `s-maxage=60` directive on the SSR'd page so the
+ * origin and the CDN have the same freshness window.
+ */
+const PUBLIC_EVENT_CACHE_TTL_SEC = 60;
 
 const PUBLIC_IMAGE_DOWNLOAD_EXPIRES_IN_SECONDS = 3600;
 
@@ -43,6 +56,14 @@ export interface PublicEventDetailDeps {
 	storage: StorageClient;
 	log: Pick<FastifyBaseLogger, "info" | "warn">;
 	featureFlags?: PublicEventFeatureFlags;
+	/**
+	 * Optional namespaced cache client (`app.redis.cache`). When provided,
+	 * `lookupPublicEventBySlug` wraps the success branch in
+	 * `singleFlight` (I-2.4.3) so concurrent cache misses don't fan out
+	 * into N parallel DB projections. Tests omit this safely — the helper
+	 * is a pure pass-through when `cache` is `undefined`.
+	 */
+	cache?: Redis;
 }
 
 export interface PublicEventFeatureFlags {
@@ -175,30 +196,6 @@ async function selectOrganizerSummary(
 		city: organizer.city,
 		description,
 	});
-}
-
-/**
- * Truncate `value` to at most `maxCodeUnits` UTF-16 code units while never
- * leaving an unpaired high surrogate at the tail.
- *
- * `String.prototype.slice` is code-unit-based, so slicing in the middle of a
- * surrogate pair (e.g. an emoji or any astral-plane code point) yields a
- * dangling high surrogate that renders as a replacement glyph downstream.
- * For a pessimistic public-event-detail boundary we accept losing one full
- * astral code point in that edge case.
- */
-function truncateNoSurrogateSplit(value: string, maxCodeUnits: number): string {
-	if (value.length <= maxCodeUnits) {
-		return value;
-	}
-	const sliced = value.slice(0, maxCodeUnits);
-	const lastCodeUnit = sliced.charCodeAt(sliced.length - 1);
-	// 0xD800–0xDBFF is the high-surrogate range; if the boundary lands there
-	// we drop it so the truncated string remains well-formed UTF-16.
-	if (lastCodeUnit >= 0xd800 && lastCodeUnit <= 0xdbff) {
-		return sliced.slice(0, -1);
-	}
-	return sliced;
 }
 
 async function selectPublicCategories(
@@ -378,6 +375,25 @@ async function buildPublicEventDetail(
 	});
 }
 
+/**
+ * Resolve a slug-redirect row for the event namespace. Throws
+ * `NotFoundError` (which the caller surfaces as 404) when:
+ *  - no redirect row exists,
+ *  - the redirect target points back at the requested slug (loop guard),
+ *  - the target event row is missing,
+ *  - the target event is not publicly readable (e.g. draft / unpublished),
+ *    OR
+ *  - the target event's current slug no longer matches `redirect.newSlug`
+ *    (the redirect is stale relative to the events table — typically a
+ *    chained rename A → B → C, where the redirect row says B but the
+ *    canonical slug has already moved to C). Issuing a 301 to B in that
+ *    case would send the client to a slug that no longer exists,
+ *    forcing an extra 404 round-trip and (at the CDN) potentially
+ *    poisoning the redirect cache.
+ *
+ * Mirrors `lookupOrganizerSlugRedirect` so both public lookup paths
+ * enforce the same chained-rename invariant. See I-2.4.6.
+ */
 async function lookupSlugRedirect(
 	deps: PublicEventDetailDeps,
 	slug: string,
@@ -401,7 +417,11 @@ async function lookupSlugRedirect(
 	}
 
 	const targetEvent = await selectEventById(deps.db, redirect.resourceId);
-	if (!targetEvent || !isPubliclyReadableEventStatus(targetEvent.status)) {
+	if (
+		!targetEvent ||
+		!isPubliclyReadableEventStatus(targetEvent.status) ||
+		targetEvent.slug !== redirect.newSlug
+	) {
 		throw new NotFoundError("Event not found");
 	}
 
@@ -409,6 +429,32 @@ async function lookupSlugRedirect(
 		kind: "redirect",
 		newSlug: redirect.newSlug,
 	});
+}
+
+/**
+ * Producer for the I-2.4.3 single-flight cache. Returns the projected
+ * detail on hit, or `null` when no event row matches the slug. The
+ * `null` branch is cached for {@link PUBLIC_EVENT_CACHE_TTL_SEC} so a
+ * burst of invalid-slug spam can't stampede the DB; the redirect
+ * fallback (which mutates a different table) still runs every request
+ * so legitimate slug renames keep working.
+ *
+ * `NotFoundError` from the draft/unpublished branch is propagated and
+ * NEVER cached — caching a 404 for a slug that's about to be published
+ * would briefly hide a legitimate event.
+ */
+async function fetchPublicEventBySlug(
+	deps: PublicEventDetailDeps,
+	slug: string,
+): Promise<EventPublicDetail | null> {
+	const event = await selectEventBySlug(deps.db, slug);
+	if (!event) {
+		return null;
+	}
+	if (!isPubliclyReadableEventStatus(event.status)) {
+		throw new NotFoundError("Event not found");
+	}
+	return buildPublicEventDetail(deps, event);
 }
 
 export async function lookupPublicEventBySlug(
@@ -420,16 +466,18 @@ export async function lookupPublicEventBySlug(
 		throw new ValidationError("Invalid event slug");
 	}
 
-	const event = await selectEventBySlug(deps.db, parsed.data);
-	if (event) {
-		if (!isPubliclyReadableEventStatus(event.status)) {
-			throw new NotFoundError("Event not found");
-		}
+	const cache = deps.cache;
+	const data = cache
+		? await singleFlight<EventPublicDetail | null>(
+				cache,
+				`${PUBLIC_EVENT_CACHE_KEY_PREFIX}${parsed.data}`,
+				PUBLIC_EVENT_CACHE_TTL_SEC,
+				() => fetchPublicEventBySlug(deps, parsed.data),
+			)
+		: await fetchPublicEventBySlug(deps, parsed.data);
 
-		return {
-			kind: "event",
-			data: await buildPublicEventDetail(deps, event),
-		};
+	if (data !== null) {
+		return { kind: "event", data };
 	}
 
 	return lookupSlugRedirect(deps, parsed.data);

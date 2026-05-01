@@ -191,7 +191,17 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 
 			const auditLogger = createAuditLogger(app.db, request.log);
 			const result = await publishEvent(
-				{ db: app.db, log: request.log, auditLogger },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger,
+					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
+				},
 				session.userId,
 				request.params.eventId,
 				request.ip,
@@ -225,7 +235,17 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 
 			const auditLogger = createAuditLogger(app.db, request.log);
 			const result = await unpublishEvent(
-				{ db: app.db, log: request.log, auditLogger },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger,
+					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
+				},
 				session.userId,
 				request.params.eventId,
 				request.ip,
@@ -247,7 +267,7 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 				},
 			},
 		},
-		async (request) => {
+		async (request, reply) => {
 			const data = await lookupPublicEventBySlug(
 				{
 					db: app.db,
@@ -257,9 +277,19 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 						spotsRemainingEnabled:
 							app.config.PUBLIC_SPOTS_REMAINING_BADGE_ENABLED ?? false,
 					},
+					cache: app.redis.cache,
 				},
 				request.params.slug,
 			);
+
+			// I-2.4.6: When the lookup resolves to a slug-rename redirect,
+			// short-cache the JSON response so a subsequent rename
+			// (A → B → C) invalidates quickly. Plain `max-age=300` —
+			// deliberately NOT `s-maxage`/`stale-while-revalidate` so
+			// stale redirects can't outlive the rename window.
+			if (data.kind === "redirect") {
+				reply.header("cache-control", "public, max-age=300");
+			}
 
 			return { success: true as const, data };
 		},
@@ -436,6 +466,12 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					db: app.db,
 					log: request.log,
 					auditLogger: createAuditLogger(app.db, request.log),
+					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
 				},
 				session.userId,
 				request.params.eventId,
@@ -474,6 +510,12 @@ const eventRoutes: FastifyPluginAsync = async (app) => {
 					db: app.db,
 					log: request.log,
 					auditLogger: createAuditLogger(app.db, request.log),
+					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
 				},
 				session.userId,
 				request.params.eventId,

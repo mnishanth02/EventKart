@@ -1,7 +1,10 @@
 import {
 	documentUploadRequestSchema,
+	eventPublicCardSchema,
 	organizerProfileSchema,
+	organizerPublicLookupHttpResponseSchema,
 	organizerRegistrationSchema,
+	organizerSlugSchema,
 	organizerUpdateBaseSchema,
 	policyAcceptanceRequestSchema,
 	policyStatusResponseSchema,
@@ -111,3 +114,22 @@ export const getVerificationStatusResponseSchema = z.object({
 	success: z.literal(true),
 	data: verificationStatusResponseSchema,
 });
+
+// ── Public profile lookup schemas ───────────────────────────────────
+
+export const organizerSlugParamsSchema = z.object({
+	slug: organizerSlugSchema,
+});
+
+// ── Next-event lookup schemas (I-2.3.6) ─────────────────────────────
+
+export const organizerIdParamsSchema = z.object({
+	organizerId: z.string().uuid(),
+});
+
+export const organizerNextEventResponseSchema = z.object({
+	success: z.literal(true),
+	data: eventPublicCardSchema.nullable(),
+});
+
+export { organizerPublicLookupHttpResponseSchema };

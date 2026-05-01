@@ -9,6 +9,9 @@ export const QUEUE_NAMES = {
 	exports: "exports",
 	failedJobs: "failed-jobs",
 	razorpayAccount: "razorpay-account",
+	cdnPurge: "cdn-purge",
+	// I-2.4.4: nightly + on-publish sitemap.xml regeneration.
+	sitemapRegen: "sitemap-regen",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -70,6 +73,41 @@ export const QUEUE_CONFIGS: Record<
 			removeOnFail: { count: 5000 },
 		},
 	},
+	// I-2.4.2: Cloudflare CDN purge. Concurrency 5 keeps us comfortably
+	// under Cloudflare's 1000-purges-per-zone-per-5-min budget while
+	// allowing a small burst of admin actions to drain quickly. Three
+	// attempts with exponential 5s/10s/20s backoff is sized for the
+	// transient 5xx blips Cloudflare occasionally emits during edge
+	// maintenance — long enough to ride out a brief outage without
+	// stalling the queue when the API is genuinely down.
+	[QUEUE_NAMES.cdnPurge]: {
+		concurrency: 5,
+		defaultJobOptions: {
+			attempts: 3,
+			backoff: { type: "exponential" as const, delay: 5000 },
+			removeOnComplete: { count: 500 },
+			removeOnFail: { count: 5000 },
+		},
+	},
+	[QUEUE_NAMES.sitemapRegen]: {
+		// I-2.4.4: Concurrency 1 — only one regen at a time. Multiple
+		// regens in flight would race on the SETEX of
+		// `cache:sitemap:current` and waste DB cycles producing identical
+		// XML.
+		concurrency: 1,
+		defaultJobOptions: {
+			attempts: 2,
+			backoff: { type: "exponential" as const, delay: 5000 },
+			// Remove completed jobs IMMEDIATELY (not after N kept). The
+			// ad-hoc enqueue path uses a fixed `jobId` for debounce; if
+			// completed jobs are retained, BullMQ's "duplicate jobId
+			// rejects new add()" semantics would silently suppress all
+			// future ad-hoc enqueues until the retained job is GC'd.
+			// Failed jobs DO stay (count: 200) so DLQ + ops have history.
+			removeOnComplete: true,
+			removeOnFail: { count: 200 },
+		},
+	},
 };
 
 // Typed queue container
@@ -80,6 +118,8 @@ export interface AppQueues {
 	exports: Queue;
 	failedJobs: Queue;
 	razorpayAccount: Queue;
+	cdnPurge: Queue;
+	sitemapRegen: Queue;
 }
 
 // Factory: creates all queue instances
@@ -102,6 +142,11 @@ export function createQueues(connection: Redis): AppQueues {
 			QUEUE_NAMES.razorpayAccount,
 			opts(QUEUE_NAMES.razorpayAccount),
 		),
+		cdnPurge: new Queue(QUEUE_NAMES.cdnPurge, opts(QUEUE_NAMES.cdnPurge)),
+		sitemapRegen: new Queue(
+			QUEUE_NAMES.sitemapRegen,
+			opts(QUEUE_NAMES.sitemapRegen),
+		),
 	};
 }
 
@@ -114,6 +159,8 @@ export async function closeQueues(queues: AppQueues): Promise<void> {
 		queues.exports.close(),
 		queues.failedJobs.close(),
 		queues.razorpayAccount.close(),
+		queues.cdnPurge.close(),
+		queues.sitemapRegen.close(),
 	]);
 }
 

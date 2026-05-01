@@ -136,7 +136,17 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 				throw new UnauthorizedError();
 			}
 			const result = await approveEventReview(
-				{ db: app.db, log: request.log, auditLogger },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger,
+					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
+				},
 				request.params.eventId,
 				session.userId,
 				request.ip,
@@ -171,7 +181,17 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
 				throw new UnauthorizedError();
 			}
 			const result = await rejectEventReview(
-				{ db: app.db, log: request.log, auditLogger },
+				{
+					db: app.db,
+					log: request.log,
+					auditLogger,
+					cache: app.redis.cache,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
+				},
 				request.params.eventId,
 				session.userId,
 				request.body.reason,

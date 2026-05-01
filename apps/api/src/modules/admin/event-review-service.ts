@@ -3,9 +3,12 @@ import { and, eq, inArray, sql } from "@repo/db";
 import { events, organizers } from "@repo/db/schema";
 import type { AdminEventReviewListParams, Event } from "@repo/shared/schemas";
 import { eventSchema } from "@repo/shared/schemas";
+import type { Queue } from "bullmq";
 import type { FastifyBaseLogger } from "fastify";
+import type { Redis } from "ioredis";
 import type { AuditLogger } from "../../lib/audit.js";
 import { NotFoundError } from "../../lib/errors.js";
+import type { CdnPurgePayload } from "../../queues/cdn-purge.js";
 import {
 	adminApproveEvent,
 	adminRejectEvent,
@@ -16,6 +19,30 @@ interface AdminEventReviewDeps {
 	db: Database;
 	log: Pick<FastifyBaseLogger, "info">;
 	auditLogger: AuditLogger;
+	/**
+	 * Public-event Redis cache (I-2.4.3) — passed through to
+	 * `adminApproveEvent` so an admin-approved publish evicts the
+	 * cached projection. Rejection (I-2.4.2) also forwards through to
+	 * a defense-in-depth purge for previously-published re-submissions.
+	 */
+	cache?: Redis;
+	/**
+	 * I-2.4.2: Cloudflare CDN purge queue + base URL — forwarded to
+	 * both `adminApproveEvent` (purge new public URL) and
+	 * `adminRejectEvent` (purge previously-public URL after rejection).
+	 * Both are optional; tests omit them and the underlying service
+	 * helpers no-op gracefully.
+	 */
+	cdnPurgeQueue?: Queue<CdnPurgePayload>;
+	cdnBaseUrl?: string;
+	/**
+	 * I-2.4.4: Sitemap regen queue. Spread through to
+	 * `adminApproveEvent` (and `adminRejectEvent` for symmetry — a
+	 * reject of a draft event has no sitemap impact, but the queue
+	 * is harmless if `invalidateEventCache` doesn't fire on the
+	 * non-publish path).
+	 */
+	sitemapRegenQueue?: Queue;
 }
 
 function eventDate(value: Date | null): string | null {

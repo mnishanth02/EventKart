@@ -13,6 +13,7 @@ import { emitEmailStub } from "../../lib/email-stub.js";
 import { ConflictError, NotFoundError } from "../../lib/errors.js";
 import type { AppQueues } from "../../lib/queue.js";
 import type { StorageClient } from "../../lib/storage.js";
+import { enqueueSitemapRegen } from "../../queues/sitemap-regen.js";
 import { getPolicyStatus } from "../organizer/policy-service.js";
 
 const DOWNLOAD_URL_EXPIRY_SECONDS = 15 * 60; // 15 minutes
@@ -320,6 +321,24 @@ export async function approveOrganizer(
 				"Failed to enqueue Razorpay account creation job",
 			);
 		}
+	}
+
+	// I-2.4.4: enqueue sitemap regen — `approveOrganizer` flips
+	// `isVerified` from false → true, which makes this organizer
+	// newly visible to the public sitemap (which filters on
+	// `isVerified=true`). Fail-soft: a missed enqueue at most delays
+	// inclusion until the next nightly cron tick, never blocks
+	// approval.
+	const regenResult = enqueueSitemapRegen(queues?.sitemapRegen, {
+		reason: "organizer_verification_approved",
+	});
+	if (regenResult) {
+		regenResult.catch((err: unknown) => {
+			log.warn(
+				{ err, organizerId },
+				"Failed to enqueue sitemap regen after organizer approval",
+			);
+		});
 	}
 
 	// Wave B: log-only email stub. Failures must NEVER break approval.
