@@ -19,13 +19,19 @@ vi.mock("@tanstack/react-router", () => ({
 
 import { PublicFooter } from "./public-footer";
 
+const COPYRIGHT_YEAR = 2026;
+
 afterEach(() => {
 	cleanup();
 });
 
+function renderPublicFooter() {
+	return render(<PublicFooter currentYear={COPYRIGHT_YEAR} />);
+}
+
 describe("PublicFooter", () => {
 	it("renders the brand link pointing to '/'", () => {
-		render(<PublicFooter />);
+		renderPublicFooter();
 		const brand = screen.getByRole("link", { name: /^eventkart$/i });
 		expect(brand.getAttribute("href")).toBe("/");
 	});
@@ -37,7 +43,7 @@ describe("PublicFooter", () => {
 		["Privacy", "/privacy"],
 		["Terms", "/terms"],
 	])("renders the %s link pointing to %s", (label, href) => {
-		render(<PublicFooter />);
+		renderPublicFooter();
 		const link = screen.getByRole("link", {
 			name: new RegExp(`^${label}$`, "i"),
 		});
@@ -45,7 +51,7 @@ describe("PublicFooter", () => {
 	});
 
 	it("renders the three column headings: Discover, Company, Legal", () => {
-		render(<PublicFooter />);
+		renderPublicFooter();
 		expect(
 			screen.getByRole("heading", { level: 2, name: /discover/i }),
 		).toBeDefined();
@@ -58,25 +64,27 @@ describe("PublicFooter", () => {
 	});
 
 	it("renders at least three labelled <nav> regions", () => {
-		render(<PublicFooter />);
+		renderPublicFooter();
 		const navs = screen.getAllByRole("navigation");
 		expect(navs.length).toBeGreaterThanOrEqual(3);
 	});
 
 	it("renders a mailto: link using SUPPORT_EMAIL (support@eventkart.run)", () => {
-		const { container } = render(<PublicFooter />);
+		const { container } = renderPublicFooter();
 		const mailto = container.querySelector(
 			'a[href="mailto:support@eventkart.run"]',
 		);
 		expect(mailto).not.toBeNull();
 	});
 
-	it("renders the copyright with the current year", () => {
-		render(<PublicFooter />);
-		const year = new Date().getFullYear();
+	it("renders the copyright with the loader-provided year", () => {
+		renderPublicFooter();
 		expect(
 			screen.getByText(
-				new RegExp(`©\\s*${year}\\s*EventKart\\. All rights reserved\\.`, "i"),
+				new RegExp(
+					`©\\s*${COPYRIGHT_YEAR}\\s*EventKart\\. All rights reserved\\.`,
+					"i",
+				),
 			),
 		).toBeDefined();
 	});

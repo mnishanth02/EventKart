@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { SUPPORT_EMAIL } from "#/features/legal-pages/constants";
 
-function PublicFooter() {
-	const currentYear = new Date().getFullYear();
+interface PublicFooterProps {
+	currentYear: number;
+}
 
+function PublicFooter({ currentYear }: PublicFooterProps) {
 	return (
 		<footer className="mt-auto border-t border-border bg-background/60 pb-16 md:pb-0">
 			<div className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-12 lg:px-8">
@@ -77,10 +79,7 @@ function PublicFooter() {
 
 				<div className="mt-8 flex flex-col items-center gap-2 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:justify-between">
 					<p>&copy; {currentYear} EventKart. All rights reserved.</p>
-					<a
-						href={`mailto:${SUPPORT_EMAIL}`}
-						className="hover:text-foreground"
-					>
+					<a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-foreground">
 						{SUPPORT_EMAIL}
 					</a>
 				</div>

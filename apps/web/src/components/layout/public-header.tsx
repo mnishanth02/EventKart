@@ -15,19 +15,23 @@ function PublicHeader() {
 	React.useEffect(() => {
 		setScrolled(window.scrollY > 16);
 
-		let ticking = false;
+		let frameId: number | null = null;
 		function onScroll() {
-			if (!ticking) {
-				ticking = true;
-				requestAnimationFrame(() => {
+			if (frameId === null) {
+				frameId = window.requestAnimationFrame(() => {
 					setScrolled(window.scrollY > 16);
-					ticking = false;
+					frameId = null;
 				});
 			}
 		}
 
 		window.addEventListener("scroll", onScroll, { passive: true });
-		return () => window.removeEventListener("scroll", onScroll);
+		return () => {
+			window.removeEventListener("scroll", onScroll);
+			if (frameId !== null) {
+				window.cancelAnimationFrame(frameId);
+			}
+		};
 	}, []);
 
 	function handleOrganizerClick() {

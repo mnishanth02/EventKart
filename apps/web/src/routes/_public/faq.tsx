@@ -1,11 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 import {
 	Accordion,
 	AccordionContent,
 	AccordionItem,
 	AccordionTrigger,
 } from "@repo/ui/components/ui/accordion";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
+import { serializeJsonLdForInlineScript } from "#/features/event-detail/json-ld";
 import {
 	LEGAL_PAGE_CACHE_CONTROL,
 	setLegalPageCacheHeaders,
@@ -16,7 +17,6 @@ import {
 	SUPPORT_FIRST_RESPONSE_SLA_BUSINESS_DAYS,
 } from "#/features/legal-pages/constants";
 import { buildLegalPageHead } from "#/features/legal-pages/seo";
-import { serializeJsonLdForInlineScript } from "#/features/event-detail/json-ld";
 
 /**
  * Public FAQ page (I-2.5.5).
@@ -57,10 +57,10 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
 		answer: (
 			<>
 				<p>
-					Browse events without signing in. Pick the event you want, choose
-					your category, and fill in your details. We send a one-time password
-					(OTP) to your phone to verify your identity at the moment you submit
-					the booking — no password or account creation needed up front.
+					Browse events without signing in. Pick the event you want, choose your
+					category, and fill in your details. We send a one-time password (OTP)
+					to your phone to verify your identity at the moment you submit the
+					booking — no password or account creation needed up front.
 				</p>
 				<p>
 					Pay via UPI or card through our payment gateway. The moment payment
@@ -77,9 +77,8 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
 		answer: (
 			<>
 				<p>
-					Your booking confirmation email contains a direct link to your
-					booking — that link is the fastest way back to your ticket and
-					details.
+					Your booking confirmation email contains a direct link to your booking
+					— that link is the fastest way back to your ticket and details.
 				</p>
 				<p>
 					If you have lost the email, you will be able to look up a booking by
@@ -103,18 +102,17 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
 			<>
 				<p>
 					Each event sets its own refund and cancellation policy. The policy
-					that applies to your booking is the one displayed on the event page
-					at the time you booked — it is part of your booking record and does
-					not change retroactively.
+					that applies to your booking is the one displayed on the event page at
+					the time you booked — it is part of your booking record and does not
+					change retroactively.
 				</p>
 				<p>
 					To request a refund, contact the organizer first using the contact
-					details on the event page. If the issue is unresolved, email
-					EventKart support at{" "}
-					<a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> — our
-					first-response target is {SUPPORT_FIRST_RESPONSE_SLA_BUSINESS_DAYS}{" "}
-					business days. See our <Link to="/terms">Terms</Link> for the full
-					dispute framework.
+					details on the event page. If the issue is unresolved, email EventKart
+					support at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> —
+					our first-response target is{" "}
+					{SUPPORT_FIRST_RESPONSE_SLA_BUSINESS_DAYS} business days. See our{" "}
+					<Link to="/terms">Terms</Link> for the full dispute framework.
 				</p>
 			</>
 		),
@@ -155,14 +153,13 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
 				<p>
 					We follow a DPDPA-aware posture built on three principles: data
 					minimization (we only collect what the booking and event-day
-					operations need), purpose limitation (we use your data only for
-					those purposes), and explicit consent captured at booking
-					submission.
+					operations need), purpose limitation (we use your data only for those
+					purposes), and explicit consent captured at booking submission.
 				</p>
 				<p>
-					Sensitive fields are opt-in by default unless the organizer provides
-					a documented safety reason for requiring them. Full detail on what
-					we collect, how long we keep it, and your rights is in our{" "}
+					Sensitive fields are opt-in by default unless the organizer provides a
+					documented safety reason for requiring them. Full detail on what we
+					collect, how long we keep it, and your rights is in our{" "}
 					<Link to="/privacy">Privacy Policy</Link>.
 				</p>
 			</>
@@ -225,7 +222,7 @@ interface FaqRouteData {
 export const Route = createFileRoute("/_public/faq")({
 	ssr: true,
 	loader: async () => {
-		setLegalPageCacheHeaders(
+		await setLegalPageCacheHeaders(
 			new Headers({ "Cache-Control": LEGAL_PAGE_CACHE_CONTROL }),
 		);
 		const { publicEnv } = await import("#/lib/env/public");
@@ -267,9 +264,8 @@ export function FaqPageView({ items }: { items: readonly FaqItem[] }) {
 		<LegalPageLayout title="Frequently Asked Questions">
 			<p>
 				Quick answers to the questions runners and event-goers ask us most
-				often. Still stuck?{" "}
-				<Link to="/contact">Contact our support team</Link> or email{" "}
-				<a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+				often. Still stuck? <Link to="/contact">Contact our support team</Link>{" "}
+				or email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
 			</p>
 			<Accordion
 				type="multiple"

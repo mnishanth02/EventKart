@@ -4,10 +4,15 @@ import { PublicFooter } from "#/components/layout/public-footer";
 import { PublicHeader } from "#/components/layout/public-header";
 
 export const Route = createFileRoute("/_public")({
+	loader: () => ({
+		currentYear: new Date().getFullYear(),
+	}),
 	component: PublicLayout,
 });
 
 function PublicLayout() {
+	const { currentYear } = Route.useLoaderData();
+
 	return (
 		<div className="flex min-h-screen flex-col">
 			<PublicHeader />
@@ -17,7 +22,7 @@ function PublicLayout() {
 				<Outlet />
 			</main>
 
-			<PublicFooter />
+			<PublicFooter currentYear={currentYear} />
 			<MobileBottomNav />
 		</div>
 	);

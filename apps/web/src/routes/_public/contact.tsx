@@ -11,9 +11,9 @@ import {
 } from "#/features/legal-pages/cache-headers";
 import { LegalPageLayout } from "#/features/legal-pages/components/legal-page-layout";
 import {
+	getSupportPhone,
 	SUPPORT_EMAIL,
 	SUPPORT_FIRST_RESPONSE_SLA_BUSINESS_DAYS,
-	getSupportPhone,
 } from "#/features/legal-pages/constants";
 import { buildLegalPageHead } from "#/features/legal-pages/seo";
 
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/_public/contact")({
 	ssr: true,
 	loader: async () => {
 		const { publicEnv } = await import("#/lib/env/public");
-		setLegalPageCacheHeaders(
+		await setLegalPageCacheHeaders(
 			new Headers({ "Cache-Control": LEGAL_PAGE_CACHE_CONTROL }),
 		);
 		return {
@@ -121,9 +121,8 @@ export function ContactContent({ supportPhone }: ContactContentProps) {
 			<h2>Response time</h2>
 			<p>
 				We aim to send a first response to all support requests within{" "}
-				{SUPPORT_FIRST_RESPONSE_SLA_BUSINESS_DAYS} business days. Disputes
-				about a specific event follow the same SLA — see the refund framework
-				in our{" "}
+				{SUPPORT_FIRST_RESPONSE_SLA_BUSINESS_DAYS} business days. Disputes about
+				a specific event follow the same SLA — see the refund framework in our{" "}
 				<Link to="/terms">Terms</Link>.
 			</p>
 
@@ -141,10 +140,9 @@ export function ContactContent({ supportPhone }: ContactContentProps) {
 
 			<h2>Reporting an issue with an organizer</h2>
 			<p>
-				If your issue is with how an organizer ran an event, please contact
-				the organizer first using the contact details on the event page. If
-				the issue is not resolved, escalate to EventKart support at the email
-				above.
+				If your issue is with how an organizer ran an event, please contact the
+				organizer first using the contact details on the event page. If the
+				issue is not resolved, escalate to EventKart support at the email above.
 			</p>
 
 			{/* TODO(I-7.2.5): mount the public dispute reporting form here in Phase 7. The form is the I-7.2.5 deliverable; this page is its mount point. */}
