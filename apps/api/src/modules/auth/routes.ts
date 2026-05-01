@@ -1,9 +1,14 @@
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME } from "@repo/shared/constants";
 import type { FastifyPluginAsync } from "fastify";
-import { ForbiddenError, UnauthorizedError } from "../../lib/errors.js";
+import {
+	ForbiddenError,
+	NotFoundError,
+	UnauthorizedError,
+} from "../../lib/errors.js";
 import { buildSessionCookieOptions } from "../../lib/session.js";
 import { requireAuth } from "../../middleware/require-auth.js";
+import { requireInternal } from "../../middleware/require-internal.js";
 import {
 	buildCsrfClearOptions,
 	buildCsrfCookieOptions,
@@ -14,6 +19,8 @@ import {
 	verifyEmailToken,
 } from "./email-verification-service.js";
 import {
+	devOtpParamsSchema,
+	devOtpResponseSchema,
 	emailConflictResponseSchema,
 	emailVerificationSendBodySchema,
 	emailVerificationSendResponseSchema,
@@ -326,15 +333,30 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
 	// Dev-only: retrieve plain OTP for testing (only when OTP_DELIVERY_MODE=log)
 	if (fastify.config.OTP_DELIVERY_MODE === "log") {
-		app.get("/dev/otp/:phone", async (request, reply) => {
-			const { phone } = request.params as { phone: string };
-			const normalizedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
-			const otp = await fastify.redis.otp.get(`dev:otp:${normalizedPhone}`);
-			if (!otp) {
-				return reply.code(404).send({ error: "No OTP found" });
-			}
-			return reply.send({ otp });
-		});
+		app.get(
+			"/dev/otp/:phone",
+			{
+				preHandler: [requireInternal],
+				schema: {
+					params: devOtpParamsSchema,
+					response: {
+						200: devOtpResponseSchema,
+						400: otpErrorResponseSchema,
+						401: otpErrorResponseSchema,
+						404: otpErrorResponseSchema,
+					},
+				},
+			},
+			async (request, reply) => {
+				const otp = await fastify.redis.otp.get(
+					`dev:otp:${request.params.phone}`,
+				);
+				if (!otp) {
+					throw new NotFoundError("No OTP found");
+				}
+				return reply.code(200).send({ otp });
+			},
+		);
 	}
 };
 

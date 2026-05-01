@@ -249,6 +249,15 @@ export function loadConfig(
 		);
 	}
 
+	if (
+		process.env.NODE_ENV === "production" &&
+		config.OTP_DELIVERY_MODE === "log"
+	) {
+		throw new Error(
+			"Invalid configuration: OTP_DELIVERY_MODE must be 'msg91' in production.",
+		);
+	}
+
 	// Fail-closed cross-field check for the Cloudflare purge client added in
 	// I-2.4.2: enabling purges without credentials or the public CDN origin
 	// would silently no-op in prod and let stale event pages persist indefinitely.

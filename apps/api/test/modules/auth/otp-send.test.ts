@@ -10,6 +10,9 @@ import {
 } from "vitest";
 import { buildTestApp } from "../../helpers/build-app.js";
 
+const DEV_OTP_URL = "/api/v1/auth/dev/otp/9876543210";
+const INTERNAL_KEY = "test-internal-key";
+
 describe("POST /api/v1/auth/otp/send", () => {
 	let app: FastifyInstance;
 
@@ -184,6 +187,70 @@ describe("POST /api/v1/auth/otp/send", () => {
 
 			expect(first.statusCode).toBe(200);
 			expect(second.statusCode).toBe(200);
+		});
+	});
+});
+
+describe("GET /api/v1/auth/dev/otp/:phone", () => {
+	let app: FastifyInstance;
+
+	beforeAll(async () => {
+		app = await buildTestApp();
+	});
+
+	afterAll(async () => {
+		await app?.close();
+	});
+
+	beforeEach(() => {
+		vi.mocked(app.redis.otp.get).mockReset().mockResolvedValue(null);
+	});
+
+	it("rejects anonymous requests before reading OTPs", async () => {
+		const response = await app.inject({
+			method: "GET",
+			url: DEV_OTP_URL,
+		});
+
+		expect(response.statusCode).toBe(401);
+		expect(response.json()).toEqual({
+			success: false,
+			error: {
+				code: "UNAUTHORIZED",
+				message: "Internal API key required",
+			},
+		});
+		expect(app.redis.otp.get).not.toHaveBeenCalled();
+	});
+
+	it("returns a stored dev OTP for internal requests", async () => {
+		vi.mocked(app.redis.otp.get).mockResolvedValue("123456");
+
+		const response = await app.inject({
+			method: "GET",
+			url: DEV_OTP_URL,
+			headers: { "x-internal-key": INTERNAL_KEY },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({ otp: "123456" });
+		expect(app.redis.otp.get).toHaveBeenCalledWith("dev:otp:+919876543210");
+	});
+
+	it("returns 404 for internal requests when no dev OTP exists", async () => {
+		const response = await app.inject({
+			method: "GET",
+			url: DEV_OTP_URL,
+			headers: { "x-internal-key": INTERNAL_KEY },
+		});
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json()).toEqual({
+			success: false,
+			error: {
+				code: "NOT_FOUND",
+				message: "No OTP found",
+			},
 		});
 	});
 });

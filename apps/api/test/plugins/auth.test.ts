@@ -14,6 +14,7 @@ const SESSION_COOKIE_NAME = "kiran_session";
 const TEST_SESSION_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 const TEST_URL = "/test/session";
 const PUBLIC_CACHE_TEST_URL = "/test/public-cache";
+const PUBLIC_CACHE_SET_COOKIE_TEST_URL = "/test/public-cache-set-cookie";
 
 const validSession = {
 	userId: "user-001",
@@ -40,6 +41,17 @@ function buildTestAppWithRoute(): FastifyInstance {
 	app.get(TEST_URL, async (request) => ({ session: request.session }));
 	app.get(PUBLIC_CACHE_TEST_URL, async (_request, reply) => {
 		reply.header("Cache-Control", "public, max-age=3600");
+		return { ok: true };
+	});
+	app.get(PUBLIC_CACHE_SET_COOKIE_TEST_URL, async (_request, reply) => {
+		reply.header(
+			"Cache-Control",
+			"public, s-maxage=60, stale-while-revalidate=300",
+		);
+		reply.header(
+			"Set-Cookie",
+			`${SESSION_COOKIE_NAME}=new-session-id; Max-Age=2592000; Path=/; HttpOnly; SameSite=Lax`,
+		);
 		return { ok: true };
 	});
 
@@ -86,6 +98,19 @@ describe("auth plugin", () => {
 		it("does not set a Set-Cookie header", async () => {
 			const res = await app.inject({ method: "GET", url: TEST_URL });
 
+			expect(res.headers["set-cookie"]).toBeUndefined();
+		});
+
+		it("strips session-creation cookies from public cacheable responses", async () => {
+			const res = await app.inject({
+				method: "GET",
+				url: PUBLIC_CACHE_SET_COOKIE_TEST_URL,
+			});
+
+			expect(res.statusCode).toBe(200);
+			expect(res.headers["cache-control"]).toBe(
+				"public, s-maxage=60, stale-while-revalidate=300",
+			);
 			expect(res.headers["set-cookie"]).toBeUndefined();
 		});
 	});

@@ -31,6 +31,7 @@ export const publicEnv = createEnv({
 		VITE_POSTHOG_KEY: z.string().min(1).optional(),
 		VITE_POSTHOG_HOST: z.string().url().optional(),
 		VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED: stringBoolEnv,
+		VITE_PUBLIC_SUPPORT_PHONE: z.string().min(1).optional(),
 		VITE_SENTRY_DSN: z.string().min(1).optional(),
 		VITE_SENTRY_ENVIRONMENT: z.string().min(1).optional(),
 		VITE_SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),

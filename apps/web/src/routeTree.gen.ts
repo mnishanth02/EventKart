@@ -14,6 +14,11 @@ import { Route as HealthRouteImport } from './routes/health'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
+import { Route as PublicTermsRouteImport } from './routes/_public/terms'
+import { Route as PublicPrivacyRouteImport } from './routes/_public/privacy'
+import { Route as PublicFaqRouteImport } from './routes/_public/faq'
+import { Route as PublicContactRouteImport } from './routes/_public/contact'
+import { Route as PublicAboutRouteImport } from './routes/_public/about'
 import { Route as AuthedOrgRouteImport } from './routes/_authed/org'
 import { Route as AuthedMyRouteImport } from './routes/_authed/my'
 import { Route as AuthedAdminRouteImport } from './routes/_authed/admin'
@@ -61,6 +66,31 @@ const AuthedRoute = AuthedRouteImport.update({
 const PublicIndexRoute = PublicIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicTermsRoute = PublicTermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicPrivacyRoute = PublicPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicFaqRoute = PublicFaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicContactRoute = PublicContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicAboutRoute = PublicAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => PublicRoute,
 } as any)
 const AuthedOrgRoute = AuthedOrgRouteImport.update({
@@ -207,6 +237,11 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthedAdminRouteWithChildren
   '/my': typeof AuthedMyRouteWithChildren
   '/org': typeof AuthedOrgRouteWithChildren
+  '/about': typeof PublicAboutRoute
+  '/contact': typeof PublicContactRoute
+  '/faq': typeof PublicFaqRoute
+  '/privacy': typeof PublicPrivacyRoute
+  '/terms': typeof PublicTermsRoute
   '/org/policies': typeof AuthedOrgPoliciesRoute
   '/org/profile': typeof AuthedOrgProfileRoute
   '/org/register': typeof AuthedOrgRegisterRoute
@@ -234,6 +269,11 @@ export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
   '/health': typeof HealthRoute
   '/ready': typeof ReadyRoute
+  '/about': typeof PublicAboutRoute
+  '/contact': typeof PublicContactRoute
+  '/faq': typeof PublicFaqRoute
+  '/privacy': typeof PublicPrivacyRoute
+  '/terms': typeof PublicTermsRoute
   '/org/policies': typeof AuthedOrgPoliciesRoute
   '/org/profile': typeof AuthedOrgProfileRoute
   '/org/register': typeof AuthedOrgRegisterRoute
@@ -266,6 +306,11 @@ export interface FileRoutesById {
   '/_authed/admin': typeof AuthedAdminRouteWithChildren
   '/_authed/my': typeof AuthedMyRouteWithChildren
   '/_authed/org': typeof AuthedOrgRouteWithChildren
+  '/_public/about': typeof PublicAboutRoute
+  '/_public/contact': typeof PublicContactRoute
+  '/_public/faq': typeof PublicFaqRoute
+  '/_public/privacy': typeof PublicPrivacyRoute
+  '/_public/terms': typeof PublicTermsRoute
   '/_public/': typeof PublicIndexRoute
   '/_authed/org/policies': typeof AuthedOrgPoliciesRoute
   '/_authed/org/profile': typeof AuthedOrgProfileRoute
@@ -299,6 +344,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/my'
     | '/org'
+    | '/about'
+    | '/contact'
+    | '/faq'
+    | '/privacy'
+    | '/terms'
     | '/org/policies'
     | '/org/profile'
     | '/org/register'
@@ -326,6 +376,11 @@ export interface FileRouteTypes {
     | '/'
     | '/health'
     | '/ready'
+    | '/about'
+    | '/contact'
+    | '/faq'
+    | '/privacy'
+    | '/terms'
     | '/org/policies'
     | '/org/profile'
     | '/org/register'
@@ -357,6 +412,11 @@ export interface FileRouteTypes {
     | '/_authed/admin'
     | '/_authed/my'
     | '/_authed/org'
+    | '/_public/about'
+    | '/_public/contact'
+    | '/_public/faq'
+    | '/_public/privacy'
+    | '/_public/terms'
     | '/_public/'
     | '/_authed/org/policies'
     | '/_authed/org/profile'
@@ -424,6 +484,41 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof PublicIndexRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/terms': {
+      id: '/_public/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof PublicTermsRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/privacy': {
+      id: '/_public/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PublicPrivacyRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/faq': {
+      id: '/_public/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof PublicFaqRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/contact': {
+      id: '/_public/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof PublicContactRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/about': {
+      id: '/_public/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof PublicAboutRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_authed/org': {
@@ -692,6 +787,11 @@ const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
 
 interface PublicRouteChildren {
+  PublicAboutRoute: typeof PublicAboutRoute
+  PublicContactRoute: typeof PublicContactRoute
+  PublicFaqRoute: typeof PublicFaqRoute
+  PublicPrivacyRoute: typeof PublicPrivacyRoute
+  PublicTermsRoute: typeof PublicTermsRoute
   PublicIndexRoute: typeof PublicIndexRoute
   PublicAuthVerifyEmailRoute: typeof PublicAuthVerifyEmailRoute
   PublicOrganizersSlugRoute: typeof PublicOrganizersSlugRoute
@@ -700,6 +800,11 @@ interface PublicRouteChildren {
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
+  PublicAboutRoute: PublicAboutRoute,
+  PublicContactRoute: PublicContactRoute,
+  PublicFaqRoute: PublicFaqRoute,
+  PublicPrivacyRoute: PublicPrivacyRoute,
+  PublicTermsRoute: PublicTermsRoute,
   PublicIndexRoute: PublicIndexRoute,
   PublicAuthVerifyEmailRoute: PublicAuthVerifyEmailRoute,
   PublicOrganizersSlugRoute: PublicOrganizersSlugRoute,

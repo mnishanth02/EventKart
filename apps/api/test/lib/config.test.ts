@@ -4,6 +4,7 @@ import { loadConfig } from "../../src/lib/config.js";
 
 const originalInternalApiKey = process.env.INTERNAL_API_KEY;
 const originalDatabaseUrl = process.env.DATABASE_URL;
+const originalNodeEnv = process.env.NODE_ENV;
 const originalCloudflareZoneId = process.env.CLOUDFLARE_ZONE_ID;
 const originalCloudflareApiToken = process.env.CLOUDFLARE_API_TOKEN;
 const originalCloudflarePurgeEnabled = process.env.CLOUDFLARE_PURGE_ENABLED;
@@ -25,6 +26,7 @@ describe("loadConfig", () => {
 	afterEach(() => {
 		restoreEnvValue("INTERNAL_API_KEY", originalInternalApiKey);
 		restoreEnvValue("DATABASE_URL", originalDatabaseUrl);
+		restoreEnvValue("NODE_ENV", originalNodeEnv);
 		restoreEnvValue("CLOUDFLARE_ZONE_ID", originalCloudflareZoneId);
 		restoreEnvValue("CLOUDFLARE_API_TOKEN", originalCloudflareApiToken);
 		restoreEnvValue("CLOUDFLARE_PURGE_ENABLED", originalCloudflarePurgeEnabled);
@@ -39,6 +41,19 @@ describe("loadConfig", () => {
 
 		expect(config.INTERNAL_API_KEY).toBeUndefined();
 		expect("INTERNAL_API_KEY" in config).toBe(false);
+	});
+
+	it("rejects log-mode OTP delivery in production", () => {
+		process.env.NODE_ENV = "production";
+		process.env.DATABASE_URL = VALID_DATABASE_URL;
+
+		expect(() =>
+			loadConfig({
+				OTP_DELIVERY_MODE: "log",
+				OTP_HMAC_SECRET: "strong-otp-hmac-secret",
+				CSRF_SECRET: "strong-csrf-secret",
+			}),
+		).toThrow(/OTP_DELIVERY_MODE must be 'msg91' in production/);
 	});
 
 	describe("Cloudflare CDN settings (I-2.4.1)", () => {

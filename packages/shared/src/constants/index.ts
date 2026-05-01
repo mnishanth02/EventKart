@@ -69,6 +69,11 @@ export {
 	V1_EVENT_TIMEZONE,
 	V1_EVENT_TYPE,
 } from "./event.js";
+export type { ParticipantLegalDocId } from "./legal-pages.js";
+export {
+	PARTICIPANT_LEGAL_DOC_IDS,
+	PARTICIPANT_LEGAL_VERSIONS,
+} from "./legal-pages.js";
 export type { ReservedOrganizerSlug } from "./organizer.js";
 export {
 	ORGANIZER_SLUG_FALLBACK,

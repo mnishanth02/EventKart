@@ -1,27 +1,31 @@
 ---
 title: EventKart Local UI Validation Guide
 date_created: 2026-04-26
-last_updated: 2026-04-29
-scope: Phase 0 through Phase 1.2, plus completed Module 2.1 event-detail slices
+last_updated: 2026-05-01
+scope: Phase 0 through Phase 2 completed V1 requirements
 ---
 
 # EventKart Local UI Validation Guide
 
-Use this guide to validate everything completed from the foundation work through **Phase 1.2 — Event Creation & Management**, plus the completed parts of **Module 2.1 — Event Detail Page**.
+Use this guide to validate everything completed from the foundation work through **Phase 2 — Event Discovery & Public Pages**.
 
 ## 0. Roadmap coverage snapshot
 
-Based on `docs/v1-implementation-plan.md` as of 2026-04-29:
+Based on `docs/v1-implementation-plan.md` as of 2026-05-01:
 
-| Area                                                 | Current status                                     | Local UI validation scope                                                                                                                                                                                                                                                                                                    |
-| ---------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 0 — Foundation, auth, app shell, observability | ✅ Core complete                                   | Validate infra, auth/session, role routing, health checks, error/loading shell. Secret rotation runbook and conversion-funnel emission are deferred follow-ups.                                                                                                                                                              |
-| Module 1.1 — Organizer Signup & Verification         | ✅ Core complete, 🟡 organizer emails stubbed      | Validate organizer profile, policy acceptance, document upload, verification tracking, admin verification queue/detail, approval/rejection, badge, Razorpay linked-account readiness. Real email delivery is deferred to Phase 3 email infrastructure.                                                                       |
-| Module 1.2 — Event Creation & Management             | ✅ Core complete, 🟡 event review emails stubbed   | Validate event create/edit/configure/publish/unpublish, category capacity fields, pricing, registration fields, event policies, event images, and admin first-3-paid event review. Real event-review emails are deferred to Phase 3 email infrastructure.                                                                    |
-| Module 2.1 — Event Detail Page                       | 🟡 In progress                                     | Validate completed slices: SSR public event detail route, mobile layout, organizer card + verification badge, refund/cancellation policy display, category/pricing breakdown, and text-only Open Graph/canonical metadata. JSON-LD, booking CTA wiring, spots-remaining badge, and early-bird countdown remain later slices. |
-| Modules 2.2+ and Phases 3–7                          | Not started or not locally validated by this guide | Discovery listing, organizer public profile, CDN infra, legal pages, booking/payment, participant profile, event-day operations, refunds/disputes, and full admin ops are outside this guide unless noted.                                                                                                                   |
+| Area                                                 | Current status                              | Local UI validation scope                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 0 — Foundation, auth, app shell, observability | ✅ Complete                                 | Validate infra, auth/session, role routing, health checks, error/loading shell, CSRF/internal API wiring, and security/header behavior that is visible locally.                                                                                                                                 |
+| Module 1.1 — Organizer Signup & Verification         | ✅ Complete, 🟡 organizer emails stubbed    | Validate organizer profile, policy acceptance, document upload, verification tracking, admin verification queue/detail, approval/rejection, badge, Razorpay linked-account readiness. Real email delivery remains log/stubbed locally unless Resend is configured.                              |
+| Module 1.2 — Event Creation & Management             | ✅ Complete, 🟡 event review emails stubbed | Validate event create/edit/configure/publish/unpublish, category capacity fields, pricing, registration fields, event policies, event images, and admin first-3-paid event review. Real event-review emails remain log/stubbed locally unless Resend is configured.                             |
+| Module 2.1 — Event Detail Page                       | ✅ Complete                                 | Validate SSR public event detail route, mobile layout, organizer card + verification explanation, refund/cancellation policies, category/pricing, Open Graph/canonical metadata, Event + Breadcrumb JSON-LD, Register Now placeholder CTA, spots badge flag behavior, and early-bird countdown. |
+| Module 2.2 — Event Discovery Surface                 | ✅ Complete                                 | Validate launch-city discovery on `/`, public event cards, status indicators, sorting, pagination/search params, empty states, and public-only filtering.                                                                                                                                       |
+| Module 2.3 — Organizer Public Profile                | ✅ Complete                                 | Validate `/organizers/:slug`, verified badge/explainer copy, upcoming and past event sections, event-detail organizer links, noindex behavior for unverified profiles, organizer slug redirects, and the internal next-event lookup API.                                                        |
+| Module 2.4 — CDN & Cache Infrastructure              | ✅ Complete                                 | Validate public cache headers, no cookie-varying cache output, Cloudflare purge no-op/optional real purge, cache-stampede-backed public loaders, sitemap generation, robots.txt directives, slug 301 redirects, canonical/alternate tags, and Breadcrumb JSON-LD.                               |
+| Module 2.5 — Public Chrome & Legal Pages             | ✅ Complete                                 | Validate `/privacy`, `/terms`, `/about`, `/faq`, `/contact`, public footer links, legal-page metadata, cache headers, and contact phone fallback behavior.                                                                                                                                      |
+| Phases 3–7                                           | Not started or not locally validated here   | Booking/payment, participant profile, organizer operations dashboard, event-day operations, refunds/disputes, full admin ops, public dispute form, and DSAR/deletion flows are outside this guide unless noted as placeholders.                                                                 |
 
-Practical completion snapshot: the manually validated UI surface now covers all completed Phase 0/1 core workflows and the completed event-detail slices from Phase 2. Booking/payment flows are intentionally out of scope until Phase 3.
+Practical completion snapshot: the manually validated UI surface now covers all completed Phase 0, Phase 1, and Phase 2 workflows. Booking/payment flows are intentionally out of scope until Phase 3, except for the Phase 2 registration placeholder route and CTA state handling.
 
 All commands below use **Bash syntax**. On Windows, run them from Git Bash, WSL, or the VS Code Bash terminal from the repo root.
 
@@ -81,6 +85,8 @@ REDIS_URL=redis://localhost:6379
 OTP_DELIVERY_MODE=log
 EMAIL_FROM=EventKart <noreply@eventkart.app>
 INTERNAL_API_KEY=replace-with-the-same-local-secret-as-web
+PUBLIC_SPOTS_REMAINING_BADGE_ENABLED=false
+CLOUDFLARE_PURGE_ENABLED=false
 ```
 
 Important notes:
@@ -88,6 +94,8 @@ Important notes:
 - Keep `OTP_DELIVERY_MODE=log` for local validation. OTP codes will appear in the API terminal logs.
 - Leave `COOKIE_DOMAIN` unset locally. Do not use `.eventkart.app` on localhost.
 - `INTERNAL_API_KEY` should be set locally and must match the web env value. This lets web server functions call the API as internal requests and avoids CSRF failures on organizer/admin mutations.
+- Keep `PUBLIC_SPOTS_REMAINING_BADGE_ENABLED=false` unless you intentionally test the Phase 2 spots badge with controlled capacity data. It must match the web flag.
+- Keep `CLOUDFLARE_PURGE_ENABLED=false` for normal local validation. Real Cloudflare purge testing requires the full Cloudflare env in section 3.
 
 ### Web env — `apps/web/.env.local`
 
@@ -102,6 +110,8 @@ INTERNAL_API_URL=http://localhost:3001
 SERVER_URL=http://localhost:3000
 INTERNAL_API_KEY=replace-with-the-same-local-secret-as-api
 VITE_SITE_URL=http://localhost:3000
+VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED=false
+VITE_PUBLIC_SUPPORT_PHONE=
 ```
 
 Important notes:
@@ -110,19 +120,22 @@ Important notes:
 - `INTERNAL_API_URL` is used by TanStack Start server functions.
 - `INTERNAL_API_KEY` must match `apps/api/.env`.
 - `VITE_SITE_URL` is used for canonical and Open Graph URL validation on public event pages. Keep it as `http://localhost:3000` locally.
+- `VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED` must match the API flag. Leave both flags `false` unless specifically validating the gated spots-remaining badge.
+- `VITE_PUBLIC_SUPPORT_PHONE` is optional. Leave it blank to validate the `/contact` email-only fallback; set it to a support number to validate the phone affordance.
 
 ## 3. Optional third-party accounts
 
 Basic local validation does not require third-party accounts. For full validation, use the table below.
 
-| Account                 | Required for local validation? | Needed for                                                                                  |
-| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------------- |
-| Cloudflare R2 or AWS S3 | Yes, for full upload flows     | Organizer document upload, admin document view URLs, event hero image, and route map upload |
-| MSG91                   | No                             | Real SMS/WhatsApp OTP delivery instead of log mode                                          |
-| Resend                  | No                             | Real email delivery. Current organizer/event emails are log-only stubs until Phase 3        |
-| Razorpay                | Optional                       | Linked-account creation, KYC/payment readiness validation, and paid-event publish readiness |
-| Sentry                  | No                             | Error tracking validation                                                                   |
-| PostHog                 | No                             | Product analytics validation                                                                |
+| Account                 | Required for local validation? | Needed for                                                                                      |
+| ----------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Cloudflare R2 or AWS S3 | Yes, for full upload flows     | Organizer document upload, admin document view URLs, event hero image, and route map upload     |
+| MSG91                   | No                             | Real SMS/WhatsApp OTP delivery instead of log mode                                              |
+| Resend                  | No                             | Real email delivery. Current organizer/event emails are log-only stubs until Phase 3            |
+| Razorpay                | Optional                       | Linked-account creation, KYC/payment readiness validation, and paid-event publish readiness     |
+| Cloudflare              | Optional                       | Real CDN cache purge validation. Local cache headers, sitemap, and robots checks do not need it |
+| Sentry                  | No                             | Error tracking validation                                                                       |
+| PostHog                 | No                             | Product analytics validation                                                                    |
 
 ### Object storage env for document and event image upload
 
@@ -171,6 +184,19 @@ RAZORPAY_KEY_SECRET=replace-me
 ```
 
 Note: Admin approval enqueues Razorpay linked-account creation. Before considering Razorpay sync or paid-event publishing fully validated, confirm the Razorpay account worker is running locally.
+
+### Cloudflare env for real CDN purge validation
+
+Normal local validation should keep purge disabled. Only configure this if you intentionally want the API to call Cloudflare:
+
+```env
+CLOUDFLARE_PURGE_ENABLED=true
+CLOUDFLARE_ZONE_ID=replace-me
+CLOUDFLARE_API_TOKEN=replace-me
+CDN_BASE_URL=https://eventkart.in
+```
+
+When purge is enabled, all four values are required. Never commit a real Cloudflare token.
 
 ## 4. Install dependencies
 
@@ -261,10 +287,12 @@ Validate:
 
 - Home page loads at `/`.
 - Header, footer, and mobile bottom navigation render correctly.
+- Footer links for `/privacy`, `/terms`, `/about`, `/faq`, and `/contact` render and navigate.
 - Theme toggle works.
 - Unknown routes show the 404 UI.
 - Protected routes redirect unauthenticated users.
 - Public event detail pages load at `/events/:slug` only when a published event exists.
+- Public organizer profiles load at `/organizers/:slug` only when a public organizer exists.
 
 Try these routes while logged out:
 
@@ -600,27 +628,182 @@ Go to:
 /events/{slug}
 ```
 
-Validate completed Module 2.1 slices:
+Validate:
 
 - Page renders server-side without requiring login.
 - Response is cacheable for public traffic and does not vary by cookie.
+- Public-cache responses do not emit session-creation `Set-Cookie` headers.
 - Mobile layout is readable and usable.
 - Hero image and route map render when storage is configured.
 - Event timing, location, category, and pricing information render.
-- Organizer card renders with business name, city, description when present, and verification badge.
-- Organizer profile link is present but may point to a future public profile route until Module 2.3 is implemented.
-- Refund and cancellation policies render before booking, with fallback copy when either policy is missing.
+- Organizer card renders with business name, city, description when present, verification badge, and a working link to `/organizers/{slug}`.
+- Verified organizer explanation opens from the event organizer card and uses the approved copy: verification is an onboarding and policy check, not a quality/safety guarantee.
+- Refund and cancellation policies render before booking, with anchors for `#policies`, `#refund-policy`, and `#cancellation-policy`.
+- Missing refund/cancellation policy data shows explicit fallback copy instead of hiding the section.
 - Category/pricing breakdown shows base and early-bird pricing correctly.
 - Active/expired early-bird labels are client-only and do not make cached SSR HTML stale.
-- Page title, meta description, canonical URL, Open Graph, and Twitter text metadata are present when `VITE_SITE_URL` is configured.
+- Early-bird countdown appears when an eligible early-bird tier is active, rolls to the next eligible tier, and hides when the offer/window expires.
+- Register CTA appears in the sidebar and mobile sticky bar.
+- Register CTA links to `/events/{slug}/register` when registration is open.
+- Register CTA is disabled and out of tab order when registration is not yet open, closed, or the event has ended.
+- `/events/{slug}/register` renders the Phase 3 placeholder and is marked `noindex,nofollow`.
+- Page title, meta description, canonical URL, alternate language links, Open Graph, and Twitter text metadata are present when `VITE_SITE_URL` is configured.
+- Event JSON-LD and Breadcrumb JSON-LD scripts are present and valid JSON.
 - Text-only OG behavior is expected; `og:image` is intentionally deferred until a stable image-serving route exists.
+- Draft, under-review, rejected, cancelled, or unpublished events do not render as public event pages.
 
-Not yet expected from Module 2.1:
+Spots-remaining badge validation:
 
-- JSON-LD structured data validation.
-- Final Register Now CTA wired to a booking flow.
-- Real spots-remaining badge backed by Phase 3 capacity reservation.
-- Early-bird countdown timer.
+1. Keep `PUBLIC_SPOTS_REMAINING_BADGE_ENABLED=false` and `VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED=false`; confirm no spots badge is rendered.
+2. Set both flags to `true`, restart API and web, and use controlled category capacity data.
+3. Confirm `Sold out` appears only when `spotsRemaining` is `0`.
+4. Confirm low-stock copy appears only when spots are within the low-availability threshold.
+5. Confirm the badge hides for closed registration windows and ended events.
+
+Slug redirect validation:
+
+- Open an old event slug after renaming a draft/published event slug where a redirect exists.
+- Confirm the old slug returns a 301 to the current slug.
+- Confirm redirect loops, private targets, and missing target rows do not produce a public success page.
+
+### 7.18 Event discovery listing
+
+Go to:
+
+```text
+/
+```
+
+Validate:
+
+- Launch-city event listing loads without login.
+- Only public upcoming events appear by default.
+- Draft, under-review, rejected, cancelled, unpublished, and past events do not appear in the default discovery list.
+- Event cards show event name, date, location, category summary, price range, and status.
+- Card links navigate to `/events/{slug}`.
+- Status indicators show the correct state: upcoming, registration open, registration closed, or sold out.
+- Status and time-derived labels are client-only and do not cause hydration mismatch after refresh.
+- Sort control changes between upcoming-first and latest/date-desc behavior.
+- Sort and page are represented in URL search params.
+- Changing sort resets the list to page 1.
+- Pagination works when enough events exist.
+- Out-of-range page deep links redirect or normalize to a valid page.
+- Empty state is clear when no public events match.
+
+### 7.19 Organizer public profile
+
+This requires an organizer with a slug and at least one public event for the full event-list validation.
+
+Go to:
+
+```text
+/organizers/{slug}
+```
+
+Validate:
+
+- Profile renders server-side without requiring login.
+- Response is cacheable for public traffic and does not vary by cookie.
+- Business name, city, and description render correctly.
+- Description preserves intentional line breaks and does not render HTML markup as HTML.
+- Verification badge appears for verified organizers.
+- Verification explanation appears only for verified organizers and uses the approved copy.
+- Unverified organizer profiles include `noindex,nofollow` metadata.
+- Event-detail organizer links navigate to this public profile route.
+- Upcoming events section lists the organizer's upcoming public events.
+- Past events section lists completed/past public events with the most recent first.
+- Upcoming and past sections have clear empty states.
+- Unknown organizer slug shows the 404 UI.
+- Old organizer slug redirects to the current slug when a valid redirect exists.
+- Redirect loops or redirects to missing/currently mismatched organizers do not produce a public success page.
+
+Internal next-event API validation:
+
+```text
+GET http://localhost:3001/api/v1/organizers/{organizerId}/next-event
+```
+
+Validate:
+
+- Request without `x-internal-key` returns unauthorized.
+- Request with the matching local `x-internal-key` succeeds.
+- Existing organizer with an upcoming public event returns the next event card projection.
+- Existing organizer without upcoming public events returns `data: null`.
+- Unknown organizer ID returns not found.
+
+### 7.20 Public SEO, cache, sitemap, and robots
+
+Validate public cache headers:
+
+- `/events/{slug}` uses public `s-maxage=60, stale-while-revalidate=300` style caching.
+- `/organizers/{slug}` uses the same public cache contract.
+- `/privacy`, `/terms`, `/about`, `/faq`, and `/contact` are SSR and CDN-cacheable.
+- Authenticated/private routes are not publicly cacheable.
+- Stale-session deletion cookies are still preserved when the API needs to clear an invalid session.
+
+Validate sitemap:
+
+```text
+http://localhost:3001/api/v1/sitemap.xml
+```
+
+- Response is XML with the sitemap content type.
+- Published future events are included.
+- Draft, private, cancelled, and past events are excluded.
+- Organizer profile URLs appear only for publicly visible/approved organizers.
+- Sitemap still renders locally when `CDN_BASE_URL` is not configured, using the fallback host behavior.
+- Publishing, unpublishing, or approving public content enqueues sitemap regeneration when workers/queues are running.
+
+Validate robots:
+
+```text
+http://localhost:3000/robots.txt
+```
+
+- `Sitemap: https://eventkart.in/sitemap.xml` is present.
+- Public pages and public event/organizer URL spaces are allowed.
+- Auth-only namespaces are disallowed with both bare-route and slash-prefix coverage.
+- Bare auth routes such as `/org` and `/admin` are blocked separately from public prefixes such as `/organizers/`.
+
+Validate CDN purge behavior:
+
+- With `CLOUDFLARE_PURGE_ENABLED=false`, publish/unpublish and admin moderation flows succeed without calling Cloudflare.
+- If Cloudflare env is configured and purge is enabled, publish/unpublish/admin moderation purges event, organizer, and sitemap URLs without logging the API token.
+- Cloudflare purge failures are surfaced through queue retries/logs and do not roll back the core event or organizer mutation.
+
+Validate canonical and structured metadata:
+
+- Event pages include canonical and alternate language links.
+- Organizer profile pages include canonical and alternate language links.
+- Event pages include both Event JSON-LD and Breadcrumb JSON-LD.
+- JSON-LD remains valid if event title, venue, description, or organizer text contains special characters.
+
+### 7.21 Public chrome and legal pages
+
+Validate these routes:
+
+```text
+/privacy
+/terms
+/about
+/faq
+/contact
+```
+
+Validate:
+
+- Each route renders without login.
+- Each route is SSR and cacheable for public traffic.
+- Page title, description, canonical, Open Graph, and Twitter text metadata are present when `VITE_SITE_URL` is configured.
+- Public footer links navigate to all five pages.
+- `/privacy` lists data categories, retention windows, and contact path for data requests.
+- `/terms` aligns with platform terms, consent versioning, and refund/cancellation framework.
+- `/about` presents the Coimbatore pilot positioning and mission/founder content.
+- `/faq` covers participant-facing questions for booking, past bookings, refunds, and event day expectations.
+- `/contact` shows support email.
+- `/contact` hides phone UI when `VITE_PUBLIC_SUPPORT_PHONE` is blank.
+- `/contact` shows the phone affordance when `VITE_PUBLIC_SUPPORT_PHONE` is configured.
+- Public dispute form is not expected yet; it belongs to Phase 7.
 
 ## 8. Automated checks
 
@@ -649,6 +832,11 @@ pnpm --filter api exec vitest run test/modules/auth
 pnpm --filter api exec vitest run test/modules/organizer
 pnpm --filter api exec vitest run test/modules/admin
 pnpm --filter api exec vitest run test/modules/events
+pnpm --filter api exec vitest run test/modules/organizer/public-profile.test.ts
+pnpm --filter api exec vitest run test/modules/organizer/next-event.test.ts
+pnpm --filter api exec vitest run test/modules/sitemap
+pnpm --filter api exec vitest run test/lib/cache-stampede.test.ts
+pnpm --filter api exec vitest run test/lib/cdn-invalidation.test.ts
 pnpm --filter api exec vitest run test/modules/payment/razorpay-account.test.ts
 pnpm --filter api exec vitest run test/plugins
 pnpm --filter api exec vitest run test/routes
@@ -660,6 +848,11 @@ Focused web suite:
 pnpm --filter web test
 pnpm --filter web test -- src/features/events
 pnpm --filter web test -- src/features/event-detail
+pnpm --filter web test -- src/features/events-discovery
+pnpm --filter web test -- src/features/organizer-detail
+pnpm --filter web test -- src/features/legal-pages
+pnpm --filter web test -- src/routes/_public
+pnpm --filter web test -- src/lib/robots.test.ts
 ```
 
 Database validation checks:
@@ -716,6 +909,47 @@ Confirm the organizer is approved and Razorpay linked-account status is ready. I
 
 Confirm the event is actually `published`. Draft, rejected, unpublished, or under-review events must not render publicly. If you changed the event slug, validate that old slugs redirect to the current slug where redirect handling is implemented.
 
+### Public event detail does not show spots remaining
+
+Confirm both flags match and are enabled:
+
+```env
+PUBLIC_SPOTS_REMAINING_BADGE_ENABLED=true
+VITE_PUBLIC_SPOTS_REMAINING_BADGE_ENABLED=true
+```
+
+Restart both API and web after changing the flags. If either flag is false, the badge is intentionally hidden.
+
+### Register CTA is disabled
+
+Check the event's registration open/close times and end time. The CTA is disabled when registration is not yet open, registration is closed, or the event has ended. The Phase 3 booking flow is not implemented yet; the open-state target is a placeholder route.
+
+### Discovery listing is empty
+
+Confirm at least one event is `published`, has `endAt` in the future, and belongs to the launch-city scope. Past events are intentionally shown on organizer profiles, not the default upcoming discovery list.
+
+### Organizer profile returns not found or noindex
+
+Confirm the organizer has a slug and public profile data. Unverified organizer profiles may render with `noindex,nofollow`; missing or stale slugs should 404 or redirect only when a verified redirect target exists.
+
+### Sitemap looks stale
+
+Start the worker if you want to validate async regeneration:
+
+```bash
+pnpm --filter api start:worker
+```
+
+Without workers, the sitemap route can still render from the API, but publish/unpublish-triggered regeneration may not run.
+
+### Cloudflare purge does not run
+
+By default, local purge is disabled. Set `CLOUDFLARE_PURGE_ENABLED=true` only when `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_API_TOKEN`, and `CDN_BASE_URL` are also configured.
+
+### Contact page does not show a phone number
+
+This is expected when `VITE_PUBLIC_SUPPORT_PHONE` is blank. Set it in `apps/web/.env.local` and restart web to validate the phone affordance.
+
 ### Role access looks wrong after login
 
 Use seeded phones and log in again:
@@ -757,6 +991,12 @@ Before starting Phase 3 booking/payment work, confirm:
 - First-paid-event admin review flow works when publish gates are satisfied.
 - Admin can approve or reject submitted events.
 - Published events render at `/events/{slug}`.
-- Public event detail page shows organizer info, policies, category/pricing breakdown, and text metadata.
-- Known deferrals are not counted as failures: real email sending, Phase 3 booking/payment, JSON-LD, final Register Now booking CTA, spots-remaining badge, and early-bird countdown.
-- Automated API/web/db checks for auth, organizer, admin, events, event-detail, plugins, and rollbacks pass.
+- Public event detail page shows organizer info, verification explainer, policies, category/pricing breakdown, Register CTA state, early-bird countdown, JSON-LD, canonical/alternate links, and text metadata.
+- Spots-remaining badge behavior is explicitly validated with both the default-off flag state and an enabled controlled-data state, or the default-off limitation is documented.
+- Homepage discovery lists public upcoming events with cards, status, sorting, pagination, and correct public-only filtering.
+- Organizer profiles render at `/organizers/{slug}` with verified badge/explainer, upcoming events, past events, cache headers, and redirect/404 behavior.
+- Sitemap XML, robots.txt, canonical links, alternate links, event JSON-LD, and breadcrumb JSON-LD validate for public pages.
+- Public legal/chrome pages render and are linked from the footer: `/privacy`, `/terms`, `/about`, `/faq`, and `/contact`.
+- CDN purge is validated as a local no-op or with real Cloudflare credentials; failures must not roll back core publish/moderation flows.
+- Known deferrals are not counted as failures: real email sending, Phase 3 booking/payment implementation, public dispute form, DSAR/deletion flows, participant profile, event-day operations, and refund/dispute workflows.
+- Automated API/web/db checks for auth, organizer, admin, events, event-detail, discovery, organizer-detail, legal pages, sitemap, robots, plugins, cache/CDN helpers, and rollbacks pass.

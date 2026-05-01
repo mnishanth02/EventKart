@@ -22,6 +22,17 @@ export const otpErrorResponseSchema = z.object({
 	}),
 });
 
+export const devOtpParamsSchema = z.object({
+	phone: phoneSchema,
+});
+
+export const devOtpResponseSchema = z.object({
+	otp: z
+		.string()
+		.length(6)
+		.regex(/^\d{6}$/),
+});
+
 export const otpVerifyBodySchema = z.object({
 	phone: phoneSchema,
 	otp: z
