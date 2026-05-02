@@ -1,11 +1,14 @@
 # Deploy Staging — EventKart
 #
-# Deploys all Railway services to the staging environment.
+# Staging deploys are triggered by Railway's native GitHub autodeploy on the
+# `main` branch with the "Wait for CI" check enabled. Railway pulls the latest
+# commit, builds each service from its `railway.*.json` config, and runs the
+# api service's `preDeployCommand` (which executes the database migrations)
+# before swapping traffic.
 #
-# Required GitHub Secrets:
-#   RAILWAY_TOKEN          — Railway API token (staging project)
-#   RAILWAY_PROJECT_ID     — Railway project ID for staging
-#   MIGRATION_DATABASE_URL — Direct PostgreSQL connection string (bypasses PgBouncer)
+# This GitHub workflow is intentionally thin: it ONLY verifies that the
+# resulting Railway deployment is healthy. It does not run migrations and it
+# does not invoke `railway up` — both responsibilities live on Railway now.
 #
 # Required GitHub Variables:
 #   STAGING_API_URL — Public hostname of the staging API (e.g. api-staging.eventkart.com)
@@ -25,94 +28,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ── Gate: only proceed when CI succeeded ──────────────────────────
-  gate:
-    name: Check CI result
+  health-check:
+    name: Verify Staging Deployment
     runs-on: ubuntu-latest
+    # Run on manual dispatch, or only when the upstream CI run succeeded.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
-    steps:
-      - run: echo "CI passed or manual trigger — proceeding with staging deploy"
-
-  # ── Job 1: Database Migration ─────────────────────────────────────
-  migrate:
-    name: Run Migrations
-    needs: gate
-    runs-on: ubuntu-latest
-    environment: staging
-
-    env:
-      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.12.0
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run database migrations
-        run: pnpm --filter @repo/db db:migrate:run
-
-  # ── Job 2: Deploy Services to Railway ─────────────────────────────
-  deploy:
-    name: Deploy to Railway
-    needs: migrate
-    runs-on: ubuntu-latest
-    environment: staging
-
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.12.0
-
-      - name: Deploy API service
-        run: pnpm dlx @railway/cli up --service api --detach
-        env:
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-
-      - name: Deploy Web service
-        run: pnpm dlx @railway/cli up --service web --detach
-        env:
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-
-      - name: Deploy Worker service
-        run: pnpm dlx @railway/cli up --service worker --detach
-        env:
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-
-  # ── Job 3: Health Check ───────────────────────────────────────────
-  health-check:
-    name: Verify Deployment
-    needs: deploy
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Wait for services to start
-        run: sleep 60
+      - name: Wait for Railway autodeploy to complete
+        # Railway queues the build after `Wait for CI` clears, then builds and
+        # rolls out api/web/worker. 90s gives enough headroom for a typical
+        # staging build + container swap.
+        run: sleep 90
 
       - name: Check API health
-        run: curl -f https://${{ vars.STAGING_API_URL }}/health
+        run: curl -fsS --retry 5 --retry-delay 10 --retry-all-errors https://${{ vars.STAGING_API_URL }}/health
 
       - name: Check Web app
-        run: curl -f https://${{ vars.STAGING_WEB_URL }}
+        run: curl -fsS --retry 5 --retry-delay 10 --retry-all-errors https://${{ vars.STAGING_WEB_URL }}
+
+      - name: Annotate successful verification
+        run: |
+          echo "::notice::Staging deployment verified successfully"
+          echo "::notice::Commit: ${{ github.sha }}"

@@ -157,3 +157,20 @@ The remaining starter-plan references in `docs/impl-plan/workspace-foundation-im
 - `docs/product-plan.md`
 - `docs/implementation-plan.md`
 - `docs/impl-plan/workspace-foundation-implementation-plan.md`
+
+## Deployment
+
+EventKart deploys to two Railway projects (`eventkart-staging`,
+`eventkart-production`), each with five services
+(`postgres`, `redis`, `api`, `web`, `worker`) in the Singapore region.
+Cloudflare proxies the `web` service only; the `api` service is reached
+directly to preserve the cookie-cache invariant in
+`apps/api/src/plugins/auth.ts`.
+
+- Operations runbook (provisioning, env-var matrix, DNS, rotation,
+  rollback, smoke tests, cost guardrails):
+  [`docs/operations/railway-deployment-setup.md`](docs/operations/railway-deployment-setup.md)
+- Implementation plan + risk register:
+  [`docs/impl-plan/infrastructure-railway-deployment.md`](docs/impl-plan/infrastructure-railway-deployment.md)
+- Cloudflare zone, cache rules, and the SSR cache contract:
+  [`docs/operations/cloudflare-cdn-setup.md`](docs/operations/cloudflare-cdn-setup.md)

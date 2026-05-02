@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import { createDatabase } from "@repo/db";
 import { Queue } from "bullmq";
 import type { FastifyBaseLogger } from "fastify";
@@ -100,6 +101,7 @@ export async function startWorkers(
 	const connection = new Redis(url, {
 		maxRetriesPerRequest: null,
 		enableOfflineQueue: true,
+		family: 0,
 	});
 
 	// DLQ queue for failed job tracking
@@ -189,10 +191,32 @@ function buildProductionSitemapDeps(): SitemapRegenWorkerDeps {
 	};
 }
 
+/**
+ * Returns true when this module is being executed directly as the
+ * Node entrypoint (rather than imported). Exposed for unit testing —
+ * callers should pass `process.argv[1]` and `import.meta.url`.
+ *
+ * Uses `pathToFileURL` so it works regardless of OS path style and
+ * regardless of whether the entrypoint is `.ts` (tsx) or `.js`
+ * (compiled `dist/`).
+ */
+export function isWorkerDirectRun(
+	argv1: string | undefined,
+	importMetaUrl: string,
+): boolean {
+	if (argv1 === undefined) {
+		return false;
+	}
+
+	try {
+		return importMetaUrl === pathToFileURL(argv1).href;
+	} catch {
+		return false;
+	}
+}
+
 // Auto-start when run directly as entrypoint
-const isDirectRun =
-	import.meta.url === `file://${process.argv[1]}` ||
-	process.argv[1]?.endsWith("workers/index.ts");
+const isDirectRun = isWorkerDirectRun(process.argv[1], import.meta.url);
 
 if (isDirectRun) {
 	const sitemapDeps = (() => {

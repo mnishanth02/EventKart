@@ -31,6 +31,9 @@ const config = defineConfig({
 	resolve: { tsconfigPaths: true },
 	plugins: [
 		devtools(),
+		// Nitro Node preset reads process.env.PORT at runtime; falls back to 3000.
+		// (Railway sets PORT automatically; we rely on the documented preset behaviour
+		// rather than an explicit app.config.ts, which TanStack Start RC does not need.)
 		nitro(),
 		tailwindcss(),
 		tanstackStart(),

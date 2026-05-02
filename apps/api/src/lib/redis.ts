@@ -53,6 +53,10 @@ export function createRedisClient(
 			return Math.min(times * RETRY_BASE_MS, DEFAULT_RETRY_CAP_MS);
 		},
 		enableOfflineQueue: options.enableOfflineQueue ?? true,
+		// Railway private-network requires dual-stack (IPv6 + IPv4) lookups.
+		// `family: 0` lets ioredis resolve both AAAA and A records, matching
+		// Railway's `*.railway.internal` private DNS. Harmless in local dev.
+		family: 0,
 	});
 }
 

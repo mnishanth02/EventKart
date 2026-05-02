@@ -97,6 +97,11 @@ describe("Redis Library", () => {
 			expect(constructorCalls[0]?.[1].enableOfflineQueue).toBe(true);
 		});
 
+		it("sets family: 0 for Railway private-network dual-stack DNS", () => {
+			createRedisClient("redis://localhost:6379");
+			expect(constructorCalls[0]?.[1].family).toBe(0);
+		});
+
 		it("allows startup-specific retry options", () => {
 			const retryStrategy = () => null;
 			createRedisClient("redis://localhost:6379", {
