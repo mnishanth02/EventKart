@@ -63,7 +63,21 @@ ENV VITE_APP_TITLE=${VITE_APP_TITLE} \
 	SENTRY_ORG=${SENTRY_ORG} \
 	SENTRY_PROJECT=${SENTRY_PROJECT}
 
-RUN node -e 'const value = process.env.VITE_API_URL; if (!value) { console.error("VITE_API_URL build arg is required"); process.exit(1); } try { new URL(value); } catch { console.error("VITE_API_URL must be a valid URL"); process.exit(1); }'
+RUN node <<'NODE'
+const value = process.env.VITE_API_URL;
+
+if (!value) {
+	console.error("VITE_API_URL build arg is required");
+	process.exit(1);
+}
+
+try {
+	new URL(value);
+} catch {
+	console.error("VITE_API_URL must be a valid URL");
+	process.exit(1);
+}
+NODE
 
 # Copy source for web + shared workspace deps it needs.
 COPY tsconfig.json ./

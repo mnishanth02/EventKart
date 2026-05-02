@@ -152,6 +152,23 @@ function getCapacityValidationError(
 	return null;
 }
 
+function areCategoryRecordsEqual(
+	current: readonly EventCategoryRecord[],
+	next: readonly EventCategoryRecord[],
+): boolean {
+	return (
+		current.length === next.length &&
+		current.every((category, index) => {
+			const nextCategory = next[index];
+			return (
+				nextCategory !== undefined &&
+				category.id === nextCategory.id &&
+				category.updatedAt === nextCategory.updatedAt
+			);
+		})
+	);
+}
+
 function CategoryCapacityCard({
 	eventId,
 	category,
@@ -293,7 +310,12 @@ export function EventCategoryConfigForm({
 	const usesDefaultEmptyState = savedCategories.length === 0;
 
 	useEffect(() => {
-		setSavedCategories(initialCategories ?? []);
+		const nextCategories = initialCategories ?? [];
+		setSavedCategories((currentCategories) =>
+			areCategoryRecordsEqual(currentCategories, nextCategories)
+				? currentCategories
+				: nextCategories,
+		);
 	}, [initialCategories]);
 
 	const mutation = useMutation({
