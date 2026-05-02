@@ -152,7 +152,12 @@ function getCapacityValidationError(
 	return null;
 }
 
-function areCategoryRecordsEqual(
+/**
+ * Shallowly compares server-returned category arrays by id + updatedAt.
+ * Category mutations update updatedAt, so this avoids redundant state writes
+ * while still detecting saved changes from the query cache.
+ */
+function haveSameCategoryVersions(
 	current: readonly EventCategoryRecord[],
 	next: readonly EventCategoryRecord[],
 ): boolean {
@@ -312,7 +317,7 @@ export function EventCategoryConfigForm({
 	useEffect(() => {
 		const nextCategories = initialCategories ?? [];
 		setSavedCategories((currentCategories) =>
-			areCategoryRecordsEqual(currentCategories, nextCategories)
+			haveSameCategoryVersions(currentCategories, nextCategories)
 				? currentCategories
 				: nextCategories,
 		);

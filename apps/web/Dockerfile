@@ -67,14 +67,14 @@ RUN node <<'NODE'
 const value = process.env.VITE_API_URL;
 
 if (!value) {
-	console.error("VITE_API_URL build arg is required");
+	console.error("Docker build failed: VITE_API_URL build arg is required");
 	process.exit(1);
 }
 
 try {
 	new URL(value);
 } catch {
-	console.error("VITE_API_URL must be a valid URL");
+	console.error("Docker build failed: VITE_API_URL must be a valid URL");
 	process.exit(1);
 }
 NODE
