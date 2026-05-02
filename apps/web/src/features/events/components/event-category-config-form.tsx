@@ -286,14 +286,21 @@ export function EventCategoryConfigForm({
 }: EventCategoryConfigFormProps) {
 	const queryClient = useQueryClient();
 	const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+	const [savedCategories, setSavedCategories] = useState<
+		readonly EventCategoryRecord[]
+	>(initialCategories ?? []);
 	const defaults = eventCategoryRecordsToConfigValues(initialCategories);
-	const usesDefaultEmptyState =
-		!initialCategories || initialCategories.length === 0;
+	const usesDefaultEmptyState = savedCategories.length === 0;
+
+	useEffect(() => {
+		setSavedCategories(initialCategories ?? []);
+	}, [initialCategories]);
 
 	const mutation = useMutation({
 		mutationFn: (config: EventCategoriesConfigInput) =>
 			updateEventCategories({ data: { eventId, config } }),
 		onSuccess: (categories) => {
+			setSavedCategories(categories);
 			queryClient.setQueryData(eventCategoriesQueryKey(eventId), categories);
 			void queryClient.invalidateQueries({
 				queryKey: eventCategoriesQueryKey(eventId),
@@ -589,7 +596,7 @@ export function EventCategoryConfigForm({
 				</CardContent>
 			</Card>
 
-			{initialCategories && initialCategories.length > 0 ? (
+			{savedCategories.length > 0 ? (
 				<Card>
 					<CardHeader>
 						<CardTitle>Configure category capacity</CardTitle>
@@ -599,7 +606,7 @@ export function EventCategoryConfigForm({
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="grid gap-4 lg:grid-cols-2">
-						{initialCategories.map((category) => (
+						{savedCategories.map((category) => (
 							<CategoryCapacityCard
 								key={category.id}
 								eventId={eventId}

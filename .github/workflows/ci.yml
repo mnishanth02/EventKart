@@ -12,6 +12,7 @@ concurrency:
 
 env:
   NODE_VERSION: "22.12.0"
+  VITE_API_URL: "http://localhost:3001"
 
 jobs:
   lint-and-types:

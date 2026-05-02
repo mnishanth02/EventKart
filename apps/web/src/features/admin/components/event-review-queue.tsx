@@ -46,6 +46,10 @@ function formatDate(dateStr: string | null): string {
 	}).format(new Date(dateStr));
 }
 
+function isEventStatus(value: string): value is EventStatus {
+	return EVENT_STATUSES.includes(value as EventStatus);
+}
+
 export function EventReviewQueue() {
 	const [page, setPage] = useState(1);
 	const [statusFilter, setStatusFilter] = useState<EventStatus>("under_review");
@@ -62,8 +66,9 @@ export function EventReviewQueue() {
 	const selectedStatusLabel = EVENT_STATUS_LABELS[statusFilter];
 
 	function handleStatusFilterChange(value: string) {
-		setStatusFilter(value as EventStatus);
+		if (!isEventStatus(value)) return;
 		setPage(1);
+		setStatusFilter(value);
 	}
 
 	return (

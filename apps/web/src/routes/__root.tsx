@@ -63,18 +63,18 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 		scripts: import.meta.env.PROD
 			? []
 			: [
-				{
-					// Parser-blocking stub installed inside <head>: must execute
-					// synchronously before any deferred module script (including
-					// the preamble in <body>) so dynamically-imported route
-					// chunks transformed by @vitejs/plugin-react never observe
-					// an undefined $RefreshReg$/$RefreshSig$ during top-level
-					// evaluation. Without this, lazy chunks importing component
-					// files from packages/ui (e.g. alert.tsx) throw
-					// `ReferenceError: $RefreshReg$ is not defined`.
-					children: REACT_REFRESH_STUB_SCRIPT,
-				},
-			],
+					{
+						// Parser-blocking stub installed inside <head>: must execute
+						// synchronously before any deferred module script (including
+						// the preamble in <body>) so dynamically-imported route
+						// chunks transformed by @vitejs/plugin-react never observe
+						// an undefined $RefreshReg$/$RefreshSig$ during top-level
+						// evaluation. Without this, lazy chunks importing component
+						// files from packages/ui (e.g. alert.tsx) throw
+						// `ReferenceError: $RefreshReg$ is not defined`.
+						children: REACT_REFRESH_STUB_SCRIPT,
+					},
+				],
 	}),
 	component: RootComponent,
 	notFoundComponent: NotFoundPage,
@@ -86,7 +86,7 @@ function RootComponent() {
 		<ThemeProvider>
 			<SentryClientInit />
 			<Outlet />
-			<Toaster position="bottom-right" toastOptions={ { duration: 4000 } } />
+			<Toaster position="bottom-right" toastOptions={{ duration: 4000 }} />
 		</ThemeProvider>
 	);
 }
@@ -108,30 +108,30 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				{ import.meta.env.MODE === "development" ? (
+				{import.meta.env.MODE === "development" ? (
 					<script
 						type="module"
 						// TanStack Start serves SSR HTML directly in dev, so Vite's
 						// HTML transform does not inject the React Refresh preamble.
 						// biome-ignore lint/security/noDangerouslySetInnerHtml: <false positive>
-						dangerouslySetInnerHTML={ {
+						dangerouslySetInnerHTML={{
 							__html: REACT_REFRESH_PREAMBLE_SCRIPT,
-						} }
+						}}
 					/>
-				) : null }
+				) : null}
 				<PostHogProvider>
-					{ children }
+					{children}
 					<TanStackDevtools
-						config={ {
+						config={{
 							position: "bottom-right",
-						} }
-						plugins={ [
+						}}
+						plugins={[
 							{
 								name: "Tanstack Router",
 								render: <TanStackRouterDevtoolsPanel />,
 							},
 							TanStackQueryDevtools,
-						] }
+						]}
 					/>
 				</PostHogProvider>
 				<Scripts />

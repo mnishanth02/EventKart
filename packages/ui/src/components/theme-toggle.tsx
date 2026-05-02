@@ -21,13 +21,13 @@ function ThemeToggle({ className }: { className?: string }) {
 					? `Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`
 					: "Toggle theme"
 			}
-			className={ cn(
+			className={cn(
 				"inline-flex size-9 items-center justify-center rounded-md border border-border/60 bg-background/40 text-foreground shadow-xs backdrop-blur-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
 				className,
-			) }
-			onClick={ () => setTheme(resolvedTheme === "dark" ? "light" : "dark") }
+			)}
+			onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
 		>
-			{ mounted ? (
+			{mounted ? (
 				resolvedTheme === "dark" ? (
 					<SunIcon className="size-[18px]" />
 				) : (
@@ -35,7 +35,7 @@ function ThemeToggle({ className }: { className?: string }) {
 				)
 			) : (
 				<span className="size-[18px]" />
-			) }
+			)}
 		</button>
 	);
 }

@@ -28,8 +28,8 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 WORKDIR /app
 
-# VITE_* values are inlined at build time. publicEnv (apps/web/src/lib/env/public.ts)
-# enforces VITE_API_URL via z.string().url() — missing values fail the build loudly.
+# VITE_* values are inlined at build time. Validate required build args before
+# the bundle is produced so missing values fail the image build loudly.
 ARG VITE_APP_TITLE
 ARG VITE_API_URL
 ARG VITE_POSTHOG_KEY
@@ -62,6 +62,8 @@ ENV VITE_APP_TITLE=${VITE_APP_TITLE} \
 	SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} \
 	SENTRY_ORG=${SENTRY_ORG} \
 	SENTRY_PROJECT=${SENTRY_PROJECT}
+
+RUN node -e 'const value = process.env.VITE_API_URL; if (!value) { console.error("VITE_API_URL build arg is required"); process.exit(1); } try { new URL(value); } catch { console.error("VITE_API_URL must be a valid URL"); process.exit(1); }'
 
 # Copy source for web + shared workspace deps it needs.
 COPY tsconfig.json ./

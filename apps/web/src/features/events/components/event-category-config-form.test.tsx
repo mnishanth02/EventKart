@@ -238,6 +238,26 @@ describe("EventCategoryConfigForm", () => {
 		expect(toast.success).toHaveBeenCalledWith("Event categories updated");
 	});
 
+	it("shows capacity controls for categories returned after saving", async () => {
+		vi.mocked(updateEventCategories).mockResolvedValueOnce(
+			savedCategoryRecords,
+		);
+		renderForm();
+
+		const submitButton = screen.getByRole("button", {
+			name: "Save categories",
+		}) as HTMLButtonElement;
+		await waitFor(() => expect(submitButton.disabled).toBe(false));
+
+		fireEvent.click(submitButton);
+
+		await screen.findByText("Configure category capacity");
+		expect(screen.queryByText("No categories configured yet")).toBeNull();
+		expect(screen.getAllByLabelText("Spots total")).toHaveLength(
+			savedCategoryRecords.length,
+		);
+	});
+
 	it("saves category capacity updates", async () => {
 		const firstCategory = savedCategoryRecords[0];
 		if (!firstCategory) throw new Error("Expected a saved category fixture");

@@ -156,8 +156,10 @@ new Railway runbook so the rule is not silently broken later.
   is reached directly. This preserves the cache-security invariant from
   [memory: cache security].
 - **REQ-009** — The web service must listen on Railway's injected `PORT`.
-  Add `apps/web/app.config.ts` with `server.port = Number(process.env.PORT) || 3000`
-  (or an equivalent documented TanStack Start config) before first deploy.
+  The current TanStack Start/Nitro deployment relies on Nitro's default
+  `process.env.PORT` binding, documented in
+  [apps/web/vite.config.ts](apps/web/vite.config.ts), so no separate
+  `apps/web/app.config.ts` file is required.
 - **SEC-001** — `INTERNAL_API_KEY` is a Railway shared secret across the
   `api` and `web` services in each environment. Rotate via Railway's
   variable replace flow; the `requireInternal` preHandler already added
@@ -186,9 +188,12 @@ new Railway runbook so the rule is not silently broken later.
   artifact (both run from `apps/api/dist/`). For V1 we use **one image**
   with two Railway `deploy.startCommand` values; we split images later if
   worker memory pressure justifies it.
-- **CON-003** — Worker runs compiled JS (`node dist/workers/index.js`),
-  not `tsx`. Faster cold start, smaller runtime image, no source-map
-  resolution overhead in the hot job-processing path.
+- **CON-003** — Worker runs the compiled API entry through Node with the
+  `tsx` import hook (`node --import tsx dist/workers/index.js`), matching
+  [railway.worker.json](railway.worker.json) and
+  [apps/api/package.json](apps/api/package.json). The loader is required
+  because workspace package exports still point at TypeScript source that
+  contains `.js` import specifiers after compilation.
 - **CON-004** — Workers must NOT use Railway's `overlapSeconds` zero-
   downtime feature (could cause double-processing of the same job). Set
   `overlapSeconds = 0` for `worker`. Web + api use `overlapSeconds = 30`.
