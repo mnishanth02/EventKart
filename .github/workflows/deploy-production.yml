@@ -1,12 +1,19 @@
 # Deploy Production — EventKart
 #
-# Deploys all Railway services to the production environment.
-# Requires GitHub environment protection rules (manual reviewers).
+# Production deploys remain on GitHub Actions (not Railway native autodeploy)
+# because Railway's GitHub integration does not yet support tag-filtered
+# triggers — production must only ship on `v*` tags, never on every push to
+# `main`. See infrastructure-railway-deployment.md §D6 / RISK-007.
+#
+# Database migrations are NOT run from this workflow. They are executed by
+# Railway's `preDeployCommand` on the api service (railway.api.json), which
+# runs after the build and before the new container takes traffic. This keeps
+# the migration co-located with the code that depends on it and avoids a
+# split-brain between CI and Railway state.
 #
 # Required GitHub Secrets:
-#   RAILWAY_TOKEN          — Railway API token (production project)
-#   RAILWAY_PROJECT_ID     — Railway project ID for production
-#   MIGRATION_DATABASE_URL — Direct PostgreSQL connection string (bypasses PgBouncer)
+#   RAILWAY_TOKEN      — Railway API token (production project)
+#   RAILWAY_PROJECT_ID — Railway project ID for production
 #
 # Required GitHub Variables:
 #   PRODUCTION_API_URL — Public hostname of the production API (e.g. api.eventkart.com)
@@ -21,11 +28,6 @@ on:
         description: "Type 'yes' to confirm production deployment"
         required: true
         type: string
-      skip_migration:
-        description: "Skip database migration (code-only deploy)"
-        required: false
-        type: boolean
-        default: false
   push:
     tags:
       - "v*"
@@ -52,43 +54,13 @@ jobs:
           echo "::notice::Ref: ${{ github.ref }}"
           echo "::notice::SHA: ${{ github.sha }}"
 
-  # ── Job 1: Database Migration ─────────────────────────────────────
-  migrate:
-    name: Run Migrations
-    needs: gate
-    if: >-
-      !(github.event_name == 'workflow_dispatch' &&
-        github.event.inputs.skip_migration == 'true')
-    runs-on: ubuntu-latest
-    environment: production
-
-    env:
-      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.12.0
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run database migrations
-        run: pnpm --filter @repo/db db:migrate:run
-
-  # ── Job 2: Deploy Services to Railway ─────────────────────────────
+  # ── Job: Deploy Services to Railway ───────────────────────────────
+  # Railway runs the api service's `preDeployCommand` (drizzle migrations)
+  # automatically as part of the api rollout — there is no separate migration
+  # job here.
   deploy:
     name: Deploy to Railway
-    needs: migrate
-    if: ${{ !cancelled() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped') }}
+    needs: gate
     runs-on: ubuntu-latest
     environment: production
 
@@ -128,7 +100,7 @@ jobs:
         env:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
-  # ── Job 3: Health Check ───────────────────────────────────────────
+  # ── Job: Health Check ─────────────────────────────────────────────
   health-check:
     name: Verify Deployment
     needs: deploy
@@ -136,13 +108,16 @@ jobs:
 
     steps:
       - name: Wait for services to start
-        run: sleep 60
+        # Production builds (no Turbo cache, full image build) typically take
+        # longer than staging — 120s gives the api preDeployCommand + web +
+        # worker rollout room to complete.
+        run: sleep 120
 
       - name: Check API health
-        run: curl -f https://${{ vars.PRODUCTION_API_URL }}/health
+        run: curl -fsS --retry 5 --retry-delay 10 --retry-all-errors https://${{ vars.PRODUCTION_API_URL }}/health
 
       - name: Check Web app
-        run: curl -f https://${{ vars.PRODUCTION_WEB_URL }}
+        run: curl -fsS --retry 5 --retry-delay 10 --retry-all-errors https://${{ vars.PRODUCTION_WEB_URL }}
 
       - name: Annotate successful deployment
         run: |

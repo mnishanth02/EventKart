@@ -41,6 +41,11 @@ export type EventCategoriesResponse = {
 	};
 };
 
+export type EventCategoryCapacityResponse = {
+	success: true;
+	data: EventCategoryRecord;
+};
+
 export type EventPricingResponse = {
 	success: true;
 	data: {

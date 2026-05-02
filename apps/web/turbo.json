@@ -5,6 +5,9 @@
 			"env": ["VITE_*"],
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": [".output/**"]
+		},
+		"test": {
+			"env": ["VITE_*"]
 		}
 	}
 }

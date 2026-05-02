@@ -155,7 +155,9 @@ function OrganizerDashboard() {
 			<div className="flex items-center justify-center py-12">
 				<Card className="max-w-md text-center">
 					<CardHeader>
-						<CardTitle>Something Went Wrong</CardTitle>
+						<CardTitle role="heading" aria-level={1}>
+							Something Went Wrong
+						</CardTitle>
 						<CardDescription>
 							We couldn&apos;t load your organizer profile. Please try again.
 						</CardDescription>
@@ -173,7 +175,9 @@ function OrganizerDashboard() {
 			<div className="flex items-center justify-center py-12">
 				<Card className="max-w-md text-center">
 					<CardHeader>
-						<CardTitle>Complete Your Profile</CardTitle>
+						<CardTitle role="heading" aria-level={1}>
+							Complete Your Profile
+						</CardTitle>
 						<CardDescription>
 							You need to create an organizer profile before you can manage
 							events.
@@ -205,9 +209,11 @@ function OrganizerDashboard() {
 		if (policyQuery.isError) {
 			return (
 				<div className="flex items-center justify-center py-12">
-					<Card className="max-w-md text-center">
-						<CardHeader>
-							<CardTitle>Something Went Wrong</CardTitle>
+				<Card className="max-w-md text-center">
+					<CardHeader>
+						<CardTitle role="heading" aria-level={1}>
+							Something Went Wrong
+						</CardTitle>
 							<CardDescription>
 								We couldn&apos;t check your policy status. Please try again.
 							</CardDescription>
@@ -224,7 +230,9 @@ function OrganizerDashboard() {
 			<div className="flex items-center justify-center py-12">
 				<Card className="max-w-md text-center">
 					<CardHeader>
-						<CardTitle>Accept Platform Policies</CardTitle>
+						<CardTitle role="heading" aria-level={1}>
+							Accept Platform Policies
+						</CardTitle>
 						<CardDescription>
 							You need to accept our platform policies before you can manage
 							events.

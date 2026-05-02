@@ -1,4 +1,14 @@
-import { and, type Database, desc, eq, inArray, type SQL, sql } from "@repo/db";
+import {
+	and,
+	type Database,
+	desc,
+	eq,
+	gt,
+	inArray,
+	lte,
+	type SQL,
+	sql,
+} from "@repo/db";
 import {
 	eventCategories,
 	eventImages,
@@ -131,10 +141,10 @@ async function selectListingRows(
 	const baseConditions: SQL[] = [];
 	if (params.timeWindow === "past") {
 		baseConditions.push(inArray(events.status, ["published", "completed"]));
-		baseConditions.push(sql`${events.endAt} <= ${params.now}`);
+		baseConditions.push(lte(events.endAt, params.now));
 	} else {
 		baseConditions.push(eq(events.status, "published"));
-		baseConditions.push(sql`${events.endAt} > ${params.now}`);
+		baseConditions.push(gt(events.endAt, params.now));
 	}
 	if (params.organizerSlug !== undefined) {
 		baseConditions.push(

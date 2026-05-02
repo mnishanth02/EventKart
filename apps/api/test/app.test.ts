@@ -59,6 +59,23 @@ describe("buildApp", () => {
 		expect(config.INTERNAL_API_KEY).toBeUndefined();
 	});
 
+	it("defaults HOST to '::' (Railway IPv6 dual-stack) when unset", () => {
+		const originalHost = process.env.HOST;
+		delete process.env.HOST;
+		try {
+			const config = loadConfig({
+				DATABASE_URL:
+					"postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev",
+			});
+
+			expect(config.HOST).toBe("::");
+		} finally {
+			if (originalHost !== undefined) {
+				process.env.HOST = originalHost;
+			}
+		}
+	});
+
 	it("accepts explicit default ports in web origins", () => {
 		const config = loadConfig({
 			HOST: "0.0.0.0",

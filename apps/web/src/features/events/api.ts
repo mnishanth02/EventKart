@@ -9,6 +9,7 @@ import {
 	createEventInputSchema,
 	type Event,
 	type EventCategoriesConfigInput,
+	type EventCategoryCapacityUpdateInput,
 	type EventCategoryRecord,
 	type EventImage,
 	type EventImageKind,
@@ -22,6 +23,7 @@ import {
 	type EventRegistrationForm,
 	type EventRegistrationFormInput,
 	eventCategoriesConfigSchema,
+	eventCategoryCapacityUpdateSchema,
 	eventImageConfirmRequestSchema,
 	eventImageDeleteRequestSchema,
 	eventImageListQuerySchema,
@@ -50,6 +52,12 @@ const updateEventInputSchema = z.object({
 const updateEventCategoriesInputSchema = z.object({
 	eventId: uuidSchema,
 	config: eventCategoriesConfigSchema,
+});
+
+const updateEventCategoryCapacityInputSchema = z.object({
+	eventId: uuidSchema,
+	categoryId: uuidSchema,
+	capacity: eventCategoryCapacityUpdateSchema,
 });
 
 const updateEventPricingInputSchema = z.object({
@@ -88,6 +96,11 @@ export type GetEventCategoriesInput = z.input<typeof eventIdInputSchema>;
 export type UpdateEventCategoriesInput = {
 	eventId: string;
 	config: EventCategoriesConfigInput;
+};
+export type UpdateEventCategoryCapacityInput = {
+	eventId: string;
+	categoryId: string;
+	capacity: EventCategoryCapacityUpdateInput;
 };
 export type GetEventPricingInput = z.input<typeof eventIdInputSchema>;
 export type UpdateEventPricingInput = {
@@ -197,6 +210,22 @@ export const updateEventCategories = createServerFn({ method: "POST" })
 			data.config,
 		);
 		return response.data.categories;
+	});
+
+export const updateEventCategoryCapacity = createServerFn({ method: "POST" })
+	.inputValidator((data: UpdateEventCategoryCapacityInput) =>
+		updateEventCategoryCapacityInputSchema.parse(data),
+	)
+	.handler(async ({ data }): Promise<EventCategoryRecord> => {
+		const { updateEventCategoryCapacityOnServer } = await import(
+			"./api.server"
+		);
+		const response = await updateEventCategoryCapacityOnServer(
+			data.eventId,
+			data.categoryId,
+			data.capacity,
+		);
+		return response.data;
 	});
 
 export const getEventPolicies = createServerFn({ method: "GET" })

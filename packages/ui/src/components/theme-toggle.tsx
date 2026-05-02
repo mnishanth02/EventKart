@@ -22,7 +22,7 @@ function ThemeToggle({ className }: { className?: string }) {
 					: "Toggle theme"
 			}
 			className={cn(
-				"inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+				"inline-flex size-9 items-center justify-center rounded-md border border-border/60 bg-background/40 text-foreground shadow-xs backdrop-blur-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
 				className,
 			)}
 			onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}

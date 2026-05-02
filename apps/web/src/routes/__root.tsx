@@ -16,6 +16,26 @@ import PostHogProvider from "../integrations/posthog/provider";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
+// Synchronous (non-module) stub installed BEFORE any deferred module script
+// evaluates. Lazy-loaded route chunks transformed by @vitejs/plugin-react
+// reference $RefreshReg$/$RefreshSig$ at module top-level; without these
+// no-op stubs in scope before evaluation, the chunk throws
+// `ReferenceError: $RefreshReg$ is not defined`. Module scripts (including
+// the runtime preamble below) are deferred and may not have run yet when a
+// dynamic import resolves, so the parser-blocking script is required.
+const REACT_REFRESH_STUB_SCRIPT = `
+window.$RefreshReg$ = function () {};
+window.$RefreshSig$ = function () { return function (type) { return type; }; };
+`;
+
+const REACT_REFRESH_PREAMBLE_SCRIPT = `
+import RefreshRuntime from "/@react-refresh";
+RefreshRuntime.injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;
+window.__vite_plugin_react_preamble_installed__ = true;
+`;
+
 interface MyRouterContext {
 	queryClient: QueryClient;
 }
@@ -40,6 +60,21 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				href: appCss,
 			},
 		],
+		scripts: import.meta.env.PROD
+			? []
+			: [
+					{
+						// Parser-blocking stub installed inside <head>: must execute
+						// synchronously before any deferred module script (including
+						// the preamble in <body>) so dynamically-imported route
+						// chunks transformed by @vitejs/plugin-react never observe
+						// an undefined $RefreshReg$/$RefreshSig$ during top-level
+						// evaluation. Without this, lazy chunks importing component
+						// files from packages/ui (e.g. alert.tsx) throw
+						// `ReferenceError: $RefreshReg$ is not defined`.
+						children: REACT_REFRESH_STUB_SCRIPT,
+					},
+				],
 	}),
 	component: RootComponent,
 	notFoundComponent: NotFoundPage,
@@ -73,6 +108,17 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
+				{import.meta.env.MODE === "development" ? (
+					<script
+						type="module"
+						// TanStack Start serves SSR HTML directly in dev, so Vite's
+						// HTML transform does not inject the React Refresh preamble.
+						// biome-ignore lint/security/noDangerouslySetInnerHtml: <false positive>
+						dangerouslySetInnerHTML={{
+							__html: REACT_REFRESH_PREAMBLE_SCRIPT,
+						}}
+					/>
+				) : null}
 				<PostHogProvider>
 					{children}
 					<TanStackDevtools

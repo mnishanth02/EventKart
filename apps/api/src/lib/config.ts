@@ -144,7 +144,7 @@ function parseWebOrigin(value: string) {
 }
 
 export const appConfigSchema = Type.Object({
-	HOST: Type.String({ default: "0.0.0.0" }),
+	HOST: Type.String({ default: "::" }),
 	PORT: Type.Integer({ default: 3001, minimum: 1, maximum: 65535 }),
 	LOG_LEVEL: Type.Union(
 		[

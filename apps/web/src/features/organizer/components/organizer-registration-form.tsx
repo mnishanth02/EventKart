@@ -41,6 +41,16 @@ function FormFieldError({
 	);
 }
 
+function hasRequiredRegistrationValues(values: OrganizerRegistrationInput) {
+	return (
+		values.businessName.trim().length > 0 &&
+		values.contactName.trim().length > 0 &&
+		values.contactEmail.trim().length > 0 &&
+		values.contactPhone.trim().length > 0 &&
+		values.city.trim().length > 0
+	);
+}
+
 export function OrganizerRegistrationForm() {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
@@ -82,6 +92,7 @@ export function OrganizerRegistrationForm() {
 		} as OrganizerRegistrationInput,
 		validators: {
 			onChange: organizerRegistrationSchema,
+			onSubmit: organizerRegistrationSchema,
 		},
 		onSubmit: ({ value }) => {
 			mutation.mutate(value);
@@ -307,13 +318,17 @@ export function OrganizerRegistrationForm() {
 
 					{/* Submit */}
 					<form.Subscribe
-						selector={(state) => [state.canSubmit, state.isSubmitting]}
+						selector={(state) => [
+							state.canSubmit,
+							state.isSubmitting,
+							hasRequiredRegistrationValues(state.values),
+						]}
 					>
-						{([canSubmit, isSubmitting]) => (
+						{([canSubmit, isSubmitting, hasRequiredValues]) => (
 							<Button
 								type="submit"
 								className="w-full"
-								disabled={!canSubmit || mutation.isPending}
+								disabled={!canSubmit || !hasRequiredValues || mutation.isPending}
 							>
 								{mutation.isPending || isSubmitting
 									? "Creating Profile..."

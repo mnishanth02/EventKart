@@ -156,7 +156,9 @@ function CenteredCard({
 		<div className="mx-auto flex min-h-[50vh] w-full max-w-md items-center justify-center px-4 py-12">
 			<Card className="w-full text-center">
 				<CardHeader>
-					<CardTitle>{title}</CardTitle>
+					<CardTitle role="heading" aria-level={1}>
+						{title}
+					</CardTitle>
 					<CardDescription>{description}</CardDescription>
 				</CardHeader>
 				<CardContent>{children}</CardContent>

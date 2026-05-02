@@ -34,6 +34,8 @@ const TEST_ADMIN_ID = "aa0e8400-e29b-41d4-a716-446655440001";
 const TEST_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const TEST_ORGANIZER_ID = "660e8400-e29b-41d4-a716-446655440001";
 const TEST_EVENT_ID = "11111111-1111-4111-8111-111111111111";
+const TEST_CATEGORY_ID = "22222222-2222-4222-8222-222222222222";
+const TEST_PRICING_TIER_ID = "33333333-3333-4333-8333-333333333333";
 const TEST_CSRF_SECRET = "eventkart-csrf-secret-v1";
 
 const mockEvent = {
@@ -107,6 +109,67 @@ const mockDetailResult = {
 		isVerified: true,
 		razorpayAccountStatus: "active",
 		previouslyPublishedPaidEventCount: 2,
+	},
+	configuration: {
+		categories: [
+			{
+				id: TEST_CATEGORY_ID,
+				eventId: TEST_EVENT_ID,
+				name: "10K",
+				slug: "10k",
+				distanceMeters: 10_000,
+				sortOrder: 0,
+				spotsTotal: 100,
+				spotsRemaining: 100,
+				createdAt: "2026-04-26T12:00:00.000Z",
+				updatedAt: "2026-04-26T12:00:00.000Z",
+			},
+		],
+		pricingTiers: [
+			{
+				id: TEST_PRICING_TIER_ID,
+				eventId: TEST_EVENT_ID,
+				eventCategoryId: TEST_CATEGORY_ID,
+				basePrice: 50000,
+				earlyBirdPrice: null,
+				earlyBirdDeadline: null,
+				createdAt: "2026-04-26T12:00:00.000Z",
+				updatedAt: "2026-04-26T12:00:00.000Z",
+				category: {
+					id: TEST_CATEGORY_ID,
+					eventId: TEST_EVENT_ID,
+					name: "10K",
+					slug: "10k",
+					distanceMeters: 10_000,
+					sortOrder: 0,
+					spotsTotal: 100,
+					spotsRemaining: 100,
+					createdAt: "2026-04-26T12:00:00.000Z",
+					updatedAt: "2026-04-26T12:00:00.000Z",
+				},
+			},
+		],
+		policies: {
+			eventId: TEST_EVENT_ID,
+			refundPolicy: mockEvent.refundPolicy,
+			cancellationPolicy: mockEvent.cancellationPolicy,
+			updatedAt: "2026-04-26T12:00:00.000Z",
+		},
+		readiness: {
+			ready: true,
+			eventStatus: "under_review",
+			isPaid: true,
+			requiresRazorpay: true,
+			wouldRequireAdminReview: true,
+			items: [
+				{
+					check: "organizer_verified",
+					passed: true,
+					message: "Organizer verified",
+					severity: "error",
+				},
+			],
+		},
 	},
 };
 

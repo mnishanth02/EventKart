@@ -79,6 +79,7 @@ NODE_ENV=development
 HOST=0.0.0.0
 PORT=3001
 LOG_LEVEL=info
+LOG_PRETTY=false
 WEB_ORIGIN=http://localhost:3000
 DATABASE_URL=postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev
 REDIS_URL=redis://localhost:6379
@@ -91,6 +92,8 @@ CLOUDFLARE_PURGE_ENABLED=false
 
 Important notes:
 
+- `NODE_ENV=development` is read directly by a few runtime helpers such as cookie security and Sentry environment fallback. It is intentionally not accessed through the API config decorator.
+- Set `LOG_PRETTY=true` temporarily if you want human-readable API logs while doing manual UI validation. Keep `false` when you want production-like JSON logs.
 - Keep `OTP_DELIVERY_MODE=log` for local validation. OTP codes will appear in the API terminal logs.
 - Leave `COOKIE_DOMAIN` unset locally. Do not use `.eventkart.app` on localhost.
 - `INTERNAL_API_KEY` should be set locally and must match the web env value. This lets web server functions call the API as internal requests and avoids CSRF failures on organizer/admin mutations.
@@ -264,6 +267,12 @@ pnpm --filter api start:worker
 
 Workers are needed for async flows such as Razorpay linked-account creation and future email processing. Current organizer/event transactional emails are log-only stubs, so real email delivery is not expected yet.
 
+Expected local startup notes:
+
+- `pnpm --filter web dev` may warn that route-adjacent `*.test.tsx` files under `apps/web/src/routes/` do not export a route. These warnings are cosmetic; TanStack Router ignores those files and the app still starts.
+- `pnpm --filter api dev` may print BullMQ warnings such as `Eviction policy is volatile-lru. It should be "noeviction"` when using the local Redis container. Treat this as an advisory for queue safety, not a boot failure.
+- API warnings about Razorpay, object storage, Cloudflare purge, Sentry, PostHog, MSG91, or Resend being unconfigured are expected unless you are validating those optional integrations.
+
 Open the app:
 
 ```text
@@ -335,6 +344,21 @@ Role routing checks:
 | `9999900001` | Can access `/admin`                                          |
 | `9999900002` | Can access `/org`                                            |
 | `9999900003` | Can access `/my`; should be blocked from `/org` and `/admin` |
+
+### 7.2.1 Email verification link route
+
+Go to:
+
+```text
+/auth/verify-email?token={64-character-lowercase-hex-token}
+```
+
+Validate:
+
+- Missing, malformed, or non-hex tokens show the expected invalid-link state.
+- A valid unexpired email verification token verifies the user's email and redirects to the appropriate post-verification destination.
+- Expired or already-consumed tokens show a clear error and do not create duplicate verification side effects.
+- If email delivery is not configured, use the API logs or database record for the generated token when validating locally.
 
 ### 7.3 Organizer registration and profile management
 
@@ -859,7 +883,14 @@ Database validation checks:
 
 ```bash
 pnpm --filter @repo/db db:check:lock-risk
+pnpm --filter @repo/db db:check:drift
 pnpm --filter @repo/db db:check:rollbacks
+```
+
+Optional database inspection:
+
+```bash
+pnpm --filter @repo/db db:studio
 ```
 
 ## 9. Troubleshooting
@@ -892,6 +923,20 @@ INTERNAL_API_KEY=replace-with-the-same-local-secret
 ```
 
 Restart both API and web servers after changing env files.
+
+### Web dev shows route-file warnings for `*.test.tsx`
+
+This is expected today because several route tests are colocated under `apps/web/src/routes/`. TanStack Router prints warnings that those test files do not export a route and then ignores them. If the server reaches `VITE ... ready` and `http://localhost:3000/` is listed, the warning is not a validation failure.
+
+### API dev shows Redis eviction policy warnings
+
+BullMQ expects Redis `maxmemory-policy` to be `noeviction`. The local Redis container may print advisory messages such as:
+
+```text
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+```
+
+The API can still run locally if Redis connects and the server reaches `API server listening`. Treat this as an infrastructure hardening warning unless you are validating queue behavior under memory pressure.
 
 ### Document upload is unavailable
 

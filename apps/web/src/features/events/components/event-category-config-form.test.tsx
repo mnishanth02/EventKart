@@ -13,7 +13,7 @@ import {
 import type React from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { updateEventCategories } from "../api";
+import { updateEventCategories, updateEventCategoryCapacity } from "../api";
 import { EventCategoryConfigForm } from "./event-category-config-form";
 
 vi.mock("sonner", () => ({
@@ -26,6 +26,7 @@ vi.mock("sonner", () => ({
 
 vi.mock("../api", () => ({
 	updateEventCategories: vi.fn(),
+	updateEventCategoryCapacity: vi.fn(),
 }));
 
 vi.mock("@repo/ui/components/ui/alert", () => ({
@@ -133,6 +134,8 @@ const savedCategoryRecords = defaultEventCategoriesConfig.categories.map(
 		...category,
 		id: `33333333-3333-4333-8333-33333333333${index}`,
 		eventId,
+		spotsTotal: 100,
+		spotsRemaining: 100,
 		createdAt: "2026-04-26T12:00:00.000Z",
 		updatedAt: "2026-04-26T12:00:00.000Z",
 	}),
@@ -159,6 +162,7 @@ function renderForm(initialCategories: EventCategoryRecord[] = []) {
 describe("EventCategoryConfigForm", () => {
 	beforeEach(() => {
 		vi.mocked(updateEventCategories).mockReset();
+		vi.mocked(updateEventCategoryCapacity).mockReset();
 		vi.mocked(toast.success).mockReset();
 		vi.mocked(toast.error).mockReset();
 	});
@@ -232,5 +236,67 @@ describe("EventCategoryConfigForm", () => {
 			}),
 		);
 		expect(toast.success).toHaveBeenCalledWith("Event categories updated");
+	});
+
+	it("shows capacity controls for categories returned after saving", async () => {
+		vi.mocked(updateEventCategories).mockResolvedValueOnce(
+			savedCategoryRecords,
+		);
+		renderForm();
+
+		const submitButton = screen.getByRole("button", {
+			name: "Save categories",
+		}) as HTMLButtonElement;
+		await waitFor(() => expect(submitButton.disabled).toBe(false));
+
+		fireEvent.click(submitButton);
+
+		await screen.findByText("Configure category capacity");
+		expect(screen.queryByText("No categories configured yet")).toBeNull();
+		expect(screen.getAllByLabelText("Spots total")).toHaveLength(
+			savedCategoryRecords.length,
+		);
+	});
+
+	it("saves category capacity updates", async () => {
+		const firstCategory = savedCategoryRecords[0];
+		if (!firstCategory) throw new Error("Expected a saved category fixture");
+
+		vi.mocked(updateEventCategoryCapacity).mockResolvedValueOnce({
+			...firstCategory,
+			spotsTotal: 150,
+			spotsRemaining: 120,
+		});
+
+		renderForm(savedCategoryRecords);
+
+		fireEvent.change(
+			screen.getAllByLabelText("Spots total")[0] as HTMLInputElement,
+			{
+				target: { value: "150" },
+			},
+		);
+		fireEvent.change(
+			screen.getAllByLabelText("Spots remaining")[0] as HTMLInputElement,
+			{
+				target: { value: "120" },
+			},
+		);
+		fireEvent.click(
+			screen.getAllByRole("button", {
+				name: "Save capacity",
+			})[0] as HTMLButtonElement,
+		);
+
+		await waitFor(() =>
+			expect(updateEventCategoryCapacity).toHaveBeenCalledWith({
+				data: {
+					eventId,
+					categoryId: firstCategory.id,
+					capacity: { spotsTotal: 150, spotsRemaining: 120 },
+				},
+			}),
+		);
+		expect(toast.success).toHaveBeenCalledWith("5K capacity updated");
 	});
 });

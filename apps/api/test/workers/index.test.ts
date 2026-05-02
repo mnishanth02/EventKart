@@ -1,6 +1,10 @@
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { createWorkerCdnPurgeConfig } from "../../src/workers/index.js";
+import {
+	createWorkerCdnPurgeConfig,
+	isWorkerDirectRun,
+} from "../../src/workers/index.js";
 
 describe("createWorkerCdnPurgeConfig", () => {
 	it("normalizes CDN_BASE_URL to an origin when purge is enabled", () => {
@@ -30,5 +34,38 @@ describe("createWorkerCdnPurgeConfig", () => {
 		).toThrow(
 			/CDN_BASE_URL must be an absolute origin without a path, query, or hash/,
 		);
+	});
+});
+
+describe("isWorkerDirectRun", () => {
+	it("returns true when argv1 (.ts) matches import.meta.url", () => {
+		const argv1 = "/repo/apps/api/src/workers/index.ts";
+		const importMetaUrl = pathToFileURL(argv1).href;
+
+		expect(isWorkerDirectRun(argv1, importMetaUrl)).toBe(true);
+	});
+
+	it("returns true when argv1 (.js) matches import.meta.url", () => {
+		const argv1 = "/repo/apps/api/dist/workers/index.js";
+		const importMetaUrl = pathToFileURL(argv1).href;
+
+		expect(isWorkerDirectRun(argv1, importMetaUrl)).toBe(true);
+	});
+
+	it("returns false when argv1 does not match import.meta.url", () => {
+		const argv1 = "/repo/apps/api/src/server.ts";
+		const importMetaUrl = pathToFileURL(
+			"/repo/apps/api/src/workers/index.ts",
+		).href;
+
+		expect(isWorkerDirectRun(argv1, importMetaUrl)).toBe(false);
+	});
+
+	it("returns false when argv1 is undefined", () => {
+		const importMetaUrl = pathToFileURL(
+			"/repo/apps/api/src/workers/index.ts",
+		).href;
+
+		expect(isWorkerDirectRun(undefined, importMetaUrl)).toBe(false);
 	});
 });

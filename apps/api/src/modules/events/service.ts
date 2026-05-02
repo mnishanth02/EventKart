@@ -501,7 +501,9 @@ function hasOnlyPublishedLowRiskFields(input: unknown): boolean {
 		return false;
 	}
 
-	return providedKeys.every((key) => PUBLISHED_EVENT_LOW_RISK_FIELD_SET.has(key));
+	return providedKeys.every((key) =>
+		PUBLISHED_EVENT_LOW_RISK_FIELD_SET.has(key),
+	);
 }
 
 function throwPublishedHighRiskEditConflict(
@@ -843,7 +845,10 @@ function toValidationDetails(error: {
 function throwInvalidEventDetails(
 	error: Parameters<typeof toValidationDetails>[0],
 ): never {
-	throw new ValidationError("Invalid event details", toValidationDetails(error));
+	throw new ValidationError(
+		"Invalid event details",
+		toValidationDetails(error),
+	);
 }
 
 async function selectEventForCategories(
@@ -1718,6 +1723,20 @@ export async function getPublishReadiness(
 		db,
 		userId,
 		eventId,
+	);
+
+	return buildPublishReadinessForEvent(db, event, organizer, new Date());
+}
+
+export async function getPublishReadinessForEvent(
+	db: Database,
+	eventId: string,
+): Promise<PublishReadiness> {
+	const parsedEventId = parseUuid(eventId, "event id");
+	const event = await selectEventForCategories(db, parsedEventId);
+	const organizer = await selectOrganizerForPublishReadiness(
+		db,
+		event.organizerId,
 	);
 
 	return buildPublishReadinessForEvent(db, event, organizer, new Date());
