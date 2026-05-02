@@ -16,7 +16,7 @@ services:
     volumes:
       - eventkart-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U eventkart -d eventkart_dev"]
+      test: [ "CMD-SHELL", "pg_isready -U eventkart -d eventkart_dev" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -31,14 +31,12 @@ services:
     ports:
       - "6379:6379"
     command: >
-      redis-server
-      --maxmemory 256mb
-      --maxmemory-policy volatile-lru
-      --appendonly yes
+      redis-server --maxmemory 256mb --maxmemory-policy noeviction --appendonly
+      yes
     volumes:
       - eventkart-redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5

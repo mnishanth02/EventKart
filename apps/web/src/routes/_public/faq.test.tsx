@@ -12,7 +12,11 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 import { serializeJsonLdForInlineScript } from "#/features/event-detail/json-ld";
-import { buildFaqPageJsonLd, FAQ_ITEMS, FaqPageView } from "./faq";
+import {
+	buildFaqPageJsonLd,
+	FAQ_ITEMS,
+	FaqPageView,
+} from "#/features/legal-pages/faq";
 
 afterEach(() => {
 	cleanup();

@@ -63,6 +63,24 @@ describe("GET /health", () => {
 		expect(response.headers["access-control-allow-credentials"]).toBe("true");
 		expect(response.headers["access-control-allow-methods"]).toContain("GET");
 	});
+
+	it("allows the fallback local web origin for logout preflight", async () => {
+		const response = await app.inject({
+			method: "OPTIONS",
+			url: "/api/v1/auth/logout",
+			headers: {
+				origin: "http://localhost:3002",
+				"access-control-request-method": "POST",
+				"access-control-request-headers": "x-csrf-token,content-type",
+			},
+		});
+
+		expect(response.statusCode).toBe(204);
+		expect(response.headers["access-control-allow-origin"]).toBe(
+			"http://localhost:3002",
+		);
+		expect(response.headers["access-control-allow-credentials"]).toBe("true");
+	});
 });
 
 describe("GET /ready", () => {

@@ -17,7 +17,7 @@ vi.mock("#/features/legal-pages/cache-headers", () => ({
 	setLegalPageCacheHeaders: vi.fn(async () => {}),
 }));
 
-import { PrivacyPage } from "./privacy";
+import { PrivacyPage } from "#/features/legal-pages/components/privacy-page";
 
 afterEach(() => {
 	cleanup();
@@ -43,12 +43,7 @@ describe("PrivacyPage", () => {
 		const headers = within(table)
 			.getAllByRole("columnheader")
 			.map((th) => th.textContent?.trim().toLowerCase() ?? "");
-		expect(headers).toEqual([
-			"data class",
-			"examples",
-			"access",
-			"retention",
-		]);
+		expect(headers).toEqual(["data class", "examples", "access", "retention"]);
 
 		const bodyRows = table.querySelectorAll("tbody tr");
 		const rowLabels = Array.from(bodyRows).map(

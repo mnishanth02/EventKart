@@ -48,12 +48,12 @@ import {
  */
 function validateOrigin(
 	requestOrigin: string | undefined,
-	allowedOrigin: string,
+	allowedOrigins: readonly string[],
 ): boolean {
 	if (!requestOrigin) {
 		return false;
 	}
-	return requestOrigin === allowedOrigin;
+	return allowedOrigins.includes(requestOrigin);
 }
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
@@ -120,9 +120,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 		async (request, reply) => {
 			// Login-CSRF protection: validate Origin header
 			const origin = request.headers.origin;
-			if (!validateOrigin(origin, fastify.config.WEB_ORIGIN)) {
+			if (!validateOrigin(origin, fastify.config.WEB_ORIGINS)) {
 				request.log.warn(
-					{ origin, expected: fastify.config.WEB_ORIGIN },
+					{ origin, expected: fastify.config.WEB_ORIGINS },
 					"OTP verify rejected: invalid Origin header",
 				);
 				throw new ForbiddenError("Invalid request origin", "INVALID_ORIGIN");

@@ -1,3 +1,4 @@
+import { loadEnvFile } from "node:process";
 import { pathToFileURL } from "node:url";
 import { createDatabase } from "@repo/db";
 import { Queue } from "bullmq";
@@ -24,7 +25,32 @@ import {
 // Worker service entry point — runs as a separate Railway service.
 // Usage: pnpm --filter api start:worker
 
+let hasLoadedWorkerEnvFile = false;
+
+function ensureWorkerEnvLoaded() {
+	if (hasLoadedWorkerEnvFile) {
+		return;
+	}
+
+	try {
+		loadEnvFile();
+	} catch (error) {
+		const code =
+			typeof error === "object" && error !== null && "code" in error
+				? error.code
+				: undefined;
+
+		if (code !== "ENOENT") {
+			throw error;
+		}
+	}
+
+	hasLoadedWorkerEnvFile = true;
+}
+
 function getRequiredEnv(name: string): string {
+	ensureWorkerEnvLoaded();
+
 	const value = process.env[name];
 	if (!value) {
 		throw new Error(

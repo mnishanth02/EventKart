@@ -85,7 +85,7 @@ interface AuthedSidebarProps {
 
 function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 	const navigate = useNavigate();
-	const { clearSession, invalidateSession } = useAuthActions();
+	const { clearSession } = useAuthActions();
 	const areaConfig = AREA_CONFIG[area];
 	const navItems = NAV_ITEMS[area];
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -93,7 +93,7 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 	async function handleLogout() {
 		try {
 			await apiClient("/auth/logout", { method: "POST" });
-			invalidateSession();
+			clearSession();
 		} catch {
 			// API failed — clear local cache so UI reflects logged-out state,
 			// but warn the user that the server session may persist.
@@ -116,19 +116,19 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarGroupLabel>{ areaConfig.label }</SidebarGroupLabel>
+					<SidebarGroupLabel>{areaConfig.label}</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{ navItems.map((item) => (
-								<SidebarMenuItem key={ item.href }>
-									<SidebarMenuButton asChild isActive={ pathname === item.href }>
-										<Link to={ item.href }>
+							{navItems.map((item) => (
+								<SidebarMenuItem key={item.href}>
+									<SidebarMenuButton asChild isActive={pathname === item.href}>
+										<Link to={item.href}>
 											<item.icon className="size-4" />
-											<span>{ item.label }</span>
+											<span>{item.label}</span>
 										</Link>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
-							)) }
+							))}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
@@ -137,11 +137,11 @@ function AuthedSidebar({ area, user }: AuthedSidebarProps) {
 			<SidebarFooter className="border-t p-4">
 				<div className="flex items-center justify-between">
 					<Badge variant="secondary" className="text-xs">
-						{ user.role }
+						{user.role}
 					</Badge>
 					<button
 						type="button"
-						onClick={ handleLogout }
+						onClick={handleLogout}
 						className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
 					>
 						<LogOutIcon className="size-3.5" />

@@ -36,7 +36,11 @@ const config = defineConfig({
 		// rather than an explicit app.config.ts, which TanStack Start RC does not need.)
 		nitro(),
 		tailwindcss(),
-		tanstackStart(),
+		tanstackStart({
+			router: {
+				routeFileIgnorePattern: "\\.test\\.(ts|tsx)$",
+			},
+		}),
 		viteReact(),
 		babel({ presets: [reactCompilerPreset()] }),
 		...(sentryBuildConfig

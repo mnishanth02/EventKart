@@ -30,6 +30,7 @@ export function useAuthActions() {
 	}
 
 	function clearSession() {
+		void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
 		queryClient.setQueryData(AUTH_QUERY_KEY, null);
 	}
 

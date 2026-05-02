@@ -1,7 +1,6 @@
 import type { FastifyInstance } from "fastify";
-
-import type { AppConfig } from "../../src/lib/config.js";
 import { buildApp } from "../../src/app.js";
+import type { AppConfig } from "../../src/lib/config.js";
 
 export async function buildTestApp(
 	overrides: Partial<AppConfig> = {},
@@ -12,7 +11,7 @@ export async function buildTestApp(
 			HOST: "127.0.0.1",
 			PORT: 3001,
 			LOG_LEVEL: "info",
-			WEB_ORIGIN: "http://localhost:3000",
+			WEB_ORIGIN: "http://localhost:3000,http://localhost:3002",
 			INTERNAL_API_KEY: "test-internal-key",
 			DATABASE_URL:
 				"postgresql://eventkart:eventkart_dev@localhost:5432/eventkart_dev",

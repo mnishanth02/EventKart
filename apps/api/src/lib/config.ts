@@ -143,6 +143,28 @@ function parseWebOrigin(value: string) {
 	return parseAbsoluteOrigin(value);
 }
 
+function parseWebOriginList(value: string) {
+	const origins = value
+		.split(",")
+		.map((origin) => origin.trim())
+		.filter(Boolean);
+
+	if (origins.length === 0) {
+		return null;
+	}
+
+	const normalizedOrigins: string[] = [];
+	for (const origin of origins) {
+		const parsed = parseWebOrigin(origin);
+		if (!parsed) {
+			return null;
+		}
+		normalizedOrigins.push(parsed.origin);
+	}
+
+	return [...new Set(normalizedOrigins)];
+}
+
 export const appConfigSchema = Type.Object({
 	HOST: Type.String({ default: "::" }),
 	PORT: Type.Integer({ default: 3001, minimum: 1, maximum: 65535 }),
@@ -157,7 +179,10 @@ export const appConfigSchema = Type.Object({
 		],
 		{ default: "info" },
 	),
-	WEB_ORIGIN: Type.String({ default: "http://localhost:3000" }),
+	WEB_ORIGIN: Type.String({
+		default: "http://localhost:3000,http://localhost:3002",
+	}),
+	WEB_ORIGINS: Type.Array(Type.String(), { default: [] }),
 	DATABASE_URL: Type.String({ minLength: 1 }),
 	REDIS_URL: Type.String({ default: "redis://localhost:6379" }),
 	INTERNAL_API_KEY: Type.Optional(Type.String({ minLength: 1 })),
@@ -221,11 +246,15 @@ export function loadConfig(
 		}),
 	});
 
-	const webOrigin = parseWebOrigin(config.WEB_ORIGIN);
+	const webOriginInput =
+		config.WEB_ORIGINS.length > 0
+			? config.WEB_ORIGINS.join(",")
+			: config.WEB_ORIGIN;
+	const webOrigins = parseWebOriginList(webOriginInput);
 
-	if (!webOrigin) {
+	if (!webOrigins) {
 		throw new Error(
-			"Invalid configuration: WEB_ORIGIN must be an absolute origin without a path, query, or hash.",
+			"Invalid configuration: WEB_ORIGIN must contain one or more comma-separated absolute origins without paths, queries, or hashes.",
 		);
 	}
 
@@ -287,7 +316,8 @@ export function loadConfig(
 
 	return {
 		...config,
-		WEB_ORIGIN: webOrigin.origin,
+		WEB_ORIGIN: webOrigins[0] ?? "http://localhost:3000",
+		WEB_ORIGINS: webOrigins,
 		...(cdnBaseUrl !== undefined ? { CDN_BASE_URL: cdnBaseUrl } : {}),
 	};
 }
