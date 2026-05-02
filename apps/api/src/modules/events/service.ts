@@ -67,6 +67,7 @@ import {
 	ValidationError,
 } from "../../lib/errors.js";
 import { enqueueSitemapRegen } from "../../queues/sitemap-regen.js";
+import { hasAcceptedAllPolicies } from "../organizer/policy-service.js";
 import { getOrganizerByUserId } from "../organizer/service.js";
 import {
 	type CdnPurgePayload,
@@ -1072,6 +1073,13 @@ export async function createDraftEvent(
 	if (!organizer) {
 		throw new NotFoundError(
 			"Organizer profile not found. Please register first.",
+		);
+	}
+
+	const policiesAccepted = await hasAcceptedAllPolicies(db, userId);
+	if (!policiesAccepted) {
+		throw new ForbiddenError(
+			"Organizer policies must be accepted before creating events",
 		);
 	}
 

@@ -119,8 +119,6 @@ export const events = pgTable(
 			.where(
 				sql`${table.firstPublishedAt} IS NOT NULL AND ${table.isPaid} = true`,
 			),
-		check("events_v1_city_check", sql.raw(`"city" = '${V1_EVENT_CITY}'`)),
-		check("events_v1_state_check", sql.raw(`"state" = '${V1_EVENT_STATE}'`)),
 		check(
 			"events_v1_country_check",
 			sql.raw(`"country" = '${V1_EVENT_COUNTRY}'`),

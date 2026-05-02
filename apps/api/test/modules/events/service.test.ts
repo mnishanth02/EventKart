@@ -9,6 +9,10 @@ import {
 	eventPricingConfigSchema,
 	eventRegistrationFormSchema,
 } from "@repo/shared/schemas";
+import {
+	CURRENT_POLICY_VERSIONS,
+	REQUIRED_ORGANIZER_POLICIES,
+} from "@repo/shared/constants";
 import { EVENT_SLUG_MAX_LENGTH } from "@repo/shared/utils";
 import { describe, expect, it, vi } from "vitest";
 import type { AuditLogger } from "../../../src/lib/audit.js";
@@ -55,12 +59,24 @@ const OTHER_ORGANIZER_ID = "770e8400-e29b-41d4-a716-446655440002";
 type SelectRows = Record<string, unknown>[];
 
 function createSelectQuery(rows: SelectRows) {
-	const query = {
+	const query: {
+		for: ReturnType<typeof vi.fn>;
+		from: ReturnType<typeof vi.fn>;
+		limit: ReturnType<typeof vi.fn>;
+		orderBy: ReturnType<typeof vi.fn>;
+		where: ReturnType<typeof vi.fn>;
+		then: (
+			onFulfilled?: (value: SelectRows) => unknown,
+			onRejected?: (reason: unknown) => unknown,
+		) => Promise<unknown>;
+	} = {
 		for: vi.fn(),
 		from: vi.fn(),
 		limit: vi.fn(),
 		orderBy: vi.fn(),
 		where: vi.fn(),
+		then: (onFulfilled, onRejected) =>
+			Promise.resolve(rows).then(onFulfilled, onRejected),
 	};
 
 	query.for.mockReturnValue(query);
@@ -190,6 +206,14 @@ const verifiedOrganizerRow = {
 	isVerified: true,
 	razorpayAccountStatus: "active",
 };
+
+function buildAcceptedConsentRows() {
+	return REQUIRED_ORGANIZER_POLICIES.map((policyType) => ({
+		consentType: policyType,
+		consentVersion: CURRENT_POLICY_VERSIONS[policyType],
+		acceptedAt: new Date("2026-04-25T00:00:00.000Z"),
+	}));
+}
 
 function buildEventRow(overrides: Record<string, unknown> = {}) {
 	return {
@@ -536,7 +560,7 @@ describe("requiresAdminReview", () => {
 describe("createDraftEvent", () => {
 	it("creates a draft paid running event with shared V1 defaults", async () => {
 		const { db, insertValues } = createMockSlugStore(
-			[[organizerRow], [], []],
+			[[organizerRow], buildAcceptedConsentRows(), [], []],
 			[],
 			[buildEventRow()],
 		);
@@ -599,7 +623,6 @@ describe("createDraftEvent", () => {
 	});
 
 	it.each([
-		["city", { city: "Chennai" }],
 		["event type", { eventType: "workshop" }],
 		["payment", { isPaid: false }],
 		[
@@ -625,7 +648,13 @@ describe("createDraftEvent", () => {
 
 	it("uses a suffixed slug when the base slug already exists", async () => {
 		const { db, insertValues, select } = createMockSlugStore(
-			[[organizerRow], [{ id: "existing-event" }], [], []],
+			[
+				[organizerRow],
+				buildAcceptedConsentRows(),
+				[{ id: "existing-event" }],
+				[],
+				[],
+			],
 			[],
 			[buildEventRow({ slug: "coimbatore-city-10k-2" })],
 		);
@@ -640,7 +669,38 @@ describe("createDraftEvent", () => {
 		expect(insertValues).toHaveBeenCalledWith(
 			expect.objectContaining({ slug: "coimbatore-city-10k-2" }),
 		);
-		expect(select).toHaveBeenCalledTimes(4);
+		expect(select).toHaveBeenCalledTimes(5);
+	});
+
+	it("rejects when organizer has not accepted required policies", async () => {
+		const { db, insert } = createMockSlugStore([[organizerRow], []]);
+
+		await expect(
+			createDraftEvent(
+				{ db: asDatabase(db), log: { info: vi.fn() } },
+				TEST_USER_ID,
+				validCreateEventInput,
+			),
+		).rejects.toThrow(ForbiddenError);
+		expect(insert).not.toHaveBeenCalled();
+	});
+
+	it("accepts events in any Indian city beyond Coimbatore", async () => {
+		const { db, insertValues } = createMockSlugStore(
+			[[organizerRow], buildAcceptedConsentRows(), [], []],
+			[],
+			[buildEventRow({ city: "Chennai", state: "Tamil Nadu" })],
+		);
+
+		await createDraftEvent(
+			{ db: asDatabase(db), log: { info: vi.fn() } },
+			TEST_USER_ID,
+			{ ...validCreateEventInput, city: "Chennai", state: "Tamil Nadu" },
+		);
+
+		expect(insertValues).toHaveBeenCalledWith(
+			expect.objectContaining({ city: "Chennai", state: "Tamil Nadu" }),
+		);
 	});
 });
 

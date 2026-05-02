@@ -52,15 +52,15 @@ function parseDateTime(value: string): Date {
 	return new Date(value);
 }
 
-const coimbatoreDateFormatter = new Intl.DateTimeFormat("en-CA", {
+const istDateFormatter = new Intl.DateTimeFormat("en-CA", {
 	timeZone: V1_EVENT_TIMEZONE,
 	year: "numeric",
 	month: "2-digit",
 	day: "2-digit",
 });
 
-function getCoimbatoreDateKey(value: string): string {
-	const parts = coimbatoreDateFormatter.formatToParts(parseDateTime(value));
+function getEventDateKeyInIst(value: string): string {
+	const parts = istDateFormatter.formatToParts(parseDateTime(value));
 	const year = parts.find((part) => part.type === "year")?.value;
 	const month = parts.find((part) => part.type === "month")?.value;
 	const day = parts.find((part) => part.type === "day")?.value;
@@ -117,14 +117,16 @@ export const createEventBaseSchema = z.object({
 		.trim()
 		.optional(),
 	city: z
-		.literal(V1_EVENT_CITY, {
-			message: "V1 event creation is limited to Coimbatore",
-		})
+		.string()
+		.trim()
+		.min(2, "City must be at least 2 characters")
+		.max(100, "City must not exceed 100 characters")
 		.default(V1_EVENT_CITY),
 	state: z
-		.literal(V1_EVENT_STATE, {
-			message: "V1 event creation is limited to Tamil Nadu",
-		})
+		.string()
+		.trim()
+		.min(2, "State must be at least 2 characters")
+		.max(100, "State must not exceed 100 characters")
 		.default(V1_EVENT_STATE),
 	country: z
 		.literal(V1_EVENT_COUNTRY, {
@@ -185,7 +187,7 @@ function validateEventSchedule(
 	}
 
 	if (
-		getCoimbatoreDateKey(input.startAt) !== getCoimbatoreDateKey(input.endAt)
+		getEventDateKeyInIst(input.startAt) !== getEventDateKeyInIst(input.endAt)
 	) {
 		ctx.addIssue({
 			code: "custom",

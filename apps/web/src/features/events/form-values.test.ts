@@ -6,11 +6,11 @@ import {
 import { eventSchema } from "@repo/shared/schemas";
 import { describe, expect, it } from "vitest";
 import {
-	coimbatoreDateTimeLocalToIso,
 	eventEditValuesSchema,
 	eventToEditFormValues,
 	getDefaultCreateEventValues,
-	isoToCoimbatoreDateTimeLocal,
+	istDateTimeLocalToIso,
+	isoToIstDateTimeLocal,
 } from "./form-values";
 
 describe("event form values", () => {
@@ -22,14 +22,14 @@ describe("event form values", () => {
 		});
 	});
 
-	it("converts Coimbatore local datetime values to ISO strings", () => {
-		expect(coimbatoreDateTimeLocalToIso("2026-08-15T06:00")).toBe(
+	it("converts IST datetime-local to ISO", () => {
+		expect(istDateTimeLocalToIso("2026-08-15T06:00")).toBe(
 			"2026-08-15T00:30:00.000Z",
 		);
 	});
 
-	it("converts ISO strings back to Coimbatore local datetime values", () => {
-		expect(isoToCoimbatoreDateTimeLocal("2026-08-15T00:30:00.000Z")).toBe(
+	it("converts ISO to IST datetime-local", () => {
+		expect(isoToIstDateTimeLocal("2026-08-15T00:30:00.000Z")).toBe(
 			"2026-08-15T06:00",
 		);
 	});

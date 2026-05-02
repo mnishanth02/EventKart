@@ -1,10 +1,8 @@
 import {
 	V1_EVENT_CATEGORY,
-	V1_EVENT_CITY,
 	V1_EVENT_COUNTRY,
 	V1_EVENT_CURRENCY,
 	V1_EVENT_SPORT,
-	V1_EVENT_STATE,
 	V1_EVENT_TIMEZONE,
 	V1_EVENT_TYPE,
 } from "@repo/shared/constants";
@@ -30,9 +28,9 @@ import { ApiClientError } from "#/lib/api-client.shared";
 import { toastRetry } from "@/components/design-system";
 import { createEvent } from "../api";
 import {
-	coimbatoreDateTimeLocalToIso,
 	getDefaultCreateEventValues,
-	isoToCoimbatoreDateTimeLocal,
+	istDateTimeLocalToIso,
+	isoToIstDateTimeLocal,
 } from "../form-values";
 
 function FormFieldError({
@@ -64,10 +62,7 @@ function V1ConstraintSummary() {
 	const constraints = [
 		{ label: "Event type", value: `${V1_EVENT_TYPE} / ${V1_EVENT_SPORT}` },
 		{ label: "Category", value: V1_EVENT_CATEGORY },
-		{
-			label: "Location",
-			value: `${V1_EVENT_CITY}, ${V1_EVENT_STATE}, ${V1_EVENT_COUNTRY}`,
-		},
+		{ label: "Country", value: V1_EVENT_COUNTRY },
 		{ label: "Pricing", value: `Paid only (${V1_EVENT_CURRENCY})` },
 		{ label: "Schedule", value: "Single-day events only" },
 		{ label: "Timezone", value: V1_EVENT_TIMEZONE },
@@ -81,15 +76,20 @@ function V1ConstraintSummary() {
 					Event creation is intentionally limited for launch readiness.
 				</CardDescription>
 			</CardHeader>
-			<CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-				{constraints.map((constraint) => (
-					<div key={constraint.label} className="space-y-1">
-						<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-							{constraint.label}
-						</p>
-						<Badge variant="secondary">{constraint.value}</Badge>
-					</div>
-				))}
+			<CardContent className="space-y-3">
+				<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+					{constraints.map((constraint) => (
+						<div key={constraint.label} className="space-y-1">
+							<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+								{constraint.label}
+							</p>
+							<Badge variant="secondary">{constraint.value}</Badge>
+						</div>
+					))}
+				</div>
+				<p className="text-muted-foreground text-xs">
+					Hosted in your chosen Indian city — currently piloting in Coimbatore.
+				</p>
 			</CardContent>
 		</Card>
 	);
@@ -107,6 +107,8 @@ function hasRequiredCreateEventValues(values: CreateEventInput) {
 		values.description.trim().length > 0 &&
 		values.venueName.trim().length > 0 &&
 		values.addressLine1.trim().length > 0 &&
+		(values.city?.trim().length ?? 0) > 0 &&
+		(values.state?.trim().length ?? 0) > 0 &&
 		values.startAt.trim().length > 0 &&
 		values.endAt.trim().length > 0 &&
 		values.routeDetails.trim().length > 0
@@ -159,8 +161,8 @@ export function EventCreateForm() {
 				<CardHeader>
 					<CardTitle>Create running event</CardTitle>
 					<CardDescription>
-						Create a draft paid running event in Coimbatore. You can publish it
-						after review once ticketing details are configured.
+						Create a draft paid running event. You can publish it after review
+						once ticketing details are configured.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -227,7 +229,7 @@ export function EventCreateForm() {
 							)}
 						</form.Field>
 
-						<div className="grid gap-6 md:grid-cols-2">
+						<div className="grid gap-6 md:grid-cols-3">
 							<form.Field name="venueName">
 								{(field) => (
 									<div className="space-y-2">
@@ -255,15 +257,59 @@ export function EventCreateForm() {
 								)}
 							</form.Field>
 
-							<div className="space-y-2">
-								<Label htmlFor="event-location">City</Label>
-								<Input
-									id="event-location"
-									value={`${V1_EVENT_CITY}, ${V1_EVENT_STATE}`}
-									disabled
-									readOnly
-								/>
-							</div>
+							<form.Field name="city">
+								{(field) => (
+									<div className="space-y-2">
+										<Label htmlFor={field.name}>
+											City <RequiredMark />
+										</Label>
+										<Input
+											id={field.name}
+											name={field.name}
+											value={field.state.value}
+											placeholder="Coimbatore"
+											aria-describedby={`${field.name}-error`}
+											aria-invalid={field.state.meta.errors.length > 0}
+											aria-required="true"
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+										/>
+										{field.state.meta.isTouched && (
+											<FormFieldError
+												id={`${field.name}-error`}
+												errors={field.state.meta.errors}
+											/>
+										)}
+									</div>
+								)}
+							</form.Field>
+
+							<form.Field name="state">
+								{(field) => (
+									<div className="space-y-2">
+										<Label htmlFor={field.name}>
+											State <RequiredMark />
+										</Label>
+										<Input
+											id={field.name}
+											name={field.name}
+											value={field.state.value}
+											placeholder="Tamil Nadu"
+											aria-describedby={`${field.name}-error`}
+											aria-invalid={field.state.meta.errors.length > 0}
+											aria-required="true"
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+										/>
+										{field.state.meta.isTouched && (
+											<FormFieldError
+												id={`${field.name}-error`}
+												errors={field.state.meta.errors}
+											/>
+										)}
+									</div>
+								)}
+							</form.Field>
 						</div>
 
 						<form.Field name="addressLine1">
@@ -358,14 +404,14 @@ export function EventCreateForm() {
 											id={field.name}
 											name={field.name}
 											type="datetime-local"
-											value={isoToCoimbatoreDateTimeLocal(field.state.value)}
+											value={isoToIstDateTimeLocal(field.state.value)}
 											aria-describedby={`${field.name}-help ${field.name}-error`}
 											aria-invalid={field.state.meta.errors.length > 0}
 											aria-required="true"
 											onBlur={field.handleBlur}
 											onChange={(e) =>
 												field.handleChange(
-													coimbatoreDateTimeLocalToIso(e.target.value),
+													istDateTimeLocalToIso(e.target.value),
 												)
 											}
 										/>
@@ -373,7 +419,7 @@ export function EventCreateForm() {
 											id={`${field.name}-help`}
 											className="text-muted-foreground text-xs"
 										>
-											Select the Coimbatore local date and start time.
+											Select the event local date and start time (IST).
 										</p>
 										{field.state.meta.isTouched && (
 											<FormFieldError
@@ -395,14 +441,14 @@ export function EventCreateForm() {
 											id={field.name}
 											name={field.name}
 											type="datetime-local"
-											value={isoToCoimbatoreDateTimeLocal(field.state.value)}
+											value={isoToIstDateTimeLocal(field.state.value)}
 											aria-describedby={`${field.name}-help ${field.name}-error`}
 											aria-invalid={field.state.meta.errors.length > 0}
 											aria-required="true"
 											onBlur={field.handleBlur}
 											onChange={(e) =>
 												field.handleChange(
-													coimbatoreDateTimeLocalToIso(e.target.value),
+													istDateTimeLocalToIso(e.target.value),
 												)
 											}
 										/>
@@ -410,7 +456,7 @@ export function EventCreateForm() {
 											id={`${field.name}-help`}
 											className="text-muted-foreground text-xs"
 										>
-											Must be after start and on the same Coimbatore day.
+											Must be after start and on the same calendar day (IST).
 										</p>
 										{field.state.meta.isTouched && (
 											<FormFieldError
@@ -432,14 +478,14 @@ export function EventCreateForm() {
 											id={field.name}
 											name={field.name}
 											type="datetime-local"
-											value={isoToCoimbatoreDateTimeLocal(field.state.value)}
+											value={isoToIstDateTimeLocal(field.state.value)}
 											aria-describedby={`${field.name}-help ${field.name}-error`}
 											aria-invalid={field.state.meta.errors.length > 0}
 											onBlur={field.handleBlur}
 											onChange={(e) =>
 												field.handleChange(
 													e.target.value
-														? coimbatoreDateTimeLocalToIso(e.target.value)
+														? istDateTimeLocalToIso(e.target.value)
 														: undefined,
 												)
 											}
@@ -468,14 +514,14 @@ export function EventCreateForm() {
 											id={field.name}
 											name={field.name}
 											type="datetime-local"
-											value={isoToCoimbatoreDateTimeLocal(field.state.value)}
+											value={isoToIstDateTimeLocal(field.state.value)}
 											aria-describedby={`${field.name}-help ${field.name}-error`}
 											aria-invalid={field.state.meta.errors.length > 0}
 											onBlur={field.handleBlur}
 											onChange={(e) =>
 												field.handleChange(
 													e.target.value
-														? coimbatoreDateTimeLocalToIso(e.target.value)
+														? istDateTimeLocalToIso(e.target.value)
 														: undefined,
 												)
 											}

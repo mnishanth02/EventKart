@@ -71,7 +71,7 @@ export const eventEditValuesSchema = editableEventBaseSchema.transform(
 export type EventEditFormValues = z.input<typeof eventEditValuesSchema>;
 export type EventUpdatePayload = z.output<typeof eventEditValuesSchema>;
 
-export function coimbatoreDateTimeLocalToIso(value: string): string {
+export function istDateTimeLocalToIso(value: string): string {
 	if (!value) return "";
 
 	const match = DATE_TIME_LOCAL_PATTERN.exec(value);
@@ -85,9 +85,7 @@ export function coimbatoreDateTimeLocalToIso(value: string): string {
 	return new Date(`${date}T${hour}:${minute}:00.000+05:30`).toISOString();
 }
 
-export function isoToCoimbatoreDateTimeLocal(
-	value: string | undefined,
-): string {
+export function isoToIstDateTimeLocal(value: string | undefined): string {
 	if (!value) return "";
 
 	const date = new Date(value);

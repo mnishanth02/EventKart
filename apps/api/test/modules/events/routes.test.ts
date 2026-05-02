@@ -525,7 +525,6 @@ describe("POST /api/v1/events", () => {
 	});
 
 	it.each([
-		["city", { city: "Chennai" }],
 		["type", { eventType: "workshop" }],
 		["payment", { isPaid: false }],
 	])("returns 400 for invalid V1 %s constraints", async (_name, override) => {
@@ -596,6 +595,29 @@ describe("POST /api/v1/events", () => {
 			error: { code: "CSRF_VALIDATION_FAILED" },
 		});
 		expect(mockCreateDraftEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns 403 when organizer has not accepted required policies", async () => {
+		setupOrganizerSession(app);
+		mockCreateDraftEvent.mockRejectedValue(
+			new ForbiddenError(
+				"Organizer policies must be accepted before creating events",
+			),
+		);
+		const csrf = buildCsrfHeaders();
+
+		const response = await app.inject({
+			method: "POST",
+			url: EVENTS_URL,
+			...csrf,
+			payload: validCreateEventBody,
+		});
+
+		expect(response.statusCode).toBe(403);
+		expect(response.json()).toMatchObject({
+			success: false,
+			error: { code: "FORBIDDEN" },
+		});
 	});
 });
 

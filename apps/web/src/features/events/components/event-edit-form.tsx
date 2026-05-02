@@ -18,11 +18,11 @@ import { ApiClientError } from "#/lib/api-client.shared";
 import { toastRetry } from "@/components/design-system";
 import { updateEvent } from "../api";
 import {
-	coimbatoreDateTimeLocalToIso,
+	istDateTimeLocalToIso,
 	type EventUpdatePayload,
 	eventEditValuesSchema,
 	eventToEditFormValues,
-	isoToCoimbatoreDateTimeLocal,
+	isoToIstDateTimeLocal,
 } from "../form-values";
 import { eventQueryKey } from "../queries";
 import type { Event } from "../types";
@@ -370,14 +370,14 @@ function EventEditFormFields({
 											id={field.name}
 											name={field.name}
 											type="datetime-local"
-											value={isoToCoimbatoreDateTimeLocal(field.state.value)}
+											value={isoToIstDateTimeLocal(field.state.value)}
 											aria-describedby={`${field.name}-help ${field.name}-error`}
 											aria-invalid={field.state.meta.errors.length > 0}
 											aria-required="true"
 											onBlur={field.handleBlur}
 											onChange={(e) =>
 												field.handleChange(
-													coimbatoreDateTimeLocalToIso(e.target.value),
+													istDateTimeLocalToIso(e.target.value),
 												)
 											}
 										/>
@@ -385,7 +385,7 @@ function EventEditFormFields({
 											id={`${field.name}-help`}
 											className="text-muted-foreground text-xs"
 										>
-											Select the Coimbatore local date and start time.
+											Select the event local date and start time (IST).
 										</p>
 										{field.state.meta.isTouched && (
 											<FormFieldError
@@ -407,14 +407,14 @@ function EventEditFormFields({
 											id={field.name}
 											name={field.name}
 											type="datetime-local"
-											value={isoToCoimbatoreDateTimeLocal(field.state.value)}
+											value={isoToIstDateTimeLocal(field.state.value)}
 											aria-describedby={`${field.name}-help ${field.name}-error`}
 											aria-invalid={field.state.meta.errors.length > 0}
 											aria-required="true"
 											onBlur={field.handleBlur}
 											onChange={(e) =>
 												field.handleChange(
-													coimbatoreDateTimeLocalToIso(e.target.value),
+													istDateTimeLocalToIso(e.target.value),
 												)
 											}
 										/>
@@ -422,7 +422,7 @@ function EventEditFormFields({
 											id={`${field.name}-help`}
 											className="text-muted-foreground text-xs"
 										>
-											Must be after start and on the same Coimbatore day.
+											Must be after start and on the same calendar day (IST).
 										</p>
 										{field.state.meta.isTouched && (
 											<FormFieldError
@@ -444,14 +444,14 @@ function EventEditFormFields({
 											id={field.name}
 											name={field.name}
 											type="datetime-local"
-											value={isoToCoimbatoreDateTimeLocal(field.state.value)}
+											value={isoToIstDateTimeLocal(field.state.value)}
 											aria-describedby={`${field.name}-help ${field.name}-error`}
 											aria-invalid={field.state.meta.errors.length > 0}
 											onBlur={field.handleBlur}
 											onChange={(e) =>
 												field.handleChange(
 													e.target.value
-														? coimbatoreDateTimeLocalToIso(e.target.value)
+														? istDateTimeLocalToIso(e.target.value)
 														: undefined,
 												)
 											}
@@ -480,14 +480,14 @@ function EventEditFormFields({
 											id={field.name}
 											name={field.name}
 											type="datetime-local"
-											value={isoToCoimbatoreDateTimeLocal(field.state.value)}
+											value={isoToIstDateTimeLocal(field.state.value)}
 											aria-describedby={`${field.name}-help ${field.name}-error`}
 											aria-invalid={field.state.meta.errors.length > 0}
 											onBlur={field.handleBlur}
 											onChange={(e) =>
 												field.handleChange(
 													e.target.value
-														? coimbatoreDateTimeLocalToIso(e.target.value)
+														? istDateTimeLocalToIso(e.target.value)
 														: undefined,
 												)
 											}

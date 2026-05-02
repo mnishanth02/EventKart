@@ -34,17 +34,74 @@ describe("createEventInputSchema", () => {
 		});
 	});
 
-	it("rejects non-Coimbatore events", () => {
+	it("accepts events in any Indian city", () => {
 		const result = createEventInputSchema.safeParse({
 			...validCreateEventInput,
 			city: "Chennai",
+			state: "Tamil Nadu",
 		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.city).toBe("Chennai");
+			expect(result.data.state).toBe("Tamil Nadu");
+		}
+	});
 
+	it("rejects city shorter than 2 characters", () => {
+		const result = createEventInputSchema.safeParse({
+			...validCreateEventInput,
+			city: "A",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects city longer than 100 characters", () => {
+		const result = createEventInputSchema.safeParse({
+			...validCreateEventInput,
+			city: "A".repeat(101),
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects blank city after trimming", () => {
+		const result = createEventInputSchema.safeParse({
+			...validCreateEventInput,
+			city: "   ",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects blank state after trimming", () => {
+		const result = createEventInputSchema.safeParse({
+			...validCreateEventInput,
+			state: "   ",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("still rejects non-India country", () => {
+		const result = createEventInputSchema.safeParse({
+			...validCreateEventInput,
+			country: "Bhutan",
+		});
 		expect(result.success).toBe(false);
 		if (!result.success) {
-			expect(result.error.issues[0]?.message).toBe(
-				"V1 event creation is limited to Coimbatore",
-			);
+			expect(
+				result.error.issues.some((i) => i.message.includes("India")),
+			).toBe(true);
+		}
+	});
+
+	it("still rejects non-IST timezone", () => {
+		const result = createEventInputSchema.safeParse({
+			...validCreateEventInput,
+			timezone: "America/New_York",
+		});
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(
+				result.error.issues.some((i) => i.message.includes("Asia/Kolkata")),
+			).toBe(true);
 		}
 	});
 
