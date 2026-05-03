@@ -1,5 +1,5 @@
 import type { Database } from "@repo/db";
-import { and, eq, inArray } from "@repo/db";
+import { and, eq, inArray, isNull } from "@repo/db";
 import { organizers, verificationDocuments } from "@repo/db/schema";
 import {
 	AUDIT_ACTIONS,
@@ -356,7 +356,7 @@ export async function maybeUpdateOrganizerVerificationStatus(
 			userId: organizers.userId,
 		})
 		.from(organizers)
-		.where(eq(organizers.id, organizerId))
+		.where(and(eq(organizers.id, organizerId), isNull(organizers.deletedAt)))
 		.limit(1);
 
 	const org = orgs[0];

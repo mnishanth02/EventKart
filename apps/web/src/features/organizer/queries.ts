@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
+	getOrganizerDeletionPreview,
 	getOrganizerPolicyStatus,
 	getOrganizerProfile,
 	getVerificationDocuments,
@@ -50,5 +51,19 @@ export function verificationStatusQueryOptions() {
 		queryFn: () => getVerificationStatus(),
 		staleTime: 30_000,
 		gcTime: 300_000,
+	});
+}
+
+export const DELETION_PREVIEW_QUERY_KEY = [
+	"organizer",
+	"deletion-preview",
+] as const;
+
+export function organizerDeletionPreviewQueryOptions() {
+	return queryOptions({
+		queryKey: DELETION_PREVIEW_QUERY_KEY,
+		queryFn: () => getOrganizerDeletionPreview(),
+		staleTime: 0,
+		gcTime: 0,
 	});
 }

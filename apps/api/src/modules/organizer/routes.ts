@@ -1,5 +1,10 @@
 import type { ZodTypeProvider } from "@fastify/type-provider-zod";
-import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from "@repo/shared/constants";
+import {
+	AUDIT_ACTIONS,
+	AUDIT_RESOURCE_TYPES,
+	CSRF_COOKIE_NAME,
+	SESSION_COOKIE_NAME,
+} from "@repo/shared/constants";
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { createAuditLogger } from "../../lib/audit.js";
 import {
@@ -7,9 +12,16 @@ import {
 	UnauthorizedError,
 	ValidationError,
 } from "../../lib/errors.js";
+import { buildSessionCookieOptions } from "../../lib/session.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { requireInternal } from "../../middleware/require-internal.js";
 import { requireRole } from "../../middleware/require-role.js";
+import { buildCsrfClearOptions } from "../../plugins/csrf.js";
+import {
+	deleteOrganizerAccount,
+	previewOrganizerDeletion,
+	runDeletionSideEffects,
+} from "./deletion-service.js";
 import {
 	confirmDocumentUpload,
 	deleteVerificationDocument,
@@ -17,11 +29,11 @@ import {
 	maybeUpdateOrganizerVerificationStatus,
 	requestDocumentUpload,
 } from "./document-service.js";
-import { acceptPolicies, getPolicyStatus } from "./policy-service.js";
 import {
 	organizerExistsById,
 	selectOrganizerNextEvent,
 } from "./next-event-service.js";
+import { acceptPolicies, getPolicyStatus } from "./policy-service.js";
 import { lookupPublicOrganizerBySlug } from "./public-profile-service.js";
 import {
 	acceptPoliciesBodySchema,
@@ -37,6 +49,8 @@ import {
 	getPoliciesResponseSchema,
 	getVerificationStatusResponseSchema,
 	organizerConflictResponseSchema,
+	organizerDeletionPreviewResponseSchema,
+	organizerDeletionResponseSchema,
 	organizerErrorResponseSchema,
 	organizerIdParamsSchema,
 	organizerNextEventResponseSchema,
@@ -546,6 +560,115 @@ const organizerRoutes: FastifyPluginAsync = async (app) => {
 			);
 
 			return { success: true as const, data: { deleted: true as const } };
+		},
+	);
+
+	// ── Account deletion routes ──────────────────────────────────────
+
+	/**
+	 * GET /api/v1/organizers/me/deletion-preview
+	 * Preview what will be affected by deleting the organizer account.
+	 */
+	typedApp.get(
+		"/me/deletion-preview",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				response: {
+					200: organizerDeletionPreviewResponseSchema,
+					401: organizerErrorResponseSchema,
+					403: organizerErrorResponseSchema,
+					404: organizerErrorResponseSchema,
+				},
+			},
+		},
+		async (request, reply) => {
+			const session = getAuthenticatedSession(request);
+			const preview = await previewOrganizerDeletion(app.db, session.userId);
+
+			const { futureEvents, ...rest } = preview;
+			reply.header("Cache-Control", "private, no-store");
+			return {
+				success: true as const,
+				data: {
+					...rest,
+					futureEvents: futureEvents.map((e) => ({
+						id: e.id,
+						slug: e.slug,
+						title: e.title,
+						startAt: e.startAt.toISOString(),
+						status: e.status,
+					})),
+				},
+			};
+		},
+	);
+
+	/**
+	 * POST /api/v1/organizers/me/delete
+	 * Permanently delete the organizer account and associated data.
+	 */
+	typedApp.post(
+		"/me/delete",
+		{
+			preHandler: [requireAuth, requireRole("organizer")],
+			schema: {
+				response: {
+					200: organizerDeletionResponseSchema,
+					401: organizerErrorResponseSchema,
+					403: organizerErrorResponseSchema,
+					404: organizerErrorResponseSchema,
+				},
+			},
+		},
+		async (request, reply) => {
+			const session = getAuthenticatedSession(request);
+			const auditLogger = createAuditLogger(app.db, request.log);
+
+			const txResult = await deleteOrganizerAccount(
+				{ db: app.db, log: request.log, auditLogger },
+				session.userId,
+				{ ip: request.ip, sessionId: session.sessionId },
+			);
+
+			await runDeletionSideEffects(
+				{
+					log: request.log,
+					redis: {
+						session: app.redis.session,
+						cache: app.redis.cache,
+					},
+					storage: app.storage,
+					cdnPurgeQueue: app.queues.cdnPurge,
+					...(app.config.CDN_BASE_URL
+						? { cdnBaseUrl: app.config.CDN_BASE_URL }
+						: {}),
+					sitemapRegenQueue: app.queues.sitemapRegen,
+				},
+				txResult,
+			);
+
+			// Clear session cookie (mirror logout pattern)
+			const { maxAge: _, ...clearOptions } = buildSessionCookieOptions(
+				app.config.COOKIE_DOMAIN,
+			);
+			reply.clearCookie(SESSION_COOKIE_NAME, clearOptions);
+
+			// Clear CSRF cookie
+			reply.clearCookie(
+				CSRF_COOKIE_NAME,
+				buildCsrfClearOptions(app.config.COOKIE_DOMAIN),
+			);
+
+			reply.header("Cache-Control", "private, no-store");
+			return {
+				success: true as const,
+				data: {
+					message: "Organizer account deleted successfully",
+					deletedEventCount: txResult.deletedEventCount,
+					preservedEventCount: txResult.preservedEventCount,
+				},
+			};
 		},
 	);
 };

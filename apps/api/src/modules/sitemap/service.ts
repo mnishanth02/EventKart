@@ -1,5 +1,5 @@
 import type { Database } from "@repo/db";
-import { and, eq, gt } from "@repo/db";
+import { and, eq, gt, isNull } from "@repo/db";
 import { events, organizers } from "@repo/db/schema";
 import type { FastifyBaseLogger } from "fastify";
 
@@ -194,7 +194,7 @@ export async function buildSitemapXml(
 				updatedAt: organizers.updatedAt,
 			})
 			.from(organizers)
-			.where(eq(organizers.isVerified, true))
+			.where(and(eq(organizers.isVerified, true), isNull(organizers.deletedAt)))
 			.orderBy(organizers.id)
 			.limit(remaining());
 

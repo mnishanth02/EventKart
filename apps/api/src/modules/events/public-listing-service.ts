@@ -148,7 +148,7 @@ async function selectListingRows(
 	}
 	if (params.organizerSlug !== undefined) {
 		baseConditions.push(
-			sql`${events.organizerId} IN (SELECT ${organizers.id} FROM ${organizers} WHERE ${organizers.slug} = ${params.organizerSlug})`,
+			sql`${events.organizerId} IN (SELECT ${organizers.id} FROM ${organizers} WHERE ${organizers.slug} = ${params.organizerSlug} AND ${organizers.deletedAt} IS NULL)`,
 		);
 	}
 	if (params.organizerId !== undefined) {

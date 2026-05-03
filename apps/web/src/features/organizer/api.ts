@@ -143,3 +143,43 @@ export const getVerificationStatus = createServerFn({
 		return null;
 	}
 });
+
+// ── Browser-Only API Functions (Account Deletion) ───────────────────
+//
+// These use the browser apiClient directly (NOT createServerFn) because
+// the DELETE POST must be a direct browser request so Set-Cookie clears
+// (session cookie removal) propagate to the browser.
+
+import { apiClient } from "#/lib/api-client";
+
+export interface DeletionPreview {
+	businessName: string;
+	futureEvents: Array<{ title: string; startAt: string }>;
+	preservedEventCount: number;
+	hasRazorpayAccount: boolean;
+	kycDocumentCount: number;
+}
+
+export interface DeletionResult {
+	message: string;
+	deletedEventCount: number;
+	preservedEventCount: number;
+}
+
+/**
+ * Fetches a preview of what will happen when the organizer account is deleted.
+ * Browser-only — requires the session cookie to be sent from the browser.
+ */
+export async function getOrganizerDeletionPreview(): Promise<DeletionPreview> {
+	return apiClient<DeletionPreview>("/organizers/me/deletion-preview");
+}
+
+/**
+ * Permanently deletes the organizer account. The API clears the session cookie.
+ * Browser-only — must run in the browser so cookie clears land correctly.
+ */
+export async function deleteOrganizerAccount(): Promise<DeletionResult> {
+	return apiClient<DeletionResult>("/organizers/me/delete", {
+		method: "POST",
+	});
+}

@@ -1,5 +1,5 @@
 import type { Database } from "@repo/db";
-import { and, eq, ne } from "@repo/db";
+import { and, eq, isNull, ne } from "@repo/db";
 import { organizers, slugRedirects } from "@repo/db/schema";
 import {
 	ORGANIZER_SLUG_FALLBACK,
@@ -54,8 +54,9 @@ async function organizerSlugExists(
 		? and(
 				eq(organizers.slug, slug),
 				ne(organizers.id, options.excludeOrganizerId),
+				isNull(organizers.deletedAt),
 			)
-		: eq(organizers.slug, slug);
+		: and(eq(organizers.slug, slug), isNull(organizers.deletedAt));
 
 	const matches = await db
 		.select({ id: organizers.id })

@@ -8,6 +8,7 @@ import {
 } from "@repo/ui/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { DeleteOrganizerSection } from "#/features/organizer/components/delete-organizer-section";
 import { OrganizerProfileForm } from "#/features/organizer/components/organizer-profile-form";
 import { organizerProfileQueryOptions } from "#/features/organizer/queries";
 
@@ -55,6 +56,7 @@ function ProfilePage() {
 				</p>
 			</div>
 			<OrganizerProfileForm profile={profileQuery.data} />
+			<DeleteOrganizerSection />
 		</div>
 	);
 }

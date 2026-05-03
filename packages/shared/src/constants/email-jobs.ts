@@ -10,6 +10,7 @@ export const EMAIL_JOB_NAMES = {
 	EVENT_REVIEW_SUBMITTED: "event.review_submitted",
 	EVENT_REVIEW_APPROVED: "event.review_approved",
 	EVENT_REVIEW_REJECTED: "event.review_rejected",
+	ORGANIZER_ACCOUNT_DELETED: "organizer.account_deleted",
 } as const;
 
 export type EmailJobName = (typeof EMAIL_JOB_NAMES)[keyof typeof EMAIL_JOB_NAMES];
@@ -28,4 +29,6 @@ export const buildEmailIdempotencyKey = {
 		`event-review-approved:${eventId}:${reviewedAt.toISOString()}`,
 	eventReviewRejected: (eventId: string, reviewedAt: Date) =>
 		`event-review-rejected:${eventId}:${reviewedAt.toISOString()}`,
+	organizerAccountDeleted: (organizerId: string) =>
+		`organizer-account-deleted:${organizerId}`,
 } as const;

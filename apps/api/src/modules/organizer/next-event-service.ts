@@ -1,4 +1,4 @@
-import { type Database, eq } from "@repo/db";
+import { and, type Database, eq, isNull } from "@repo/db";
 import { organizers } from "@repo/db/schema";
 import type { EventPublicCard } from "@repo/shared/schemas";
 import type { FastifyBaseLogger } from "fastify";
@@ -61,7 +61,7 @@ export async function organizerExistsById(
 	const [row] = await db
 		.select({ id: organizers.id })
 		.from(organizers)
-		.where(eq(organizers.id, organizerId))
+		.where(and(eq(organizers.id, organizerId), isNull(organizers.deletedAt)))
 		.limit(1);
 	return row !== undefined;
 }

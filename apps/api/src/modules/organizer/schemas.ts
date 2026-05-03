@@ -133,3 +133,33 @@ export const organizerNextEventResponseSchema = z.object({
 });
 
 export { organizerPublicLookupHttpResponseSchema };
+
+// ── Deletion schemas ────────────────────────────────────────────────
+
+export const organizerDeletionPreviewResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.object({
+		businessName: z.string(),
+		futureEvents: z.array(
+			z.object({
+				id: z.string(),
+				slug: z.string(),
+				title: z.string(),
+				startAt: z.string().datetime(),
+				status: z.string(),
+			}),
+		),
+		preservedEventCount: z.number().int().nonnegative(),
+		hasRazorpayAccount: z.boolean(),
+		kycDocumentCount: z.number().int().nonnegative(),
+	}),
+});
+
+export const organizerDeletionResponseSchema = z.object({
+	success: z.literal(true),
+	data: z.object({
+		message: z.string(),
+		deletedEventCount: z.number().int().nonnegative(),
+		preservedEventCount: z.number().int().nonnegative(),
+	}),
+});

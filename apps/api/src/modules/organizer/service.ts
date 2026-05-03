@@ -1,5 +1,5 @@
 import type { Database } from "@repo/db";
-import { eq } from "@repo/db";
+import { and, eq, isNull } from "@repo/db";
 import { organizers } from "@repo/db/schema";
 import {
 	buildEmailIdempotencyKey,
@@ -91,7 +91,7 @@ export async function registerOrganizer(
 	const existing = await db
 		.select({ id: organizers.id })
 		.from(organizers)
-		.where(eq(organizers.userId, userId))
+		.where(and(eq(organizers.userId, userId), isNull(organizers.deletedAt)))
 		.limit(1);
 
 	if (existing.length > 0) {
@@ -130,7 +130,7 @@ export async function registerOrganizer(
 			const recheckRows = await db
 				.select({ id: organizers.id })
 				.from(organizers)
-				.where(eq(organizers.userId, userId))
+				.where(and(eq(organizers.userId, userId), isNull(organizers.deletedAt)))
 				.limit(1);
 			if (recheckRows.length > 0) {
 				throw new ConflictError(
@@ -179,7 +179,7 @@ export async function getOrganizerByUserId(db: Database, userId: string) {
 	const rows = await db
 		.select()
 		.from(organizers)
-		.where(eq(organizers.userId, userId))
+		.where(and(eq(organizers.userId, userId), isNull(organizers.deletedAt)))
 		.limit(1);
 
 	const row = rows[0];
@@ -226,7 +226,7 @@ export async function updateOrganizer(
 				businessName: organizers.businessName,
 			})
 			.from(organizers)
-			.where(eq(organizers.userId, userId))
+			.where(and(eq(organizers.userId, userId), isNull(organizers.deletedAt)))
 			.limit(1);
 
 		if (!existing) {

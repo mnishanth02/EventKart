@@ -1,4 +1,4 @@
-import { and, type Database, eq } from "@repo/db";
+import { and, type Database, eq, isNull } from "@repo/db";
 import { organizers, slugRedirects } from "@repo/db/schema";
 import {
 	type OrganizerPublicLookupResponse,
@@ -51,7 +51,7 @@ async function selectOrganizerBySlug(
 	const [row] = await db
 		.select(PUBLIC_ORGANIZER_COLUMNS)
 		.from(organizers)
-		.where(eq(organizers.slug, slug))
+		.where(and(eq(organizers.slug, slug), isNull(organizers.deletedAt)))
 		.limit(1);
 
 	return row ?? null;
@@ -64,7 +64,7 @@ async function selectOrganizerById(
 	const [row] = await db
 		.select(PUBLIC_ORGANIZER_COLUMNS)
 		.from(organizers)
-		.where(eq(organizers.id, id))
+		.where(and(eq(organizers.id, id), isNull(organizers.deletedAt)))
 		.limit(1);
 
 	return row ?? null;

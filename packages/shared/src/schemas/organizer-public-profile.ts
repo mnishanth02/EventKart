@@ -25,6 +25,7 @@ export const organizerPublicProfileSchema = z.object({
 	slug: organizerSlugSchema,
 	businessName: z.string().min(1),
 	isVerified: z.boolean(),
+	isActive: z.boolean().optional(),
 	city: z.string().min(1),
 	description: z.string().max(2000).nullable(),
 });

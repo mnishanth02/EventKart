@@ -176,6 +176,7 @@ async function selectOrganizerSummary(
 			isVerified: organizers.isVerified,
 			city: organizers.city,
 			description: organizers.description,
+			deletedAt: organizers.deletedAt,
 		})
 		.from(organizers)
 		.where(eq(organizers.id, organizerId))
@@ -195,6 +196,7 @@ async function selectOrganizerSummary(
 		isVerified: organizer.isVerified,
 		city: organizer.city,
 		description,
+		isActive: organizer.deletedAt ? false : undefined,
 	});
 }
 

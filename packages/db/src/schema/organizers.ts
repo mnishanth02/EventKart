@@ -2,6 +2,7 @@ import {
 	RAZORPAY_ACCOUNT_STATUSES,
 	VERIFICATION_STATUSES,
 } from "@repo/shared/constants";
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	index,
@@ -71,13 +72,21 @@ export const organizers = pgTable(
 			.notNull()
 			.defaultNow()
 			.$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 	},
 	(table) => [
-		uniqueIndex("organizers_user_id_unique").on(table.userId),
-		uniqueIndex("organizers_slug_unique").on(table.slug),
-		uniqueIndex("organizers_razorpay_account_id_unique").on(
-			table.razorpayAccountId,
-		),
+		uniqueIndex("organizers_user_id_unique")
+			.on(table.userId)
+			.where(sql`deleted_at IS NULL`),
+		uniqueIndex("organizers_slug_unique")
+			.on(table.slug)
+			.where(sql`deleted_at IS NULL`),
+		uniqueIndex("organizers_razorpay_account_id_unique")
+			.on(table.razorpayAccountId)
+			.where(sql`deleted_at IS NULL AND razorpay_account_id IS NOT NULL`),
+		index("organizers_deleted_at_idx")
+			.on(table.deletedAt)
+			.where(sql`deleted_at IS NOT NULL`),
 		index("organizers_verification_status_idx").on(table.verificationStatus),
 		index("organizers_city_idx").on(table.city),
 	],

@@ -1,5 +1,5 @@
 import type { Database } from "@repo/db";
-import { and, eq } from "@repo/db";
+import { and, eq, isNull } from "@repo/db";
 import { organizers, verificationDocuments } from "@repo/db/schema";
 import {
 	REQUIRED_DOCUMENT_COUNT,
@@ -41,7 +41,7 @@ export async function getVerificationStatus(
 	const orgs = await db
 		.select()
 		.from(organizers)
-		.where(eq(organizers.id, organizerId))
+		.where(and(eq(organizers.id, organizerId), isNull(organizers.deletedAt)))
 		.limit(1);
 
 	const org = orgs[0];

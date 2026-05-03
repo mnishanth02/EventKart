@@ -16,6 +16,8 @@ export interface PublicEventOrganizerCardProps {
 export function PublicEventOrganizerCard({
 	organizer,
 }: PublicEventOrganizerCardProps) {
+	const isActive = organizer.isActive ?? true;
+
 	return (
 		<Card>
 			<CardHeader>
@@ -26,13 +28,18 @@ export function PublicEventOrganizerCard({
 					<p className="font-semibold text-base text-foreground">
 						{organizer.businessName}
 					</p>
-					{organizer.isVerified === true ? (
+					{isActive && organizer.isVerified === true ? (
 						<>
 							<VerifiedBadge variant="inline" />
 							<VerificationExplainer variant="popover" />
 						</>
 					) : null}
 				</div>
+				{!isActive ? (
+					<p className="text-sm text-muted-foreground italic">
+						This organizer is no longer active on EventKart.
+					</p>
+				) : null}
 				<p className="text-muted-foreground text-sm">
 					Based in {organizer.city}
 				</p>
@@ -41,14 +48,16 @@ export function PublicEventOrganizerCard({
 						{organizer.description}
 					</p>
 				) : null}
-				<Link
-					aria-label={`View profile of ${organizer.businessName}`}
-					className="inline-flex items-center font-medium text-primary text-sm hover:underline"
-					to="/organizers/$slug"
-					params={{ slug: organizer.slug }}
-				>
-					View organizer profile →
-				</Link>
+				{isActive ? (
+					<Link
+						aria-label={`View profile of ${organizer.businessName}`}
+						className="inline-flex items-center font-medium text-primary text-sm hover:underline"
+						to="/organizers/$slug"
+						params={{ slug: organizer.slug }}
+					>
+						View organizer profile →
+					</Link>
+				) : null}
 			</CardContent>
 		</Card>
 	);
